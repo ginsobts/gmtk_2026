@@ -20,8 +20,12 @@ public class PlayerController : MonoBehaviour
         HandleMovement();
         FindNearestNpc();
 
-        if (_nearest != null && Input.GetKeyDown(KeyCode.E))
-            gm.BeginDialogue(_nearest);
+        if (_nearest != null)
+        {
+            if (Input.GetKeyDown(KeyCode.E)) gm.BeginDialogue(_nearest);
+            else if (Input.GetKeyDown(KeyCode.Q)) gm.ViewCharacterPhotos(_nearest);
+            else if (Input.GetKeyDown(KeyCode.F)) gm.Accuse(_nearest);
+        }
     }
 
     void HandleMovement()
@@ -53,6 +57,6 @@ public class PlayerController : MonoBehaviour
         }
 
         _nearest = best;
-        GameManager.Instance.UI.SetInteractPrompt(_nearest);
+        GameManager.Instance.UpdateNearest(_nearest);
     }
 }

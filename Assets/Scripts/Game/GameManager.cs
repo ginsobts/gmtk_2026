@@ -38,6 +38,9 @@ public class GameManager : MonoBehaviour
     /// <summary>供 NPC（变瘪人）检测玩家接触。</summary>
     public Transform PlayerTransform => _player;
 
+    // 靠近的角色（探索态）
+    Npc _nearestNpc;
+
     // 对话态
     Npc _dialogueNpc;
     string[] _dialogueLines;
@@ -313,7 +316,8 @@ public class GameManager : MonoBehaviour
                 break;
 
             case GameState.Album:
-                if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab)) CloseAlbum();
+                if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.Q))
+                    CloseAlbum();
                 break;
 
             case GameState.Dialogue:
@@ -475,7 +479,31 @@ public class GameManager : MonoBehaviour
         CheckLose();
     }
 
-    // ---------------- 相册 / 指认 ----------------
+    // ---------------- 靠近角色的交互（探索态） ----------------
+
+    /// <summary>由 PlayerController 每帧上报最近的可交互 NPC。</summary>
+    public void UpdateNearest(Npc npc)
+    {
+        _nearestNpc = npc;
+        UI.ShowInteract(npc);
+    }
+
+    public void TalkNearest()
+    {
+        if (State == GameState.Playing && _nearestNpc != null) BeginDialogue(_nearestNpc);
+    }
+
+    public void ViewNearestPhotos()
+    {
+        if (State == GameState.Playing && _nearestNpc != null) ViewCharacterPhotos(_nearestNpc);
+    }
+
+    public void AccuseNearest()
+    {
+        if (State == GameState.Playing && _nearestNpc != null) Accuse(_nearestNpc);
+    }
+
+    // ---------------- 相册 / 照片查看 ----------------
 
     public void OpenAlbum()
     {
@@ -483,7 +511,20 @@ public class GameManager : MonoBehaviour
         if (State == GameState.Camera) CloseCamera();
         State = GameState.Album;
         UI.SetHudVisible(false);
-        UI.ShowAlbum(Album);
+        UI.ShowAlbum(Album, $"相册 —— 全部照片（{Album.Count} 张）");
+    }
+
+    /// <summary>查看某个角色出现过的照片（靠近该角色时触发）。</summary>
+    public void ViewCharacterPhotos(Npc npc)
+    {
+        if (State != GameState.Playing || npc == null) return;
+        var shots = new List<PhotoEntry>();
+        foreach (var e in Album)
+            if (e.framed.Contains(npc)) shots.Add(e);
+
+        State = GameState.Album;
+        UI.SetHudVisible(false);
+        UI.ShowAlbum(shots, $"{npc.npcName} 的照片（{shots.Count} 张）");
     }
 
     public void CloseAlbum()
@@ -494,10 +535,12 @@ public class GameManager : MonoBehaviour
         UI.SetHudVisible(true);
     }
 
-    /// <summary>在相册里指认某个 NPC 为伪人。正确免费，错误浪费一张胶卷。</summary>
-    public void AccuseFromAlbum(Npc npc)
+    // ---------------- 指认（靠近角色，直接指认） ----------------
+
+    /// <summary>指认某个角色为伪人。正确抓获，错误浪费一张胶卷。</summary>
+    public void Accuse(Npc npc)
     {
-        if (State != GameState.Album || npc == null || npc.caught || npc.accusedWrong) return;
+        if (State != GameState.Playing || npc == null || npc.caught || npc.accusedWrong) return;
 
         if (npc.IsImposter)
         {
@@ -505,13 +548,10 @@ public class GameManager : MonoBehaviour
             _imposterFound++;
             UI.ShowToast($"指认成功！{npc.npcName} 是伪人（{KindLabel(npc.kind)}）", true);
             RefreshHud();
-            UI.RefreshAlbumChips();
+            UI.ShowInteract(null);
 
             if (_imposterFound >= imposterCount)
-            {
-                CloseAlbum();
                 EndRound(true);
-            }
         }
         else
         {
@@ -519,7 +559,6 @@ public class GameManager : MonoBehaviour
             _film--;
             UI.ShowToast($"指认错误！{npc.npcName} 是普通人，浪费一张胶卷", false);
             RefreshHud();
-            UI.RefreshAlbumChips();
             CheckLose();
         }
     }
