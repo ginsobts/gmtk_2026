@@ -4,6 +4,8 @@
 
 - 引擎：Unity **2023.1.22f1**（Built-in 渲染管线）
 - 整个场景在运行时由脚本程序化生成，任意场景启动即可（`GameBootstrap` 自动拉起 `GameManager`）。
+- **主菜单**：启动进入主菜单，可「开始游戏 / 制作者名单 / 切换语言 / 退出游戏」。
+- **中英双语**：默认英文，可在主菜单一键切换中/英，选择会被记住（`PlayerPrefs`）。所有 UI 文案与角色名、对话都支持双语配置。
 
 ---
 
@@ -33,6 +35,16 @@
 
 > 拍照所见即所拍：相册里的照片 = 你在取景框里看到的画面。
 
+### 主菜单
+
+启动后先进入主菜单：
+- **开始游戏**：进入小镇开始一局。
+- **制作者名单**：查看 Credits（内容可在 `ui.txt` 的 `credits.body` 里改，`Esc` 或「返回」退出）。
+- **语言：English / 中文**：一键在中英之间切换，全部界面即时刷新，选择会被记住。
+- **退出游戏**：退出（编辑器内为停止运行）。
+
+结算界面除「再玩一次」外，也可「返回主菜单」。
+
 ### 游玩流程
 
 1. **探索小镇**：走近 NPC，用 `E` 聊天听话术、用相机拍照留证。
@@ -61,9 +73,10 @@
 Assets/
   Resources/
     GameData/            # 策划配置表（Tab 分隔 .txt）
-      characters.txt
-      dialogue.txt
-      rounds.txt
+      characters.txt     # 角色（含中英名字）
+      dialogue.txt       # 对话（中英双语）
+      rounds.txt         # 关卡
+      ui.txt             # 界面文案 / 菜单 / 制作名单（中英双语）
     Art/
       Characters/        # 角色立绘：每角色一个文件夹
         npc_00/ base.png  smile.png  yeah.png
@@ -84,10 +97,12 @@ tools/
 
 ## 三、策划：如何配置对话与关卡
 
-所有内容都在 `Assets/Resources/GameData/` 的三张表里，**改表即生效，无需改代码**。表为 **Tab（制表符）分隔**，`#` 开头的行是注释会被忽略，首个非注释行是表头。
+所有内容都在 `Assets/Resources/GameData/` 的四张表里，**改表即生效，无需改代码**。表为 **Tab（制表符）分隔**，`#` 开头的行是注释会被忽略，首个非注释行是表头。
+
+> **双语说明**：需要显示给玩家的文本都拆成 `en` / `zh` 两列。游戏按当前语言取对应列；某列留空会自动回退到另一语言，避免出现空文本。
 
 ### 推荐工作流（Excel → 表）
-1. 维护一个 `tools/game_tables.xlsx`，里面建三个 sheet：`characters`、`dialogue`、`rounds`，首行为列名。
+1. 维护一个 `tools/game_tables.xlsx`，里面建四个 sheet：`characters`、`dialogue`、`rounds`、`ui`，首行为列名。
 2. 运行导出脚本：
    ```
    pip install openpyxl
@@ -97,17 +112,24 @@ tools/
 3. 也可以直接手改 `.txt`（注意用 Tab 分隔）。
 
 ### characters.txt — 角色主表
-`charId  displayName  artFolder  dialogueId`
+`charId  artFolder  dialogueId  name_en  name_zh`
 - `charId`：角色唯一 id（现用 `npc_00`…）。
-- `displayName`：游戏里显示的名字。
 - `artFolder`：立绘文件夹，相对 `Resources/Art`，如 `Characters/npc_00`。
 - `dialogueId`：该角色**普通状态**用的对话 id（留空则用 `generic`）。
+- `name_en` / `name_zh`：游戏里显示的名字（英文 / 中文）。
 
 ### dialogue.txt — 台词表
-`dialogueId  order  line`
+`dialogueId  order  en  zh`
 - 同一个 `dialogueId` 写多行，按 `order` 从小到大逐句显示。
-- 台词里要换行就写 `\n`。
+- `en` / `zh` 为双语台词；要换行就写 `\n`。
 - 伪人各自的对话 id 是固定的：`doubao / sixfinger / scarysmile / framedrop / stitched / photomissing / deflate`；普通闲聊用 `generic` 或角色自定义 id。
+
+### ui.txt — 界面文案表
+`key  en  zh`
+- `key` 是程序取用的键（如 `menu.start`、`result.win`、`kind.sixfinger`），**不要改 key**，只改 `en` / `zh` 文本。
+- 含 `{0}` `{1}` 的是带参数模板（如 `hud.film = Film {0}`），改文案时**保留占位符**。
+- 主菜单标题、制作者名单（`credits.body`，用 `\n` 换行）、七种伪人类型名（`kind.*`）都在这里配。
+- 漏配某个 key 或某列时，游戏会回退到代码内置默认，不会崩。
 
 ### rounds.txt — 关卡表
 `roundId  npcCount  imposterCount  film  assign`

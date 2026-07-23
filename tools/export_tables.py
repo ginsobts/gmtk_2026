@@ -7,20 +7,21 @@
     python tools/export_tables.py                       # 默认读 tools/game_tables.xlsx
     python tools/export_tables.py path/to/tables.xlsx
 
-Excel 里请建这三个工作表（sheet），首行为表头：
-    characters : charId | displayName | artFolder | dialogueId
-    dialogue   : dialogueId | order | line
+Excel 里请建这四个工作表（sheet），首行为表头：
+    characters : charId | artFolder | dialogueId | name_en | name_zh
+    dialogue   : dialogueId | order | en | zh
     rounds     : roundId | npcCount | imposterCount | film | assign
+    ui         : key | en | zh
 
 说明：
 - 输出到 Assets/Resources/GameData/<sheet>.txt，Tab 分隔，UTF-8。
 - 单元格里的真实换行会被写成字面量 \\n（游戏读取时还原）。
-- 只导出上面三个已知 sheet；其它 sheet 忽略。
+- 只导出上面四个已知 sheet；其它 sheet 忽略。
 """
 import os
 import sys
 
-SHEETS = ("characters", "dialogue", "rounds")
+SHEETS = ("characters", "dialogue", "rounds", "ui")
 OUT_DIR = os.path.join("Assets", "Resources", "GameData")
 
 

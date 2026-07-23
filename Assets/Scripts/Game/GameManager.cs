@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum GameState { Playing, Dialogue, Camera, Album, MarkList, Result }
+public enum GameState { MainMenu, Playing, Dialogue, Camera, Album, MarkList, Result }
 
 /// <summary>相册里的一张照片：截图 + 拍摄时处于取景框内的 NPC 名单。</summary>
 public class PhotoEntry
@@ -23,7 +23,8 @@ public class GameManager : MonoBehaviour
     public int imposterCount = 3;
     public int filmMax = 10;
 
-    public GameState State { get; private set; } = GameState.Playing;
+    public GameState State { get; private set; } = GameState.MainMenu;
+    bool _creditsOpen;
     public List<Npc> Npcs { get; private set; } = new List<Npc>();
     public UIManager UI { get; private set; }
     public List<PhotoEntry> Album { get; private set; } = new List<PhotoEntry>();
@@ -60,7 +61,56 @@ public class GameManager : MonoBehaviour
         UI = gameObject.AddComponent<UIManager>();
         UI.Build();
 
+        EnterMainMenu();
+    }
+
+    // ---------------- 主菜单 ----------------
+
+    public void EnterMainMenu()
+    {
+        State = GameState.MainMenu;
+        _creditsOpen = false;
+        UI.HideAllPanels();
+        UI.SetHudVisible(false);
+        UI.ShowMainMenu();
+    }
+
+    /// <summary>点“开始游戏”。</summary>
+    public void StartGame()
+    {
+        UI.HideMainMenu();
         StartRound();
+    }
+
+    public void OpenCredits()
+    {
+        if (State != GameState.MainMenu) return;
+        _creditsOpen = true;
+        UI.ShowCredits();
+    }
+
+    public void CloseCredits()
+    {
+        _creditsOpen = false;
+        UI.HideCredits();
+    }
+
+    /// <summary>切换中英文（本地化事件会自动重刷 UI）。</summary>
+    public void ToggleLanguage() => Loc.Toggle();
+
+    /// <summary>UIManager 在语言切换后回调，用于刷新动态文案。</summary>
+    public void OnLanguageChanged()
+    {
+        if (State == GameState.Playing || State == GameState.Camera) RefreshHud();
+    }
+
+    public void QuitGame()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     // ---------------- 场景搭建（占位） ----------------
@@ -375,7 +425,7 @@ public class GameManager : MonoBehaviour
             go.transform.position = RandomGroundPos();
 
             var npc = go.AddComponent<Npc>();
-            npc.Setup(def.displayName, kind, def.artFolder, def.dialogueId, bodyR);
+            npc.Setup(def.DisplayName, kind, def.artFolder, def.dialogueId, bodyR);
             Npcs.Add(npc);
         }
     }
@@ -421,6 +471,10 @@ public class GameManager : MonoBehaviour
     {
         switch (State)
         {
+            case GameState.MainMenu:
+                if (_creditsOpen && Input.GetKeyDown(KeyCode.Escape)) CloseCredits();
+                break;
+
             case GameState.Playing:
                 if (Input.GetKeyDown(KeyCode.Space)) OpenCamera();
                 else if (Input.GetKeyDown(KeyCode.Tab)) OpenAlbum();
@@ -538,7 +592,7 @@ public class GameManager : MonoBehaviour
         PoseType pose = smile ? PoseType.Smile : PoseType.Yeah;
         foreach (var npc in _framed)
             npc.SetPose(pose);
-        UI.ShowToast(smile ? "“大家笑一个～”" : "“来，比个耶！”", true);
+        UI.ShowToast(Loc.Get(smile ? "cam.poseSmile" : "cam.posePeace"), true);
     }
 
     public void OnShutter()
@@ -546,7 +600,7 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Camera || _capturing) return;
         if (_film <= 0)
         {
-            UI.ShowToast("没有胶卷了！", false);
+            UI.ShowToast(Loc.Get("cam.nofilm"), false);
             return;
         }
         UI.PlayShutterPress();
@@ -600,7 +654,7 @@ public class GameManager : MonoBehaviour
         Album.Add(new PhotoEntry { image = tex, framed = framedNow });
         _film--;
         RefreshHud();
-        UI.ShowToast($"咔嚓！进相册了（剩余胶卷 {_film}）", true);
+        UI.ShowToast(Loc.Format("cam.shot", _film), true);
 
         // 拍照手感：先来一下震屏（此时已抓完帧，不影响成片），
         // 再把刚拍的照片“飞”出去，最后短暂定格一下。
@@ -651,7 +705,7 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Playing) return;
         State = GameState.Album;
         UI.SetHudVisible(false);
-        UI.ShowAlbum(Album, $"相册 —— 全部照片（{Album.Count} 张）");
+        UI.ShowAlbum(Album, Loc.Format("album.titleAll", Album.Count));
     }
 
     /// <summary>查看某个角色出现过的照片（靠近该角色时触发）。</summary>
@@ -664,7 +718,7 @@ public class GameManager : MonoBehaviour
 
         State = GameState.Album;
         UI.SetHudVisible(false);
-        UI.ShowAlbum(shots, $"{npc.npcName} 的照片（{shots.Count} 张）");
+        UI.ShowAlbum(shots, Loc.Format("album.titleChar", npc.npcName, shots.Count));
     }
 
     public void CloseAlbum()
@@ -682,8 +736,7 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Playing || npc == null) return;
         npc.SetMarked(!npc.marked);
-        UI.ShowToast(npc.marked ? $"已标记「{npc.npcName}」为嫌疑人（待提交）"
-                                : $"已取消标记「{npc.npcName}」", npc.marked);
+        UI.ShowToast(Loc.Format(npc.marked ? "toast.marked" : "toast.unmarked", npc.npcName), npc.marked);
         RefreshHud();
         UI.ShowInteract(npc); // 刷新按钮文案（标记 / 取消标记）
     }
@@ -756,7 +809,7 @@ public class GameManager : MonoBehaviour
         var imposters = new List<string>();
         foreach (var n in Npcs)
             if (n != null && n.IsImposter)
-                imposters.Add($"{n.npcName}（{KindLabel(n.kind)}）");
+                imposters.Add($"{n.npcName}  ({KindLabel(n.kind)})");
 
         UI.HideAllPanels();
         UI.SetHudVisible(false);

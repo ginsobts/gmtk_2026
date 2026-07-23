@@ -15,6 +15,14 @@ public class UIManager : MonoBehaviour
     Canvas _canvas;
     RectTransform _canvasRect;
 
+    // 本地化：登记所有静态文案（Text, key），语言切换时统一重刷
+    readonly List<(Text text, string key)> _locStatic = new List<(Text, string)>();
+
+    // 主菜单 / 制作者名单
+    GameObject _menuRoot;
+    GameObject _creditsRoot;
+    Text _menuLangLabel;
+
     // HUD
     GameObject _hudRoot;
     Text _filmText, _foundText, _promptText;
@@ -114,7 +122,88 @@ public class UIManager : MonoBehaviour
         BuildMarkList();
         BuildResult();
         BuildToast();
+        BuildMainMenu();
+        BuildCredits();
         BuildFadeOverlay();
+
+        Loc.OnChanged += Relocalize;
+    }
+
+    // ---------------- 主菜单 / 制作者名单 ----------------
+
+    void BuildMainMenu()
+    {
+        _menuRoot = MakePanel(_canvas.transform, "MainMenu", new Color(0.05f, 0.06f, 0.1f, 0.96f));
+        SetRect(_menuRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+        var title = MakeLocText(_menuRoot.transform, "Title", "menu.title", 96, TextAnchor.MiddleCenter);
+        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -180), new Vector2(1600, 130));
+        title.color = new Color(1f, 0.9f, 0.55f);
+
+        var sub = MakeLocText(_menuRoot.transform, "Subtitle", "menu.subtitle", 34, TextAnchor.MiddleCenter);
+        SetRect(sub.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -300), new Vector2(1400, 50));
+        sub.color = new Color(0.8f, 0.85f, 0.95f);
+
+        MakeButton(_menuRoot.transform, "menu.start", 36, () => GameManager.Instance.StartGame(),
+            new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(420, 96));
+        MakeButton(_menuRoot.transform, "menu.credits", 32, () => GameManager.Instance.OpenCredits(),
+            new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(420, 84));
+
+        var langBtn = MakeButton(_menuRoot.transform, Loc.Format("menu.language", Loc.LanguageName), 32,
+            () => GameManager.Instance.ToggleLanguage(),
+            new Vector2(0.5f, 0.5f), new Vector2(0, -170), new Vector2(420, 84), register: false);
+        SetButtonColor(langBtn, new Color(0.3f, 0.42f, 0.5f));
+        _menuLangLabel = langBtn.GetComponentInChildren<Text>();
+
+        var quitBtn = MakeButton(_menuRoot.transform, "menu.quit", 32, () => GameManager.Instance.QuitGame(),
+            new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(420, 84));
+        SetButtonColor(quitBtn, new Color(0.5f, 0.3f, 0.3f));
+
+        _menuRoot.SetActive(false);
+    }
+
+    void BuildCredits()
+    {
+        _creditsRoot = MakePanel(_canvas.transform, "Credits", new Color(0.04f, 0.05f, 0.08f, 0.98f));
+        SetRect(_creditsRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+        var title = MakeLocText(_creditsRoot.transform, "CTitle", "credits.title", 60, TextAnchor.UpperCenter);
+        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -80), new Vector2(1400, 90));
+        title.color = new Color(1f, 0.9f, 0.55f);
+
+        var body = MakeLocText(_creditsRoot.transform, "CBody", "credits.body", 34, TextAnchor.UpperCenter);
+        SetRect(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 20), new Vector2(1200, 500));
+        body.color = new Color(0.88f, 0.92f, 1f);
+
+        MakeButton(_creditsRoot.transform, "credits.back", 32, () => GameManager.Instance.CloseCredits(),
+            new Vector2(0.5f, 0), new Vector2(0, 70), new Vector2(320, 84));
+
+        _creditsRoot.SetActive(false);
+    }
+
+    public void ShowMainMenu()
+    {
+        if (_menuLangLabel != null) _menuLangLabel.text = Loc.Format("menu.language", Loc.LanguageName);
+        _creditsRoot.SetActive(false);
+        _menuRoot.SetActive(true);
+        PlayShow(_menuRoot);
+    }
+
+    public void HideMainMenu()
+    {
+        if (_menuRoot != null) _menuRoot.SetActive(false);
+        if (_creditsRoot != null) _creditsRoot.SetActive(false);
+    }
+
+    public void ShowCredits()
+    {
+        _creditsRoot.SetActive(true);
+        PlayShow(_creditsRoot);
+    }
+
+    public void HideCredits()
+    {
+        if (_creditsRoot != null) _creditsRoot.SetActive(false);
     }
 
     void BuildFadeOverlay()
@@ -160,26 +249,26 @@ public class UIManager : MonoBehaviour
 
         MakeIcon(hud, "FilmIcon", GeneratedArt.GetIconSprite(0),
             new Vector2(0, 1), new Vector2(28, -28), new Vector2(46, 46));
-        _filmText = MakeText(hud, "Film", "胶卷 10", 36, TextAnchor.UpperLeft);
+        _filmText = MakeText(hud, "Film", "", 36, TextAnchor.UpperLeft);
         SetRect(_filmText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
             new Vector2(86, -26), new Vector2(400, 60));
 
         MakeIcon(hud, "FoundIcon", GeneratedArt.GetIconSprite(6),
             new Vector2(1, 1), new Vector2(-250, -28), new Vector2(44, 44));
-        _foundText = MakeText(hud, "Found", "伪人 0/3", 36, TextAnchor.UpperRight);
+        _foundText = MakeText(hud, "Found", "", 36, TextAnchor.UpperRight);
         SetRect(_foundText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1),
             new Vector2(-30, -26), new Vector2(400, 60));
 
-        _promptText = MakeText(hud, "Prompt", "移动 [WASD]　拍照 [空格]　相册 [Tab]　指认列表 [M]", 26, TextAnchor.LowerCenter);
+        _promptText = MakeLocText(hud, "Prompt", "hud.prompt", 26, TextAnchor.LowerCenter);
         SetRect(_promptText.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-            new Vector2(0, 24), new Vector2(1100, 44));
+            new Vector2(0, 24), new Vector2(1300, 44));
         _promptText.color = new Color(1f, 1f, 1f, 0.6f);
 
-        MakeButton(hud, "相机 (空格)", 30, () => GameManager.Instance.OpenCamera(),
+        MakeButton(hud, "btn.camera", 30, () => GameManager.Instance.OpenCamera(),
             new Vector2(1, 0), new Vector2(-150, 210), new Vector2(240, 70));
-        MakeButton(hud, "相册 (Tab)", 30, () => GameManager.Instance.OpenAlbum(),
+        MakeButton(hud, "btn.album", 30, () => GameManager.Instance.OpenAlbum(),
             new Vector2(1, 0), new Vector2(-150, 130), new Vector2(240, 70));
-        var markListBtn = MakeButton(hud, "指认列表 (M)", 28, () => GameManager.Instance.OpenMarkList(),
+        var markListBtn = MakeButton(hud, "btn.marklist", 28, () => GameManager.Instance.OpenMarkList(),
             new Vector2(1, 0), new Vector2(-150, 50), new Vector2(240, 70));
         SetButtonColor(markListBtn, new Color(0.7f, 0.4f, 0.3f));
 
@@ -197,11 +286,11 @@ public class UIManager : MonoBehaviour
         SetRect(_interactName.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -12), new Vector2(720, 40));
         _interactName.color = new Color(1f, 0.85f, 0.5f);
 
-        MakeButton(_interactRoot.transform, "交谈 [E]", 26, () => GameManager.Instance.TalkNearest(),
+        MakeButton(_interactRoot.transform, "interact.talk", 26, () => GameManager.Instance.TalkNearest(),
             new Vector2(0.5f, 0), new Vector2(-250, 22), new Vector2(220, 64));
-        MakeButton(_interactRoot.transform, "查看照片 [Q]", 26, () => GameManager.Instance.ViewNearestPhotos(),
+        MakeButton(_interactRoot.transform, "interact.viewphotos", 26, () => GameManager.Instance.ViewNearestPhotos(),
             new Vector2(0.5f, 0), new Vector2(0, 22), new Vector2(220, 64));
-        _interactMarkBtn = MakeButton(_interactRoot.transform, "标记嫌疑人 [F]", 24, () => GameManager.Instance.ToggleMarkNearest(),
+        _interactMarkBtn = MakeButton(_interactRoot.transform, "interact.mark", 24, () => GameManager.Instance.ToggleMarkNearest(),
             new Vector2(0.5f, 0), new Vector2(250, 22), new Vector2(220, 64));
         _interactMarkLabel = _interactMarkBtn.GetComponentInChildren<Text>();
         SetButtonColor(_interactMarkBtn, new Color(0.7f, 0.32f, 0.32f));
@@ -227,9 +316,9 @@ public class UIManager : MonoBehaviour
         bool wasActive = _interactRoot.activeSelf;
         _interactRoot.SetActive(true);
         if (!wasActive) PlayShow(_interactRoot);
-        _interactName.text = npc.marked ? npc.npcName + "（已标记）" : npc.npcName;
+        _interactName.text = npc.marked ? npc.npcName + Loc.Get("interact.markedSuffix") : npc.npcName;
         if (_interactMarkLabel != null)
-            _interactMarkLabel.text = npc.marked ? "取消标记 [F]" : "标记嫌疑人 [F]";
+            _interactMarkLabel.text = Loc.Get(npc.marked ? "interact.unmark" : "interact.mark");
         if (_interactMarkBtn != null)
             SetButtonColor(_interactMarkBtn, npc.marked ? new Color(0.4f, 0.45f, 0.55f) : new Color(0.7f, 0.32f, 0.32f));
     }
@@ -247,10 +336,10 @@ public class UIManager : MonoBehaviour
         _dialogueLine = MakeText(_dialogueRoot.transform, "DLine", "", 32, TextAnchor.UpperLeft);
         SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, -90), new Vector2(-80, 120));
 
-        MakeButton(_dialogueRoot.transform, "继续 ▶", 30, () => GameManager.Instance.DialogueNext(),
+        MakeButton(_dialogueRoot.transform, "dlg.next", 30, () => GameManager.Instance.DialogueNext(),
             new Vector2(1, 0), new Vector2(-150, 50), new Vector2(220, 66));
-        MakeButton(_dialogueRoot.transform, "结束对话", 28, () => GameManager.Instance.EndDialogue(),
-            new Vector2(0, 0), new Vector2(150, 50), new Vector2(200, 66));
+        MakeButton(_dialogueRoot.transform, "dlg.end", 28, () => GameManager.Instance.EndDialogue(),
+            new Vector2(0, 0), new Vector2(200, 50), new Vector2(240, 66));
 
         _dialogueRoot.SetActive(false);
     }
@@ -297,10 +386,10 @@ public class UIManager : MonoBehaviour
         _shutterHandRestPosition = _shutterHand.anchoredPosition;
 
         // 顶部固定提示（不随相机移动）
-        var tip = MakeText(_cameraRoot.transform, "Tip", "移动鼠标瞄准；[1] 比耶　[2] 笑　[空格] 拍照　[Esc] 退出", 28, TextAnchor.UpperCenter);
-        SetRect(tip.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -24), new Vector2(1600, 46));
+        var tip = MakeLocText(_cameraRoot.transform, "Tip", "cam.tip", 28, TextAnchor.UpperCenter);
+        SetRect(tip.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -24), new Vector2(1700, 46));
 
-        _framedText = MakeText(_cameraRoot.transform, "Framed", "在镜头中：（无）", 30, TextAnchor.UpperCenter);
+        _framedText = MakeLocText(_cameraRoot.transform, "Framed", "cam.framedNone", 30, TextAnchor.UpperCenter);
         SetRect(_framedText.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -72), new Vector2(1600, 46));
         _framedText.color = new Color(0.7f, 1f, 1f);
 
@@ -317,14 +406,14 @@ public class UIManager : MonoBehaviour
         SetRect(_recLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(88, -60), new Vector2(140, 32));
 
         // 底部操作栏（键位已标注；相机模式下鼠标用于瞄准，操作请用键盘）
-        MakeButton(_cameraRoot.transform, "比个耶 [1]", 28, () => GameManager.Instance.OnCameraPose(false),
+        MakeButton(_cameraRoot.transform, "cam.peace", 28, () => GameManager.Instance.OnCameraPose(false),
             new Vector2(0.5f, 0), new Vector2(-500, 70), new Vector2(210, 74));
-        MakeButton(_cameraRoot.transform, "笑一下 [2]", 28, () => GameManager.Instance.OnCameraPose(true),
+        MakeButton(_cameraRoot.transform, "cam.smile", 28, () => GameManager.Instance.OnCameraPose(true),
             new Vector2(0.5f, 0), new Vector2(-280, 70), new Vector2(210, 74));
-        var shutter = MakeButton(_cameraRoot.transform, "快门 [空格]", 30, () => GameManager.Instance.OnShutter(),
+        var shutter = MakeButton(_cameraRoot.transform, "cam.shutter", 30, () => GameManager.Instance.OnShutter(),
             new Vector2(0.5f, 0), new Vector2(0, 70), new Vector2(260, 74));
         SetButtonColor(shutter, new Color(0.8f, 0.3f, 0.3f));
-        MakeButton(_cameraRoot.transform, "退出 [Esc]", 28, () => GameManager.Instance.CloseCamera(),
+        MakeButton(_cameraRoot.transform, "cam.exit", 28, () => GameManager.Instance.CloseCamera(),
             new Vector2(0.5f, 0), new Vector2(300, 70), new Vector2(220, 74));
 
         _cameraRoot.SetActive(false);
@@ -403,7 +492,7 @@ public class UIManager : MonoBehaviour
         _albumRoot = MakePanel(_canvas.transform, "Album", new Color(0.05f, 0.06f, 0.09f, 0.97f));
         SetRect(_albumRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-        _albumTitle = MakeText(_albumRoot.transform, "ATitle", "相册", 34, TextAnchor.UpperCenter);
+        _albumTitle = MakeText(_albumRoot.transform, "ATitle", "", 34, TextAnchor.UpperCenter);
         SetRect(_albumTitle.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -24), new Vector2(1400, 50));
 
         var thumbGO = new GameObject("ThumbRow", typeof(RectTransform));
@@ -429,8 +518,8 @@ public class UIManager : MonoBehaviour
         _albumHint = MakeText(_albumRoot.transform, "AHint", "", 30, TextAnchor.MiddleCenter);
         SetRect(_albumHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 80));
 
-        MakeButton(_albumRoot.transform, "关闭 (Esc)", 30, () => GameManager.Instance.CloseAlbum(),
-            new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(240, 70));
+        MakeButton(_albumRoot.transform, "album.close", 30, () => GameManager.Instance.CloseAlbum(),
+            new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(280, 70));
 
         _albumRoot.SetActive(false);
     }
@@ -440,12 +529,12 @@ public class UIManager : MonoBehaviour
         _markListRoot = MakePanel(_canvas.transform, "MarkList", new Color(0.05f, 0.06f, 0.09f, 0.97f));
         SetRect(_markListRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-        var title = MakeText(_markListRoot.transform, "MTitle", "指认列表 —— 你标记的嫌疑人", 40, TextAnchor.UpperCenter);
-        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -50), new Vector2(1400, 60));
+        var title = MakeLocText(_markListRoot.transform, "MTitle", "mark.title", 40, TextAnchor.UpperCenter);
+        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -50), new Vector2(1500, 60));
         title.color = new Color(1f, 0.85f, 0.5f);
 
-        var sub = MakeText(_markListRoot.transform, "MSub", "确认无误后点击“提交指认”。注意：提交后本局立即结束。", 26, TextAnchor.UpperCenter);
-        SetRect(sub.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(1400, 44));
+        var sub = MakeLocText(_markListRoot.transform, "MSub", "mark.sub", 26, TextAnchor.UpperCenter);
+        SetRect(sub.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(1500, 44));
         sub.color = new Color(0.8f, 0.85f, 0.95f);
 
         // 已标记名单容器（动态生成每一行）
@@ -458,11 +547,11 @@ public class UIManager : MonoBehaviour
         SetRect(_markListHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(1100, 120));
         _markListHint.color = new Color(0.75f, 0.8f, 0.9f);
 
-        _markSubmitBtn = MakeButton(_markListRoot.transform, "提交指认", 34, () => GameManager.Instance.RequestSubmit(),
-            new Vector2(0.5f, 0), new Vector2(-170, 50), new Vector2(300, 82));
+        _markSubmitBtn = MakeButton(_markListRoot.transform, "mark.submit", 34, () => GameManager.Instance.RequestSubmit(),
+            new Vector2(0.5f, 0), new Vector2(-180, 50), new Vector2(320, 82));
         SetButtonColor(_markSubmitBtn, new Color(0.75f, 0.3f, 0.3f));
-        MakeButton(_markListRoot.transform, "返回场景 [Esc]", 30, () => GameManager.Instance.CloseMarkList(),
-            new Vector2(0.5f, 0), new Vector2(170, 50), new Vector2(300, 82));
+        MakeButton(_markListRoot.transform, "mark.back", 30, () => GameManager.Instance.CloseMarkList(),
+            new Vector2(0.5f, 0), new Vector2(180, 50), new Vector2(320, 82));
 
         // 提交确认弹窗（覆盖在列表之上）
         _submitConfirmRoot = MakePanel(_markListRoot.transform, "SubmitConfirm", new Color(0f, 0f, 0f, 0.75f));
@@ -471,17 +560,17 @@ public class UIManager : MonoBehaviour
         var box = MakePanel(_submitConfirmRoot.transform, "Box", new Color(0.1f, 0.12f, 0.16f, 1f));
         SetRect(box.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 560));
 
-        var cTitle = MakeText(box.transform, "CTitle", "确认提交指认", 40, TextAnchor.UpperCenter);
+        var cTitle = MakeLocText(box.transform, "CTitle", "confirm.title", 40, TextAnchor.UpperCenter);
         SetRect(cTitle.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(940, 60));
         cTitle.color = new Color(1f, 0.85f, 0.5f);
 
         _submitConfirmText = MakeText(box.transform, "CText", "", 30, TextAnchor.UpperCenter);
         SetRect(_submitConfirmText.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -110), new Vector2(920, 340));
 
-        var yes = MakeButton(box.transform, "确认提交", 32, () => GameManager.Instance.ConfirmSubmit(),
+        var yes = MakeButton(box.transform, "confirm.yes", 32, () => GameManager.Instance.ConfirmSubmit(),
             new Vector2(0.5f, 0), new Vector2(-160, 40), new Vector2(280, 80));
         SetButtonColor(yes, new Color(0.75f, 0.3f, 0.3f));
-        MakeButton(box.transform, "再想想", 32, () => GameManager.Instance.CancelSubmit(),
+        MakeButton(box.transform, "confirm.no", 32, () => GameManager.Instance.CancelSubmit(),
             new Vector2(0.5f, 0), new Vector2(160, 40), new Vector2(280, 80));
 
         _submitConfirmRoot.SetActive(false);
@@ -499,8 +588,10 @@ public class UIManager : MonoBehaviour
         _resultDetail = MakeText(_resultRoot.transform, "RDetail", "", 34, TextAnchor.UpperCenter);
         SetRect(_resultDetail.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -220), new Vector2(1300, 480));
 
-        MakeButton(_resultRoot.transform, "再玩一次", 34, () => GameManager.Instance.StartRound(),
-            new Vector2(0.5f, 0), new Vector2(0, 70), new Vector2(320, 80));
+        MakeButton(_resultRoot.transform, "result.replay", 34, () => GameManager.Instance.StartRound(),
+            new Vector2(0.5f, 0), new Vector2(-180, 70), new Vector2(320, 80));
+        MakeButton(_resultRoot.transform, "result.menu", 34, () => GameManager.Instance.EnterMainMenu(),
+            new Vector2(0.5f, 0), new Vector2(180, 70), new Vector2(320, 80));
 
         _resultRoot.SetActive(false);
     }
@@ -517,9 +608,9 @@ public class UIManager : MonoBehaviour
 
     public void SetHud(int film, int marked, int total)
     {
-        _filmText.text = "胶卷 " + film;
+        _filmText.text = Loc.Format("hud.film", film);
         _filmText.color = film <= 2 ? new Color(1f, 0.4f, 0.4f) : Color.white;
-        _foundText.text = $"已标记 {marked}（伪人共 {total}）";
+        _foundText.text = Loc.Format("hud.marked", marked, total);
 
         if (_lastFilm != int.MinValue && film != _lastFilm) StartCoroutine(PunchText(_filmText.rectTransform));
         if (_lastMarked != int.MinValue && marked != _lastMarked) StartCoroutine(PunchText(_foundText.rectTransform));
@@ -598,12 +689,12 @@ public class UIManager : MonoBehaviour
     {
         if (framed == null || framed.Count == 0)
         {
-            _framedText.text = "在镜头中：（无）";
+            _framedText.text = Loc.Get("cam.framedNone");
             return;
         }
         var names = new List<string>();
         foreach (var n in framed) names.Add(n.npcName);
-        _framedText.text = "在镜头中：" + string.Join("、", names);
+        _framedText.text = Loc.Format("cam.framed", string.Join(Sep, names));
     }
 
     /// <summary>取景框在屏幕上的像素矩形（左下角为原点，与 ReadPixels 一致）。</summary>
@@ -662,7 +753,7 @@ public class UIManager : MonoBehaviour
             _selectedPhoto = -1;
             _albumBigImage.gameObject.SetActive(false);
             _albumCaption.text = "";
-            _albumHint.text = "还没有照片，先用相机拍几张吧。";
+            _albumHint.text = Loc.Get("album.empty");
             return;
         }
 
@@ -696,7 +787,7 @@ public class UIManager : MonoBehaviour
 
         var names = new List<string>();
         foreach (var n in entry.framed) if (n != null) names.Add(n.npcName);
-        _albumCaption.text = names.Count > 0 ? "照片里：" + string.Join("、", names) : "";
+        _albumCaption.text = names.Count > 0 ? Loc.Format("album.inphoto", string.Join(Sep, names)) : "";
     }
 
     void ClearAlbumDynamic()
@@ -722,7 +813,7 @@ public class UIManager : MonoBehaviour
         ClearMarkDynamic();
 
         bool any = marked != null && marked.Count > 0;
-        _markListHint.text = any ? "" : "你还没有标记任何人。\n回到场景靠近 NPC 按 [F] 标记你怀疑的对象。";
+        _markListHint.text = any ? "" : Loc.Get("mark.empty");
         _markSubmitBtn.interactable = any;
 
         if (!any) return;
@@ -738,8 +829,8 @@ public class UIManager : MonoBehaviour
             SetRect(name.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(30, 0), new Vector2(560, 60));
 
             var npcRef = npc;
-            var rm = MakeButton(row.transform, "移除标记", 24, () => GameManager.Instance.UnmarkFromList(npcRef),
-                new Vector2(1, 0.5f), new Vector2(-130, 0), new Vector2(200, 50));
+            var rm = MakeButton(row.transform, Loc.Get("mark.remove"), 24, () => GameManager.Instance.UnmarkFromList(npcRef),
+                new Vector2(1, 0.5f), new Vector2(-130, 0), new Vector2(200, 50), register: false);
             SetButtonColor(rm, new Color(0.4f, 0.45f, 0.55f));
 
             _markDynamic.Add(row);
@@ -759,8 +850,8 @@ public class UIManager : MonoBehaviour
         if (marked != null) foreach (var n in marked) if (n != null) names.Add(n.npcName);
 
         string body = names.Count > 0
-            ? $"你将指认以下 {names.Count} 人为伪人：\n\n{string.Join("、", names)}\n\n提交后本局立即结束，且无法修改。确定吗？"
-            : "你还没有标记任何人。\n若直接提交，将视为“没有找出任何伪人”。\n\n提交后本局立即结束，确定吗？";
+            ? Loc.Format("confirm.body", names.Count, string.Join(Sep, names))
+            : Loc.Get("confirm.bodyEmpty");
         _submitConfirmText.text = body;
         _submitConfirmRoot.SetActive(true);
         PlayShow(_submitConfirmRoot);
@@ -784,13 +875,12 @@ public class UIManager : MonoBehaviour
     {
         _resultRoot.SetActive(true);
         PlayShow(_resultRoot);
-        _resultTitle.text = win ? "全部识破！" : "调查结束";
+        _resultTitle.text = Loc.Get(win ? "result.win" : "result.lose");
         _resultTitle.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.75f, 0.55f);
 
         string imposterList = (imposters != null && imposters.Count > 0)
-            ? string.Join("\n", imposters) : "（无）";
-        _resultDetail.text =
-            $"指认正确 {correct}/{total}　误指 {wrong} 人\n共拍摄 {photos} 张照片\n\n真正的伪人是：\n{imposterList}";
+            ? string.Join("\n", imposters) : Loc.Get("result.none");
+        _resultDetail.text = Loc.Format("result.detail", correct, total, wrong, photos, imposterList);
     }
 
     public void HideAllPanels()
@@ -801,6 +891,8 @@ public class UIManager : MonoBehaviour
         HideMarkList();
         if (_resultRoot != null) _resultRoot.SetActive(false);
         if (_interactRoot != null) _interactRoot.SetActive(false);
+        if (_menuRoot != null) _menuRoot.SetActive(false);
+        if (_creditsRoot != null) _creditsRoot.SetActive(false);
     }
 
     public void ShowToast(string msg, bool positive)
@@ -998,10 +1090,14 @@ public class UIManager : MonoBehaviour
         SetRect(v.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(3, 26));
     }
 
-    Button MakeButton(Transform parent, string label, int size, UnityAction onClick,
-                      Vector2 anchor, Vector2 anchoredPos, Vector2 sizeDelta)
+    /// <summary>
+    /// 创建按钮。register=true 时把 key 当作本地化键（label 取 Loc.Get(key) 并登记，语言切换时自动重刷）；
+    /// register=false 时把 key 直接当作静态/自管理文本（如“Language: 中文”这种自己刷新的）。
+    /// </summary>
+    Button MakeButton(Transform parent, string key, int size, UnityAction onClick,
+                      Vector2 anchor, Vector2 anchoredPos, Vector2 sizeDelta, bool register = true)
     {
-        var go = new GameObject("Btn_" + label, typeof(RectTransform));
+        var go = new GameObject("Btn_" + key, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         var img = go.AddComponent<Image>();
         img.color = new Color(0.25f, 0.28f, 0.36f, 0.98f);
@@ -1010,10 +1106,33 @@ public class UIManager : MonoBehaviour
         go.AddComponent<UIButtonFeedback>();
         SetRect(go.GetComponent<RectTransform>(), anchor, anchor, anchor, anchoredPos, sizeDelta);
 
-        var t = MakeText(go.transform, "Label", label, size, TextAnchor.MiddleCenter);
+        var t = MakeText(go.transform, "Label", register ? Loc.Get(key) : key, size, TextAnchor.MiddleCenter);
         SetRect(t.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        if (register) _locStatic.Add((t, key));
         return btn;
     }
+
+    /// <summary>创建带本地化键的静态文本（语言切换时自动重刷）。</summary>
+    Text MakeLocText(Transform parent, string name, string key, int size, TextAnchor anchor)
+    {
+        var t = MakeText(parent, name, Loc.Get(key), size, anchor);
+        _locStatic.Add((t, key));
+        return t;
+    }
+
+    /// <summary>当前语言的名字连接符。</summary>
+    string Sep => Loc.Current == Lang.ZH ? "、" : ", ";
+
+    /// <summary>语言切换后重刷所有已登记的静态文案，并让 GameManager 刷新动态部分。</summary>
+    public void Relocalize()
+    {
+        foreach (var e in _locStatic)
+            if (e.text != null) e.text.text = Loc.Get(e.key);
+        if (_menuLangLabel != null) _menuLangLabel.text = Loc.Format("menu.language", Loc.LanguageName);
+        if (GameManager.Instance != null) GameManager.Instance.OnLanguageChanged();
+    }
+
+    void OnDestroy() { Loc.OnChanged -= Relocalize; }
 
     void SetButtonColor(Button btn, Color c) => btn.GetComponent<Image>().color = c;
 

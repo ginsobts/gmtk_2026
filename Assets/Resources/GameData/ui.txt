@@ -1,0 +1,69 @@
+# UI 文案表（Tab 分隔）。key 为程序取用的键，en/zh 为两种语言文本。
+# 文本内需要换行写 \n；含 {0} {1} 的是带参数的模板，请保留占位符。
+# 缺某个 key 或某列时，游戏会回退到代码内置默认，不会崩。
+key	en	zh
+menu.title	The Imposter Hunt	寻找伪人
+menu.subtitle	A 2.5D observation game	2.5D 观察解谜小游戏
+menu.start	Start Game	开始游戏
+menu.credits	Credits	制作者名单
+menu.quit	Quit	退出游戏
+menu.language	Language: {0}	语言：{0}
+credits.title	Credits	制作者名单
+credits.back	Back	返回
+credits.body	The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity	寻找伪人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作
+hud.film	Film {0}	胶卷 {0}
+hud.marked	Marked {0} (imposters: {1})	已标记 {0}（伪人共 {1}）
+hud.prompt	Move [WASD]   Photo [Space]   Album [Tab]   Accuse List [M]	移动 [WASD]　拍照 [空格]　相册 [Tab]　指认列表 [M]
+btn.camera	Camera (Space)	相机 (空格)
+btn.album	Album (Tab)	相册 (Tab)
+btn.marklist	Accuse List (M)	指认列表 (M)
+interact.talk	Talk [E]	交谈 [E]
+interact.viewphotos	View Photos [Q]	查看照片 [Q]
+interact.mark	Mark Suspect [F]	标记嫌疑人 [F]
+interact.unmark	Unmark [F]	取消标记 [F]
+interact.markedSuffix	 (marked)	（已标记）
+dlg.next	Continue ▶	继续 ▶
+dlg.end	End	结束对话
+cam.tip	Move mouse to aim;  [1] Peace   [2] Smile   [Space] Shoot   [Esc] Exit	移动鼠标瞄准；[1] 比耶　[2] 笑　[空格] 拍照　[Esc] 退出
+cam.framed	In frame: {0}	在镜头中：{0}
+cam.framedNone	In frame: (none)	在镜头中：（无）
+cam.peace	Peace [1]	比个耶 [1]
+cam.smile	Smile [2]	笑一下 [2]
+cam.shutter	Shutter [Space]	快门 [空格]
+cam.exit	Exit [Esc]	退出 [Esc]
+cam.poseSmile	“Everyone smile~”	“大家笑一个～”
+cam.posePeace	“Give me a peace sign!”	“来，比个耶！”
+cam.nofilm	No film left!	没有胶卷了！
+cam.shot	Snap! Saved to album (film left {0})	咔嚓！进相册了（剩余胶卷 {0}）
+album.titleAll	Album — All Photos ({0})	相册 —— 全部照片（{0} 张）
+album.titleChar	{0}'s Photos ({1})	{0} 的照片（{1} 张）
+album.empty	No photos yet. Take some with the camera first.	还没有照片，先用相机拍几张吧。
+album.close	Close (Esc)	关闭 (Esc)
+album.inphoto	In photo: {0}	照片里：{0}
+mark.title	Accuse List — Your Suspects	指认列表 —— 你标记的嫌疑人
+mark.sub	Click “Submit” when you are sure. Note: the round ends immediately after submitting.	确认无误后点击“提交指认”。注意：提交后本局立即结束。
+mark.empty	You haven't marked anyone.\nGo near an NPC and press [F] to mark a suspect.	你还没有标记任何人。\n回到场景靠近 NPC 按 [F] 标记你怀疑的对象。
+mark.submit	Submit Accusation	提交指认
+mark.back	Back [Esc]	返回场景 [Esc]
+mark.remove	Remove	移除标记
+confirm.title	Confirm Accusation	确认提交指认
+confirm.yes	Confirm	确认提交
+confirm.no	Reconsider	再想想
+confirm.body	You will accuse these {0} as imposters:\n\n{1}\n\nThe round ends immediately and can't be changed. Sure?	你将指认以下 {0} 人为伪人：\n\n{1}\n\n提交后本局立即结束，且无法修改。确定吗？
+confirm.bodyEmpty	You haven't marked anyone.\nSubmitting now counts as “found no imposters”.\n\nThe round ends immediately. Sure?	你还没有标记任何人。\n若直接提交，将视为“没有找出任何伪人”。\n\n提交后本局立即结束，确定吗？
+toast.marked	Marked “{0}” as a suspect (pending)	已标记「{0}」为嫌疑人（待提交）
+toast.unmarked	Unmarked “{0}”	已取消标记「{0}」
+result.win	All Uncovered!	全部识破！
+result.lose	Investigation Over	调查结束
+result.detail	Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}	指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的伪人是：\n{4}
+result.none	(none)	（无）
+result.replay	Play Again	再玩一次
+result.menu	Main Menu	返回主菜单
+kind.normal	Normal	普通人
+kind.doubao	AI Bot	豆包人
+kind.sixfinger	Six-Finger	六指人
+kind.scarysmile	Scary Smile	一笑变可怕人
+kind.framedrop	Frame-Drop	掉帧人
+kind.stitched	Stitched	拼接人
+kind.photomissing	Photo-Ghost	照片消失人
+kind.deflate	Deflate	变瘪人
