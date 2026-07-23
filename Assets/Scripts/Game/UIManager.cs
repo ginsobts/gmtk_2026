@@ -77,7 +77,15 @@ public class UIManager : MonoBehaviour
 
     // Toast
     Text _toastText;
+    CanvasGroup _toastGroup;
     Coroutine _toastCo;
+
+    // 表现：黑场过渡 / 相机 REC / HUD 数字跳动
+    CanvasGroup _fadeGroup;
+    Coroutine _fadeCo;
+    Image _recDot;
+    Text _recLabel;
+    int _lastFilm = int.MinValue, _lastMarked = int.MinValue;
 
     // ---------------- 构建 ----------------
 
@@ -106,6 +114,19 @@ public class UIManager : MonoBehaviour
         BuildMarkList();
         BuildResult();
         BuildToast();
+        BuildFadeOverlay();
+    }
+
+    void BuildFadeOverlay()
+    {
+        var go = MakePanel(_canvas.transform, "FadeOverlay", Color.black);
+        SetRect(go.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        go.GetComponent<Image>().raycastTarget = false;
+        _fadeGroup = go.AddComponent<CanvasGroup>();
+        _fadeGroup.alpha = 0f;
+        _fadeGroup.blocksRaycasts = false;
+        _fadeGroup.interactable = false;
+        go.transform.SetAsLastSibling();
     }
 
     void EnsureEventSystem()
@@ -125,6 +146,17 @@ public class UIManager : MonoBehaviour
         _hudRoot.transform.SetParent(_canvas.transform, false);
         SetRect(_hudRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         var hud = _hudRoot.transform;
+
+        // 探索态暗角（相机/相册等模式随 HUD 一起隐藏，不会进照片）
+        var vignette = new GameObject("Vignette", typeof(RectTransform));
+        vignette.transform.SetParent(hud, false);
+        var vimg = vignette.AddComponent<Image>();
+        vimg.sprite = GeneratedArt.VignetteSprite;
+        vimg.type = Image.Type.Simple;
+        vimg.color = new Color(1f, 1f, 1f, 0.7f);
+        vimg.raycastTarget = false;
+        SetRect(vignette.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40));
+        vignette.transform.SetAsFirstSibling();
 
         MakeIcon(hud, "FilmIcon", GeneratedArt.GetIconSprite(0),
             new Vector2(0, 1), new Vector2(28, -28), new Vector2(46, 46));
@@ -192,7 +224,9 @@ public class UIManager : MonoBehaviour
             _interactRoot.SetActive(false);
             return;
         }
+        bool wasActive = _interactRoot.activeSelf;
         _interactRoot.SetActive(true);
+        if (!wasActive) PlayShow(_interactRoot);
         _interactName.text = npc.marked ? npc.npcName + "（已标记）" : npc.npcName;
         if (_interactMarkLabel != null)
             _interactMarkLabel.text = npc.marked ? "取消标记 [F]" : "标记嫌疑人 [F]";
@@ -269,6 +303,18 @@ public class UIManager : MonoBehaviour
         _framedText = MakeText(_cameraRoot.transform, "Framed", "在镜头中：（无）", 30, TextAnchor.UpperCenter);
         SetRect(_framedText.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -72), new Vector2(1600, 46));
         _framedText.color = new Color(0.7f, 1f, 1f);
+
+        // 取景状态 REC 指示（左上角，闪烁）
+        var recDotGO = new GameObject("RecDot", typeof(RectTransform));
+        recDotGO.transform.SetParent(_cameraRoot.transform, false);
+        _recDot = recDotGO.AddComponent<Image>();
+        _recDot.sprite = GeneratedArt.RecDotSprite;
+        _recDot.color = new Color(1f, 0.25f, 0.25f, 1f);
+        _recDot.raycastTarget = false;
+        SetRect(_recDot.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(60, -60), new Vector2(28, 28));
+        _recLabel = MakeText(_cameraRoot.transform, "RecLabel", "REC", 28, TextAnchor.MiddleLeft);
+        _recLabel.color = new Color(1f, 0.35f, 0.35f);
+        SetRect(_recLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(88, -60), new Vector2(140, 32));
 
         // 底部操作栏（键位已标注；相机模式下鼠标用于瞄准，操作请用键盘）
         MakeButton(_cameraRoot.transform, "比个耶 [1]", 28, () => GameManager.Instance.OnCameraPose(false),
@@ -463,6 +509,7 @@ public class UIManager : MonoBehaviour
     {
         _toastText = MakeText(_canvas.transform, "Toast", "", 34, TextAnchor.MiddleCenter);
         SetRect(_toastText.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -180), new Vector2(1300, 80));
+        _toastGroup = _toastText.gameObject.AddComponent<CanvasGroup>();
         _toastText.gameObject.SetActive(false);
     }
 
@@ -473,6 +520,25 @@ public class UIManager : MonoBehaviour
         _filmText.text = "胶卷 " + film;
         _filmText.color = film <= 2 ? new Color(1f, 0.4f, 0.4f) : Color.white;
         _foundText.text = $"已标记 {marked}（伪人共 {total}）";
+
+        if (_lastFilm != int.MinValue && film != _lastFilm) StartCoroutine(PunchText(_filmText.rectTransform));
+        if (_lastMarked != int.MinValue && marked != _lastMarked) StartCoroutine(PunchText(_foundText.rectTransform));
+        _lastFilm = film; _lastMarked = marked;
+    }
+
+    IEnumerator PunchText(RectTransform rt)
+    {
+        if (rt == null) yield break;
+        float t = 0f, dur = 0.22f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float s = 1f + 0.35f * Mathf.Sin(k * Mathf.PI);
+            rt.localScale = Vector3.one * s;
+            yield return null;
+        }
+        rt.localScale = Vector3.one;
     }
 
     public void SetInteractPrompt(Npc npc) => ShowInteract(npc);
@@ -481,9 +547,11 @@ public class UIManager : MonoBehaviour
 
     public void ShowDialogue(string name, string line)
     {
+        bool wasActive = _dialogueRoot.activeSelf;
         _dialogueRoot.SetActive(true);
         _dialogueName.text = name;
         _dialogueLine.text = line;
+        if (!wasActive) PlayShow(_dialogueRoot);
     }
 
     public void HideDialogue()
@@ -496,6 +564,7 @@ public class UIManager : MonoBehaviour
     public void ShowCamera()
     {
         _cameraRoot.SetActive(true);
+        PlayShow(_cameraRoot);
     }
 
     public void HideCamera()
@@ -569,6 +638,11 @@ public class UIManager : MonoBehaviour
                 // 开口中心 = 单元位置 + _vfOffset，因此单元位置需减去偏移
                 _cameraUnit.anchoredPosition = local - _vfOffset;
             }
+
+            // REC 闪烁
+            float blink = Mathf.PingPong(Time.unscaledTime * 1.6f, 1f);
+            if (_recDot != null) _recDot.color = new Color(1f, 0.25f, 0.25f, 0.25f + 0.75f * blink);
+            if (_recLabel != null) _recLabel.color = new Color(1f, 0.35f, 0.35f, 0.35f + 0.65f * blink);
         }
     }
 
@@ -579,6 +653,7 @@ public class UIManager : MonoBehaviour
     {
         _albumEntries = entries;
         _albumRoot.SetActive(true);
+        PlayShow(_albumRoot);
         _albumTitle.text = title;
         ClearAlbumDynamic();
 
@@ -642,6 +717,7 @@ public class UIManager : MonoBehaviour
     public void ShowMarkList(List<Npc> marked)
     {
         _markListRoot.SetActive(true);
+        PlayShow(_markListRoot);
         _submitConfirmRoot.SetActive(false);
         ClearMarkDynamic();
 
@@ -687,6 +763,7 @@ public class UIManager : MonoBehaviour
             : "你还没有标记任何人。\n若直接提交，将视为“没有找出任何伪人”。\n\n提交后本局立即结束，确定吗？";
         _submitConfirmText.text = body;
         _submitConfirmRoot.SetActive(true);
+        PlayShow(_submitConfirmRoot);
     }
 
     public void HideSubmitConfirm()
@@ -706,6 +783,7 @@ public class UIManager : MonoBehaviour
     public void ShowResult(bool win, int correct, int wrong, int total, List<string> imposters, int photos)
     {
         _resultRoot.SetActive(true);
+        PlayShow(_resultRoot);
         _resultTitle.text = win ? "全部识破！" : "调查结束";
         _resultTitle.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.75f, 0.55f);
 
@@ -731,13 +809,134 @@ public class UIManager : MonoBehaviour
         _toastText.color = positive ? new Color(0.75f, 1f, 0.75f) : new Color(1f, 0.6f, 0.6f);
         _toastText.gameObject.SetActive(true);
         if (_toastCo != null) StopCoroutine(_toastCo);
-        _toastCo = StartCoroutine(HideToastAfter(2.2f));
+        _toastCo = StartCoroutine(ToastRoutine(2.2f));
     }
 
-    IEnumerator HideToastAfter(float t)
+    IEnumerator ToastRoutine(float hold)
     {
-        yield return new WaitForSeconds(t);
+        var rt = _toastText.rectTransform;
+        Vector2 baseP = new Vector2(0, -180);
+        // 滑入 + 淡入
+        float t = 0f;
+        while (t < 0.18f)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / 0.18f);
+            float e = 1f - (1f - k) * (1f - k);
+            _toastGroup.alpha = e;
+            rt.anchoredPosition = baseP + new Vector2(0, 30f * (1f - e));
+            yield return null;
+        }
+        _toastGroup.alpha = 1f;
+        rt.anchoredPosition = baseP;
+
+        yield return new WaitForSecondsRealtime(hold);
+
+        // 淡出
+        t = 0f;
+        while (t < 0.25f)
+        {
+            t += Time.unscaledDeltaTime;
+            _toastGroup.alpha = 1f - Mathf.Clamp01(t / 0.25f);
+            yield return null;
+        }
+        _toastGroup.alpha = 0f;
         _toastText.gameObject.SetActive(false);
+    }
+
+    // ---------------- 通用动效工具 ----------------
+
+    /// <summary>面板出现时淡入 + 轻微放大。</summary>
+    void PlayShow(GameObject panel)
+    {
+        if (panel == null) return;
+        var cg = panel.GetComponent<CanvasGroup>();
+        if (cg == null) cg = panel.AddComponent<CanvasGroup>();
+        StartCoroutine(ShowRoutine(cg, panel.transform as RectTransform));
+    }
+
+    IEnumerator ShowRoutine(CanvasGroup cg, RectTransform rt)
+    {
+        float t = 0f;
+        Vector3 baseScale = Vector3.one;
+        while (t < 0.16f)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / 0.16f);
+            float e = 1f - (1f - k) * (1f - k);
+            cg.alpha = e;
+            if (rt != null) rt.localScale = baseScale * (0.96f + 0.04f * e);
+            yield return null;
+        }
+        cg.alpha = 1f;
+        if (rt != null) rt.localScale = baseScale;
+    }
+
+    /// <summary>回合开始的黑场淡入（从全黑到亮）。</summary>
+    public void PlayFadeIn()
+    {
+        if (_fadeGroup == null) return;
+        if (_fadeCo != null) StopCoroutine(_fadeCo);
+        _fadeCo = StartCoroutine(FadeRoutine(1f, 0f, 0.45f));
+    }
+
+    IEnumerator FadeRoutine(float from, float to, float dur)
+    {
+        _fadeGroup.alpha = from;
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            _fadeGroup.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(t / dur));
+            yield return null;
+        }
+        _fadeGroup.alpha = to;
+    }
+
+    /// <summary>拍照后把刚拍的照片从取景框飞入屏幕角落。</summary>
+    public void PlayPhotoFly(Texture2D photo, Rect viewfinderScreenRect)
+    {
+        if (photo == null || _canvasRect == null) return;
+        StartCoroutine(PhotoFlyRoutine(photo, viewfinderScreenRect));
+    }
+
+    IEnumerator PhotoFlyRoutine(Texture2D photo, Rect vf)
+    {
+        // 起点：取景框中心（屏幕像素 -> 画布本地坐标）
+        Vector2 centerPx = new Vector2(vf.x + vf.width * 0.5f, vf.y + vf.height * 0.5f);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, centerPx, null, out var startLocal);
+
+        float ratio = _canvasRect.rect.width / Mathf.Max(1, Screen.width);
+        Vector2 startSize = new Vector2(vf.width, vf.height) * ratio;
+
+        var go = new GameObject("PhotoFly", typeof(RectTransform));
+        go.transform.SetParent(_canvas.transform, false);
+        var raw = go.AddComponent<RawImage>();
+        raw.texture = photo;
+        raw.raycastTarget = false;
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = startSize;
+        rt.anchoredPosition = startLocal;
+
+        // 终点：右下角
+        Vector2 endLocal = new Vector2(_canvasRect.rect.width * 0.5f - 130f, -_canvasRect.rect.height * 0.5f + 110f);
+        Vector2 endSize = startSize * 0.22f;
+
+        float t = 0f, dur = 0.5f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float e = 1f - Mathf.Pow(1f - k, 3f); // easeOutCubic
+            rt.anchoredPosition = Vector2.Lerp(startLocal, endLocal, e);
+            rt.sizeDelta = Vector2.Lerp(startSize, endSize, e);
+            rt.localRotation = Quaternion.Euler(0, 0, -12f * e);
+            raw.color = new Color(1, 1, 1, 1f - 0.85f * Mathf.Clamp01((k - 0.6f) / 0.4f));
+            yield return null;
+        }
+        Destroy(go);
     }
 
     // ---------------- UI 构建小工具 ----------------
@@ -808,6 +1007,7 @@ public class UIManager : MonoBehaviour
         img.color = new Color(0.25f, 0.28f, 0.36f, 0.98f);
         var btn = go.AddComponent<Button>();
         btn.onClick.AddListener(onClick);
+        go.AddComponent<UIButtonFeedback>();
         SetRect(go.GetComponent<RectTransform>(), anchor, anchor, anchor, anchoredPos, sizeDelta);
 
         var t = MakeText(go.transform, "Label", label, size, TextAnchor.MiddleCenter);

@@ -34,6 +34,12 @@ public class Npc : MonoBehaviour
     bool _revealedByPose;       // 因摆动作而露馅（六指 / 可怕笑）
     bool _deflated;             // 变瘪人已被接触
 
+    // 头顶标记 / 靠近提示
+    SpriteRenderer _marker;
+    bool _nearest;
+    float _pulseT;
+    float _markerPhase;
+
     public void Setup(string name, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer)
     {
         npcName = name;
@@ -53,7 +59,21 @@ public class Npc : MonoBehaviour
 
         _activeSprite = _normalSprite;
         _activeScale = _baseScale;
+
+        EnsureMarker();
+        _markerPhase = Random.value * Mathf.PI * 2f;
         RefreshColor();
+    }
+
+    void EnsureMarker()
+    {
+        if (_marker != null) return;
+        var go = new GameObject("Marker");
+        go.transform.SetParent(transform, false);
+        _marker = go.AddComponent<SpriteRenderer>();
+        _marker.sortingOrder = 20;
+        go.AddComponent<CameraFacingSprite>();
+        _marker.enabled = false;
     }
 
     void Update()
@@ -91,12 +111,53 @@ public class Npc : MonoBehaviour
                 RefreshColor();
             }
         }
+
+        UpdateMarker();
+    }
+
+    void UpdateMarker()
+    {
+        if (_marker == null) return;
+        var gm = GameManager.Instance;
+        bool playing = gm == null || gm.State == GameState.Playing;
+
+        // 相机/对话/结算态一律隐藏，避免出现在照片里。
+        bool show = playing && (marked || _nearest);
+        if (_marker.enabled != show) _marker.enabled = show;
+        if (!show) return;
+
+        if (marked)
+        {
+            _marker.sprite = GeneratedArt.SoftDotSprite;
+            _marker.color = new Color(1f, 0.55f, 0.2f, 1f);
+        }
+        else
+        {
+            _marker.sprite = GeneratedArt.DownArrowSprite;
+            _marker.color = new Color(0.9f, 1f, 1f, 0.95f);
+        }
+
+        // 头顶定位 + 上下浮动
+        float bob = Mathf.Sin(Time.unscaledTime * 3.2f + _markerPhase) * 0.08f;
+        Vector3 top = _renderer != null ? _renderer.bounds.center + Vector3.up * (_renderer.bounds.extents.y + 0.45f) : transform.position + Vector3.up * 2f;
+        _marker.transform.position = top + Vector3.up * bob;
+
+        if (_pulseT > 0f) _pulseT -= Time.unscaledDeltaTime;
+        float pulse = Mathf.Max(0f, _pulseT) / 0.3f;
+        float s = 0.32f * (1f + 0.6f * pulse);
+        _marker.transform.localScale = Vector3.one * s;
     }
 
     public void SetMarked(bool value)
     {
         marked = value;
+        if (value) _pulseT = 0.3f;
         RefreshColor();
+    }
+
+    public void SetNearest(bool value)
+    {
+        _nearest = value;
     }
 
     public void SetInFrame(bool value)

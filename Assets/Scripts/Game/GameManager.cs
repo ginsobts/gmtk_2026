@@ -94,6 +94,55 @@ public class GameManager : MonoBehaviour
         BuildTownProps();
         BuildForestBoundary();
         BuildCloudLayer();
+        BuildAmbientParticles();
+    }
+
+    void BuildAmbientParticles()
+    {
+        var go = new GameObject("Ambient Dust");
+        go.transform.position = new Vector3(0f, 3f, 0f);
+        var ps = go.AddComponent<ParticleSystem>();
+
+        var main = ps.main;
+        main.loop = true;
+        main.startLifetime = 9f;
+        main.startSpeed = 0.15f;
+        main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.16f);
+        main.startColor = new Color(1f, 1f, 0.95f, 0.25f);
+        main.maxParticles = 120;
+        main.gravityModifier = -0.01f;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+
+        var emission = ps.emission;
+        emission.rateOverTime = 14f;
+
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Box;
+        shape.scale = new Vector3(34f, 6f, 34f);
+
+        var vel = ps.velocityOverLifetime;
+        vel.enabled = true;
+        vel.space = ParticleSystemSimulationSpace.World;
+        vel.x = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
+        vel.y = new ParticleSystem.MinMaxCurve(-0.05f, 0.08f);
+        vel.z = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
+
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        var grad = new Gradient();
+        grad.SetKeys(
+            new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+            new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(1f, 0.75f), new GradientAlphaKey(0f, 1f) });
+        col.color = grad;
+
+        var renderer = go.GetComponent<ParticleSystemRenderer>();
+        // 用 Sprites/Default（已在 Always Included），避免打包时粒子材质被剥离变粉。
+        var mat = new Material(Shader.Find("Sprites/Default"));
+        var dotTex = GeneratedArt.SoftDotSprite.texture;
+        mat.mainTexture = dotTex;
+        renderer.material = mat;
+        renderer.sortingOrder = 6;
+        ps.Play();
     }
 
     void BuildTownProps()
@@ -118,38 +167,38 @@ public class GameManager : MonoBehaviour
         {
             float scale = i % 12 == 0 ? 1.05f : 0.9f;
             BuildCard(forestRoot, "Forest North " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(i, 0f, 19f), scale, 1);
+                new Vector3(i, 0f, 19f), scale, 1, true);
             BuildCard(forestRoot, "Forest South " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(i, 0f, -19f), scale, 1);
+                new Vector3(i, 0f, -19f), scale, 1, true);
         }
         for (int i = -12; i <= 12; i += 6)
         {
             BuildCard(forestRoot, "Forest East " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(19f, 0f, i), 0.98f, 1);
+                new Vector3(19f, 0f, i), 0.98f, 1, true);
             BuildCard(forestRoot, "Forest West " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(-19f, 0f, i), 0.98f, 1);
+                new Vector3(-19f, 0f, i), 0.98f, 1, true);
         }
 
         // 内层：低矮灌木和松树形成高—中—低三层，边缘不会显得像一堵平墙。
         for (int i = -15; i <= 15; i += 5)
         {
             BuildCard(forestRoot, "North Shrub " + i, GeneratedArt.GetForestSprite(1),
-                new Vector3(i, 0f, 15.6f), 0.75f, 2);
+                new Vector3(i, 0f, 15.6f), 0.75f, 2, true);
             BuildCard(forestRoot, "South Shrub " + i, GeneratedArt.GetForestSprite(1),
-                new Vector3(i, 0f, -15.6f), 0.75f, 2);
+                new Vector3(i, 0f, -15.6f), 0.75f, 2, true);
         }
         for (int i = -10; i <= 10; i += 5)
         {
             BuildCard(forestRoot, "East Shrub " + i, GeneratedArt.GetForestSprite(1),
-                new Vector3(15.6f, 0f, i), 0.7f, 2);
+                new Vector3(15.6f, 0f, i), 0.7f, 2, true);
             BuildCard(forestRoot, "West Shrub " + i, GeneratedArt.GetForestSprite(1),
-                new Vector3(-15.6f, 0f, i), 0.7f, 2);
+                new Vector3(-15.6f, 0f, i), 0.7f, 2, true);
         }
 
-        BuildCard(forestRoot, "Pine NW", GeneratedArt.GetForestSprite(3), new Vector3(-16f, 0f, 14f), 1.05f, 3);
-        BuildCard(forestRoot, "Pine NE", GeneratedArt.GetForestSprite(3), new Vector3(16f, 0f, 14f), 1.05f, 3);
-        BuildCard(forestRoot, "Pine SW", GeneratedArt.GetForestSprite(3), new Vector3(-16f, 0f, -14f), 1.05f, 3);
-        BuildCard(forestRoot, "Pine SE", GeneratedArt.GetForestSprite(3), new Vector3(16f, 0f, -14f), 1.05f, 3);
+        BuildCard(forestRoot, "Pine NW", GeneratedArt.GetForestSprite(3), new Vector3(-16f, 0f, 14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine NE", GeneratedArt.GetForestSprite(3), new Vector3(16f, 0f, 14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine SW", GeneratedArt.GetForestSprite(3), new Vector3(-16f, 0f, -14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine SE", GeneratedArt.GetForestSprite(3), new Vector3(16f, 0f, -14f), 1.05f, 3, true);
     }
 
     void BuildCloudLayer()
@@ -160,7 +209,7 @@ public class GameManager : MonoBehaviour
         BuildCloud(cloudRoot, "Cloud C", GeneratedArt.GetForestSprite(4), new Vector3(12f, 7.5f, -12f), 1f, 0.26f);
     }
 
-    void BuildCard(Transform parent, string name, Sprite sprite, Vector3 position, float scale, int sortingOrder)
+    void BuildCard(Transform parent, string name, Sprite sprite, Vector3 position, float scale, int sortingOrder, bool sway = false)
     {
         var root = new GameObject(name);
         root.transform.SetParent(parent, false);
@@ -173,6 +222,7 @@ public class GameManager : MonoBehaviour
         renderer.sprite = sprite;
         renderer.sortingOrder = sortingOrder;
         card.AddComponent<CameraFacingSprite>();
+        if (sway) card.AddComponent<Sway>();
     }
 
     void BuildCloud(Transform parent, string name, Sprite sprite, Vector3 position, float scale, float speed)
@@ -218,8 +268,23 @@ public class GameManager : MonoBehaviour
     {
         var root = new GameObject(name);
 
+        // 脚下软阴影（平铺在地面上）
+        var shadowGO = new GameObject("Shadow");
+        shadowGO.transform.SetParent(root.transform, false);
+        shadowGO.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        shadowGO.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+        shadowGO.transform.localScale = Vector3.one * scale * 0.8f;
+        var shadow = shadowGO.AddComponent<SpriteRenderer>();
+        shadow.sprite = GeneratedArt.BlobShadowSprite;
+        shadow.sortingOrder = 4;
+
+        // 呼吸浮动包装物（Npc 的位移/缩放逻辑作用在 Portrait 上，互不干扰）
+        var bob = new GameObject("Bob");
+        bob.transform.SetParent(root.transform, false);
+        bob.AddComponent<IdleBob>();
+
         var portraitGO = new GameObject("Portrait");
-        portraitGO.transform.SetParent(root.transform, false);
+        portraitGO.transform.SetParent(bob.transform, false);
         portraitGO.transform.localScale = Vector3.one * scale;
         body = portraitGO.AddComponent<SpriteRenderer>();
         body.sprite = portrait;
@@ -255,6 +320,7 @@ public class GameManager : MonoBehaviour
         UI.SetHudVisible(true);
         UI.SetInteractPrompt(null);
         RefreshHud();
+        UI.PlayFadeIn();
     }
 
     void SpawnNpcs(RoundDef round)
@@ -536,6 +602,16 @@ public class GameManager : MonoBehaviour
         RefreshHud();
         UI.ShowToast($"咔嚓！进相册了（剩余胶卷 {_film}）", true);
 
+        // 拍照手感：先来一下震屏（此时已抓完帧，不影响成片），
+        // 再把刚拍的照片“飞”出去，最后短暂定格一下。
+        var rig = _mainCamera != null ? _mainCamera.GetComponent<CameraRig>() : null;
+        if (rig != null) rig.Shake(0.16f, 0.18f);
+        UI.PlayPhotoFly(tex, vf);
+
+        Time.timeScale = 0f;
+        yield return new WaitForSecondsRealtime(0.06f);
+        Time.timeScale = 1f;
+
         _capturing = false;
     }
 
@@ -544,6 +620,11 @@ public class GameManager : MonoBehaviour
     /// <summary>由 PlayerController 每帧上报最近的可交互 NPC。</summary>
     public void UpdateNearest(Npc npc)
     {
+        if (_nearestNpc != npc)
+        {
+            if (_nearestNpc != null) _nearestNpc.SetNearest(false);
+            if (npc != null) npc.SetNearest(true);
+        }
         _nearestNpc = npc;
         UI.ShowInteract(npc);
     }

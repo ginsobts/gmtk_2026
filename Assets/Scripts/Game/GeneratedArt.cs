@@ -26,6 +26,9 @@ public static class GeneratedArt
     static Sprite _playerSprite;
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
+    // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
+    static Sprite _blobShadow, _softDot, _downArrow, _vignette, _recDot;
+
     public static Texture2D GroundTexture =>
         _ground ??= Resources.Load<Texture2D>("Art/town_ground_texture");
 
@@ -148,6 +151,78 @@ public static class GeneratedArt
         }
 
         return _forestSprites[Mathf.Abs(index) % _forestSprites.Length];
+    }
+
+    // ---------------- 程序化生成的表现贴图 ----------------
+
+    /// <summary>脚下软阴影（黑色径向衰减）。</summary>
+    public static Sprite BlobShadowSprite => _blobShadow ??= MakeRadialSprite(64, new Color(0f, 0f, 0f, 0.45f), 2.2f);
+
+    /// <summary>白色软圆点（粒子 / 标记徽章 复用，按需染色）。</summary>
+    public static Sprite SoftDotSprite => _softDot ??= MakeRadialSprite(64, Color.white, 1.6f);
+
+    /// <summary>指向下方的实心三角（靠近可交互提示）。</summary>
+    public static Sprite DownArrowSprite => _downArrow ??= MakeDownTriangleSprite(48);
+
+    /// <summary>相机模式暗角（中间透明、四周变暗）。当前保留备用。</summary>
+    public static Sprite VignetteSprite => _vignette ??= MakeVignetteSprite(256, 0.55f);
+
+    /// <summary>REC 小红点（实心圆）。</summary>
+    public static Sprite RecDotSprite => _recDot ??= MakeRadialSprite(32, new Color(1f, 0.25f, 0.25f, 1f), 6f);
+
+    static Sprite MakeRadialSprite(int size, Color color, float falloff)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        float r = size * 0.5f;
+        var px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f - r) / r;
+                float dy = (y + 0.5f - r) / r;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(1f - d);
+                a = Mathf.Pow(a, falloff);
+                px[y * size + x] = new Color(color.r, color.g, color.b, color.a * a);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    static Sprite MakeDownTriangleSprite(int size)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        var px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // 顶宽底尖，指向下方（y 向上，顶部 y 大）
+                float t = y / (float)(size - 1);              // 0 底 -> 1 顶
+                float halfWidth = t * 0.5f;                    // 顶部最宽
+                float cx = x / (float)(size - 1) - 0.5f;
+                bool inside = Mathf.Abs(cx) <= halfWidth;
+                px[y * size + x] = inside ? Color.white : new Color(1, 1, 1, 0);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    static Sprite MakeVignetteSprite(int size, float strength)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        float r = size * 0.5f;
+        var px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f - r) / r;
+                float dy = (y + 0.5f - r) / r;
+                float d = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+                float a = Mathf.SmoothStep(0.55f, 1f, d) * strength;
+                px[y * size + x] = new Color(0, 0, 0, a);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
     }
 
     static Sprite CreateSprite(Texture2D texture, float x, float top, float width, float height)
