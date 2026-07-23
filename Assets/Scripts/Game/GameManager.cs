@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum GameState { Playing, Dialogue, Camera, Album, Result }
+public enum GameState { Playing, Dialogue, Camera, Album, MarkList, Result }
 
 /// <summary>相册里的一张照片：截图 + 拍摄时处于取景框内的 NPC 名单。</summary>
 public class PhotoEntry
@@ -29,7 +29,7 @@ public class GameManager : MonoBehaviour
     public List<PhotoEntry> Album { get; private set; } = new List<PhotoEntry>();
 
     int _film;
-    int _imposterFound;
+    bool _submitPending;   // 指认列表里“提交”确认弹窗是否打开
 
     Transform _player;
     Transform _npcRoot;
@@ -239,7 +239,7 @@ public class GameManager : MonoBehaviour
 
         SpawnNpcs();
         _film = filmMax;
-        _imposterFound = 0;
+        _submitPending = false;
         State = GameState.Playing;
 
         UI.HideAllPanels();
@@ -294,7 +294,29 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void RefreshHud() => UI.SetHud(_film, _imposterFound, imposterCount);
+    void RefreshHud() => UI.SetHud(_film, MarkedCount, imposterCount);
+
+    /// <summary>当前被玩家标记为嫌疑人的数量。</summary>
+    public int MarkedCount
+    {
+        get
+        {
+            int c = 0;
+            foreach (var n in Npcs) if (n != null && n.marked) c++;
+            return c;
+        }
+    }
+
+    /// <summary>当前所有被标记的 NPC。</summary>
+    public List<Npc> MarkedNpcs
+    {
+        get
+        {
+            var list = new List<Npc>();
+            foreach (var n in Npcs) if (n != null && n.marked) list.Add(n);
+            return list;
+        }
+    }
 
     // ---------------- 输入热键 ----------------
 
@@ -305,6 +327,7 @@ public class GameManager : MonoBehaviour
             case GameState.Playing:
                 if (Input.GetKeyDown(KeyCode.Space)) OpenCamera();
                 else if (Input.GetKeyDown(KeyCode.Tab)) OpenAlbum();
+                else if (Input.GetKeyDown(KeyCode.M)) OpenMarkList();
                 break;
 
             case GameState.Camera:
@@ -320,6 +343,14 @@ public class GameManager : MonoBehaviour
                     CloseAlbum();
                 break;
 
+            case GameState.MarkList:
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    if (_submitPending) CancelSubmit();
+                    else CloseMarkList();
+                }
+                break;
+
             case GameState.Dialogue:
                 if (Input.GetKeyDown(KeyCode.Escape)) EndDialogue();
                 break;
@@ -330,7 +361,7 @@ public class GameManager : MonoBehaviour
 
     public void BeginDialogue(Npc npc)
     {
-        if (State != GameState.Playing || npc == null || npc.caught) return;
+        if (State != GameState.Playing || npc == null) return;
         _dialogueNpc = npc;
         _dialogueLines = GameContent.GetDialogue(npc.kind);
         _dialogueIndex = 0;
@@ -394,7 +425,7 @@ public class GameManager : MonoBehaviour
         _framed.Clear();
         foreach (var npc in Npcs)
         {
-            if (npc == null || npc.caught) continue;
+            if (npc == null) continue;
             Vector3 sp = npc.GetScreenPoint(_mainCamera);
             bool inside = sp.z > 0f && vf.Contains(new Vector2(sp.x, sp.y));
             npc.SetInFrame(inside);
@@ -434,7 +465,7 @@ public class GameManager : MonoBehaviour
         var framedNow = new List<Npc>();
         foreach (var npc in Npcs)
         {
-            if (npc == null || npc.caught) continue;
+            if (npc == null) continue;
             Vector3 sp = npc.GetScreenPoint(_mainCamera);
             if (sp.z > 0f && vf.Contains(new Vector2(sp.x, sp.y)))
                 framedNow.Add(npc);
@@ -476,7 +507,6 @@ public class GameManager : MonoBehaviour
         UI.ShowToast($"咔嚓！进相册了（剩余胶卷 {_film}）", true);
 
         _capturing = false;
-        CheckLose();
     }
 
     // ---------------- 靠近角色的交互（探索态） ----------------
@@ -498,17 +528,16 @@ public class GameManager : MonoBehaviour
         if (State == GameState.Playing && _nearestNpc != null) ViewCharacterPhotos(_nearestNpc);
     }
 
-    public void AccuseNearest()
+    public void ToggleMarkNearest()
     {
-        if (State == GameState.Playing && _nearestNpc != null) Accuse(_nearestNpc);
+        if (State == GameState.Playing && _nearestNpc != null) ToggleMark(_nearestNpc);
     }
 
     // ---------------- 相册 / 照片查看 ----------------
 
     public void OpenAlbum()
     {
-        if (State != GameState.Playing && State != GameState.Camera) return;
-        if (State == GameState.Camera) CloseCamera();
+        if (State != GameState.Playing) return;
         State = GameState.Album;
         UI.SetHudVisible(false);
         UI.ShowAlbum(Album, $"相册 —— 全部照片（{Album.Count} 张）");
@@ -535,49 +564,92 @@ public class GameManager : MonoBehaviour
         UI.SetHudVisible(true);
     }
 
-    // ---------------- 指认（靠近角色，直接指认） ----------------
+    // ---------------- 标记嫌疑人（不告知对错） ----------------
 
-    /// <summary>指认某个角色为伪人。正确抓获，错误浪费一张胶卷。</summary>
-    public void Accuse(Npc npc)
+    /// <summary>标记 / 取消标记某个角色为嫌疑人。仅做标记，不透露正确与否。</summary>
+    public void ToggleMark(Npc npc)
     {
-        if (State != GameState.Playing || npc == null || npc.caught || npc.accusedWrong) return;
-
-        if (npc.IsImposter)
-        {
-            npc.MarkCaught();
-            _imposterFound++;
-            UI.ShowToast($"指认成功！{npc.npcName} 是伪人（{KindLabel(npc.kind)}）", true);
-            RefreshHud();
-            UI.ShowInteract(null);
-
-            if (_imposterFound >= imposterCount)
-                EndRound(true);
-        }
-        else
-        {
-            npc.MarkAccusedWrong();
-            _film--;
-            UI.ShowToast($"指认错误！{npc.npcName} 是普通人，浪费一张胶卷", false);
-            RefreshHud();
-            CheckLose();
-        }
+        if (State != GameState.Playing || npc == null) return;
+        npc.SetMarked(!npc.marked);
+        UI.ShowToast(npc.marked ? $"已标记「{npc.npcName}」为嫌疑人（待提交）"
+                                : $"已取消标记「{npc.npcName}」", npc.marked);
+        RefreshHud();
+        UI.ShowInteract(npc); // 刷新按钮文案（标记 / 取消标记）
     }
 
-    void CheckLose()
+    // ---------------- 指认列表 / 提交 ----------------
+
+    public void OpenMarkList()
     {
-        if (_film <= 0 && _imposterFound < imposterCount)
-        {
-            if (State == GameState.Album) CloseAlbum();
-            EndRound(false);
-        }
+        if (State != GameState.Playing) return;
+        State = GameState.MarkList;
+        _submitPending = false;
+        UI.SetHudVisible(false);
+        UI.ShowMarkList(MarkedNpcs);
     }
 
-    void EndRound(bool win)
+    public void CloseMarkList()
+    {
+        if (State != GameState.MarkList) return;
+        _submitPending = false;
+        State = GameState.Playing;
+        UI.HideMarkList();
+        UI.SetHudVisible(true);
+    }
+
+    /// <summary>在列表里移除某个标记，然后刷新列表。</summary>
+    public void UnmarkFromList(Npc npc)
+    {
+        if (State != GameState.MarkList || npc == null) return;
+        npc.SetMarked(false);
+        RefreshHud();
+        UI.ShowMarkList(MarkedNpcs);
+    }
+
+    /// <summary>点击“提交”：弹出确认框，告知玩家提交后游戏结束。</summary>
+    public void RequestSubmit()
+    {
+        if (State != GameState.MarkList) return;
+        _submitPending = true;
+        UI.ShowSubmitConfirm(MarkedNpcs);
+    }
+
+    public void CancelSubmit()
+    {
+        if (State != GameState.MarkList) return;
+        _submitPending = false;
+        UI.HideSubmitConfirm();
+    }
+
+    /// <summary>确认提交：结算所有标记，游戏结束。</summary>
+    public void ConfirmSubmit()
+    {
+        if (State != GameState.MarkList) return;
+        _submitPending = false;
+
+        int correct = 0, wrong = 0;
+        foreach (var n in Npcs)
+        {
+            if (n == null || !n.marked) continue;
+            if (n.IsImposter) correct++; else wrong++;
+        }
+        bool win = correct == imposterCount && wrong == 0;
+        EndRound(win, correct, wrong);
+    }
+
+    void EndRound(bool win, int correct, int wrong)
     {
         State = GameState.Result;
+
+        // 结算时揭示全部真正的伪人
+        var imposters = new List<string>();
+        foreach (var n in Npcs)
+            if (n != null && n.IsImposter)
+                imposters.Add($"{n.npcName}（{KindLabel(n.kind)}）");
+
         UI.HideAllPanels();
         UI.SetHudVisible(false);
-        UI.ShowResult(win, _imposterFound, imposterCount, Album.Count);
+        UI.ShowResult(win, correct, wrong, imposterCount, imposters, Album.Count);
     }
 
     public static string KindLabel(NpcKind k) => GameContent.KindLabel(k);

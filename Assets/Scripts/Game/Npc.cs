@@ -14,8 +14,7 @@ public class Npc : MonoBehaviour
     public string npcName;
     public NpcKind kind;
     public int characterIndex;
-    public bool caught;         // 已被正确指认
-    public bool accusedWrong;   // 被误判过
+    public bool marked;         // 玩家已标记为嫌疑人（未提交前不告知对错）
 
     public bool IsImposter => kind != NpcKind.Normal;
     public PoseType CurrentPose => _pose;
@@ -44,8 +43,7 @@ public class Npc : MonoBehaviour
         _baseScale = renderer != null ? renderer.transform.localScale : Vector3.one;
         _basePortraitPos = renderer != null ? renderer.transform.localPosition : Vector3.zero;
 
-        caught = false;
-        accusedWrong = false;
+        marked = false;
         _inFrame = false;
         _pose = PoseType.None;
         _revealedByPose = false;
@@ -58,7 +56,7 @@ public class Npc : MonoBehaviour
 
     void Update()
     {
-        if (_renderer == null || caught) return;
+        if (_renderer == null) return;
 
         var gm = GameManager.Instance;
 
@@ -93,15 +91,11 @@ public class Npc : MonoBehaviour
         }
     }
 
-    public void MarkCaught()
+    public void SetMarked(bool value)
     {
-        caught = true;
-        _renderer.transform.localPosition = _basePortraitPos;
-        _renderer.enabled = true;
+        marked = value;
         RefreshColor();
     }
-
-    public void MarkAccusedWrong() => accusedWrong = true;
 
     public void SetInFrame(bool value)
     {
@@ -164,12 +158,12 @@ public class Npc : MonoBehaviour
     {
         if (_renderer == null) return;
 
-        if (caught)
-            _renderer.color = new Color(0.5f, 0.5f, 0.5f, 1f);
-        else if (_revealedByPose || _deflated)
+        if (_revealedByPose || _deflated)
             _renderer.color = new Color(1f, 0.82f, 0.82f, 1f); // 露馅：略带红色警示
         else if (_inFrame)
             _renderer.color = new Color(0.75f, 1f, 1f, 1f);     // 在镜头中：轻微高亮
+        else if (marked)
+            _renderer.color = new Color(1f, 0.85f, 0.45f, 1f);  // 已标记为嫌疑人：橙黄
         else
             _renderer.color = Color.white;
     }

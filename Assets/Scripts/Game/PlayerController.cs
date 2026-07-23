@@ -24,7 +24,7 @@ public class PlayerController : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.E)) gm.BeginDialogue(_nearest);
             else if (Input.GetKeyDown(KeyCode.Q)) gm.ViewCharacterPhotos(_nearest);
-            else if (Input.GetKeyDown(KeyCode.F)) gm.Accuse(_nearest);
+            else if (Input.GetKeyDown(KeyCode.F)) gm.ToggleMark(_nearest);
         }
     }
 
@@ -47,7 +47,7 @@ public class PlayerController : MonoBehaviour
         float bestDist = interactRange;
         foreach (var npc in GameManager.Instance.Npcs)
         {
-            if (npc == null || npc.caught) continue;
+            if (npc == null) continue;
             float d = Vector3.Distance(transform.position, npc.transform.position);
             if (d < bestDist)
             {
