@@ -48,12 +48,16 @@ public class UIManager : MonoBehaviour
     Vector2 _shutterHandRestPosition;
     Coroutine _shutterHandCo;
 
-    // 相机外壳开口测量值（digital_camera_overlay.png：开口约占外壳 89.8% 宽、79.8% 高，几乎居中、略偏上）
-    const float VfW = 820f;                 // 取景框/开口宽（画布参考单位）
-    const float VfH = 486f;                 // 取景框/开口高（≈ VfW / 1.688 保持开口比例）
-    const float BodyW = 913f;               // 外壳宽 = VfW / 0.898
-    const float BodyH = 609f;               // 外壳高 = VfH / 0.798
-    static readonly Vector2 VfOffset = new Vector2(0f, 8f); // 开口中心相对外壳中心的偏移
+    // 相机外壳按其原始比例(1.5)铺满 BodyW×BodyH。
+    const float BodyW = 913f;               // 外壳宽（画布参考单位）
+    const float BodyH = 609f;               // 外壳高
+
+    // 取景开口尺寸/偏移（画布单位）。运行时从外壳贴图的透明窟窿自动量取，
+    // 使“截图矩形”与玩家透过的开口严格重合（所见即所拍）。
+    // 量取失败时回退到实测值：开口≈64.0%宽 × 63.8%高，中心上移约 8。
+    float _vfW = 0.640f * BodyW;
+    float _vfH = 0.638f * BodyH;
+    Vector2 _vfOffset = new Vector2(0f, 8f);
 
     // 照片查看器（全部 / 单角色）
     GameObject _albumRoot;
@@ -219,6 +223,9 @@ public class UIManager : MonoBehaviour
 
     void BuildCamera()
     {
+        // 先从外壳贴图量出真实取景开口，让截图矩形与开口严格重合。
+        ResolveViewfinderMetrics();
+
         // 完全不压暗，保证取景开口里看到的亮度/颜色和拍出的照片一致（所见即所拍）。
         _cameraRoot = MakePanel(_canvas.transform, "Camera", new Color(0f, 0f, 0f, 0f));
         SetRect(_cameraRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -234,7 +241,9 @@ public class UIManager : MonoBehaviour
         cameraBodyGO.transform.SetParent(_cameraUnit, false);
         _cameraBody = cameraBodyGO.AddComponent<Image>();
         _cameraBody.sprite = GeneratedArt.DigitalCameraOverlaySprite;
-        _cameraBody.preserveAspect = true;
+        // 精确铺满 BodyW×BodyH（外壳原生比例 1.5 与 913:609≈1.499 几乎一致，
+        // 关掉 preserveAspect 避免亚像素黑边，使开口与量取的矩形严格对应）。
+        _cameraBody.preserveAspect = false;
         _cameraBody.raycastTarget = false;
         SetRect(_cameraBody.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(BodyW, BodyH));
 
@@ -242,7 +251,7 @@ public class UIManager : MonoBehaviour
         var vfGO = new GameObject("Viewfinder", typeof(RectTransform));
         vfGO.transform.SetParent(_cameraUnit, false);
         _viewfinder = vfGO.GetComponent<RectTransform>();
-        SetRect(_viewfinder, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), VfOffset, new Vector2(VfW, VfH));
+        SetRect(_viewfinder, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), _vfOffset, new Vector2(_vfW, _vfH));
         MakeCrosshair(_viewfinder, new Color(1f, 0.95f, 0.4f, 0.9f));
 
         // 手放在相机顶部快门上，点击/按空格时向下压。随相机整体移动。
@@ -275,6 +284,74 @@ public class UIManager : MonoBehaviour
         _cameraRoot.SetActive(false);
     }
 
+    /// <summary>
+    /// 从相机外壳贴图中央的透明窟窿量取真实取景开口，换算成画布单位写入
+    /// _vfW / _vfH / _vfOffset。这样截图裁剪矩形与玩家透过的开口严格重合。
+    /// 贴图不可读或量取异常时保留实测回退值。
+    /// </summary>
+    void ResolveViewfinderMetrics()
+    {
+        var sprite = GeneratedArt.DigitalCameraOverlaySprite;
+        var tex = sprite != null ? sprite.texture : null;
+        if (tex == null || !tex.isReadable) return;
+
+        try
+        {
+            int tw = tex.width, th = tex.height;
+            Color32[] px = tex.GetPixels32();      // 索引 0 = 左下角，行优先，y 向上
+            const byte AThresh = 40;
+
+            int cx = tw / 2, cy = th / 2;
+            if (px[cy * tw + cx].a >= AThresh) return; // 中心不透明，说明假设不成立，回退
+
+            var visited = new bool[tw * th];
+            var stack = new Stack<int>();
+            int start = cy * tw + cx;
+            visited[start] = true;
+            stack.Push(start);
+
+            int minx = cx, maxx = cx, miny = cy, maxy = cy;
+            while (stack.Count > 0)
+            {
+                int idx = stack.Pop();
+                int x = idx % tw, y = idx / tw;
+                if (x < minx) minx = x;
+                if (x > maxx) maxx = x;
+                if (y < miny) miny = y;
+                if (y > maxy) maxy = y;
+
+                if (x > 0)      TryPushTransparent(px, visited, stack, idx - 1, AThresh);
+                if (x < tw - 1) TryPushTransparent(px, visited, stack, idx + 1, AThresh);
+                if (y > 0)      TryPushTransparent(px, visited, stack, idx - tw, AThresh);
+                if (y < th - 1) TryPushTransparent(px, visited, stack, idx + tw, AThresh);
+            }
+
+            float holeW = maxx - minx + 1;
+            float holeH = maxy - miny + 1;
+            float centerX = (minx + maxx + 1) * 0.5f;          // 像素，x 向右
+            float centerYUp = (miny + maxy + 1) * 0.5f;        // 像素，y 向上
+
+            _vfW = holeW / tw * BodyW;
+            _vfH = holeH / th * BodyH;
+            _vfOffset = new Vector2(
+                (centerX / tw - 0.5f) * BodyW,
+                (centerYUp / th - 0.5f) * BodyH);
+        }
+        catch
+        {
+            // 任意异常都保留回退常量
+        }
+    }
+
+    static void TryPushTransparent(Color32[] px, bool[] visited, Stack<int> stack, int idx, byte aThresh)
+    {
+        if (!visited[idx] && px[idx].a < aThresh)
+        {
+            visited[idx] = true;
+            stack.Push(idx);
+        }
+    }
+
     void BuildAlbum()
     {
         _albumRoot = MakePanel(_canvas.transform, "Album", new Color(0.05f, 0.06f, 0.09f, 0.97f));
@@ -297,7 +374,7 @@ public class UIManager : MonoBehaviour
         _albumBigImage.color = Color.white;
         _albumFitter = _albumBigImage.gameObject.AddComponent<AspectRatioFitter>();
         _albumFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-        _albumFitter.aspectRatio = 1.687f;
+        _albumFitter.aspectRatio = _vfW / _vfH;
 
         _albumCaption = MakeText(_albumRoot.transform, "ACaption", "", 26, TextAnchor.UpperCenter);
         SetRect(_albumCaption.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 118), new Vector2(1180, 44));
@@ -479,12 +556,12 @@ public class UIManager : MonoBehaviour
                     _canvasRect, Input.mousePosition, null, out local))
             {
                 // 夹取取景框中心，保证开口整体不出画布
-                float maxX = _canvasRect.rect.width * 0.5f - VfW * 0.5f;
-                float maxY = _canvasRect.rect.height * 0.5f - VfH * 0.5f;
+                float maxX = _canvasRect.rect.width * 0.5f - _vfW * 0.5f;
+                float maxY = _canvasRect.rect.height * 0.5f - _vfH * 0.5f;
                 local.x = Mathf.Clamp(local.x, -maxX, maxX);
                 local.y = Mathf.Clamp(local.y, -maxY, maxY);
-                // 开口中心 = 单元位置 + VfOffset，因此单元位置需减去偏移
-                _cameraUnit.anchoredPosition = local - VfOffset;
+                // 开口中心 = 单元位置 + _vfOffset，因此单元位置需减去偏移
+                _cameraUnit.anchoredPosition = local - _vfOffset;
             }
         }
     }
