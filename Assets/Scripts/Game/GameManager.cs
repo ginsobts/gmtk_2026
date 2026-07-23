@@ -237,7 +237,16 @@ public class GameManager : MonoBehaviour
             if (entry.image != null) Destroy(entry.image);
         Album.Clear();
 
-        SpawnNpcs();
+        // 关卡参数来自 rounds.txt（缺省沿用 Inspector 里的默认值）。
+        var round = GameContent.GetDefaultRound();
+        if (round != null)
+        {
+            npcCount = round.npcCount;
+            imposterCount = round.imposterCount;
+            filmMax = round.film;
+        }
+
+        SpawnNpcs(round);
         _film = filmMax;
         _submitPending = false;
         State = GameState.Playing;
@@ -248,37 +257,59 @@ public class GameManager : MonoBehaviour
         RefreshHud();
     }
 
-    void SpawnNpcs()
+    void SpawnNpcs(RoundDef round)
     {
         foreach (var n in Npcs)
             if (n != null) Destroy(n.gameObject);
         Npcs.Clear();
 
-        var kinds = new List<NpcKind>();
-        var imposterPool = new List<NpcKind>
-        {
-            NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
-            NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate
-        };
-        Shuffle(imposterPool);
-        for (int i = 0; i < imposterCount && i < imposterPool.Count; i++)
-            kinds.Add(imposterPool[i]);
-        while (kinds.Count < npcCount)
-            kinds.Add(NpcKind.Normal);
-        Shuffle(kinds);
+        // 选出参与本关的角色（表里可能多于 npcCount，随机取一批）。
+        var pool = new List<CharacterDef>(GameContent.Characters);
+        Shuffle(pool);
+        int count = Mathf.Min(npcCount, pool.Count);
+        var chosen = pool.GetRange(0, count);
 
-        var names = new List<string>(GameContent.Names);
-        Shuffle(names);
-
-        for (int i = 0; i < npcCount; i++)
+        // 决定每个角色的身份：优先用关卡表的 assign，其余按随机补足伪人。
+        var kindByChar = new Dictionary<string, NpcKind>();
+        int assigned = 0;
+        if (round != null)
         {
-            Sprite portrait = GeneratedArt.GetCharacterSprite(i);
-            var go = BuildPerson("NPC_" + i, portrait, 1f, out var bodyR);
+            foreach (var c in chosen)
+                if (round.assign.TryGetValue(c.charId, out var k) && k != NpcKind.Normal)
+                {
+                    kindByChar[c.charId] = k;
+                    assigned++;
+                }
+        }
+
+        int need = Mathf.Max(0, imposterCount - assigned);
+        if (need > 0)
+        {
+            var impostorPool = new List<NpcKind>
+            {
+                NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
+                NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate
+            };
+            Shuffle(impostorPool);
+            var free = new List<CharacterDef>();
+            foreach (var c in chosen) if (!kindByChar.ContainsKey(c.charId)) free.Add(c);
+            Shuffle(free);
+            for (int i = 0; i < need && i < free.Count && i < impostorPool.Count; i++)
+                kindByChar[free[i].charId] = impostorPool[i];
+        }
+
+        for (int i = 0; i < chosen.Count; i++)
+        {
+            var def = chosen[i];
+            NpcKind kind = kindByChar.TryGetValue(def.charId, out var k) ? k : NpcKind.Normal;
+
+            Sprite portrait = GeneratedArt.GetCharacterSprite(def.artFolder);
+            var go = BuildPerson("NPC_" + def.charId, portrait, 1f, out var bodyR);
             go.transform.SetParent(_npcRoot, false);
             go.transform.position = RandomGroundPos();
 
             var npc = go.AddComponent<Npc>();
-            npc.Setup(names[i % names.Count], kinds[i], i, bodyR);
+            npc.Setup(def.displayName, kind, def.artFolder, def.dialogueId, bodyR);
             Npcs.Add(npc);
         }
     }
@@ -363,7 +394,7 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Playing || npc == null) return;
         _dialogueNpc = npc;
-        _dialogueLines = GameContent.GetDialogue(npc.kind);
+        _dialogueLines = GameContent.GetDialogue(npc.kind, npc.dialogueId);
         _dialogueIndex = 0;
         State = GameState.Dialogue;
         UI.SetInteractPrompt(null);

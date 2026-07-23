@@ -1,0 +1,11 @@
+# 角色主表（Tab 分隔）。charId 沿用美术编号；artFolder 相对 Resources/Art。
+# dialogueId 留空则普通对话用 generic。以 # 开头的行会被忽略。
+charId	displayName	artFolder	dialogueId
+npc_00	小李	Characters/npc_00	generic
+npc_01	阿强	Characters/npc_01	generic
+npc_02	老王	Characters/npc_02	generic
+npc_03	翠花	Characters/npc_03	generic
+npc_04	大壮	Characters/npc_04	generic
+npc_05	阿珍	Characters/npc_05	generic
+npc_06	胖虎	Characters/npc_06	generic
+npc_07	丽丽	Characters/npc_07	generic

@@ -1,0 +1,7 @@
+# 关卡表（Tab 分隔）。游戏默认使用第一行有效关卡。
+# npcCount 本关出场角色数；imposterCount 伪人数；film 胶卷数。
+# assign 强制指派某角色为某种伪人：charId=Kind，多个用英文逗号分隔；留空则随机。
+# Kind 可选值：DouBao SixFinger ScarySmile FrameDrop Stitched PhotoMissing Deflate
+# 例：npc_02=SixFinger,npc_05=DouBao,npc_07=Deflate
+roundId	npcCount	imposterCount	film	assign
+r1	8	3	10	

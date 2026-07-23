@@ -13,7 +13,8 @@ public class Npc : MonoBehaviour
 {
     public string npcName;
     public NpcKind kind;
-    public int characterIndex;
+    public string artFolder;    // 该角色的美术文件夹，例如 Characters/npc_00
+    public string dialogueId;   // 普通状态对话 id（可空）
     public bool marked;         // 玩家已标记为嫌疑人（未提交前不告知对错）
 
     public bool IsImposter => kind != NpcKind.Normal;
@@ -33,11 +34,12 @@ public class Npc : MonoBehaviour
     bool _revealedByPose;       // 因摆动作而露馅（六指 / 可怕笑）
     bool _deflated;             // 变瘪人已被接触
 
-    public void Setup(string name, NpcKind kind, int characterIndex, SpriteRenderer renderer)
+    public void Setup(string name, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer)
     {
         npcName = name;
         this.kind = kind;
-        this.characterIndex = characterIndex;
+        this.artFolder = artFolder;
+        this.dialogueId = dialogueId;
         _renderer = renderer;
         _normalSprite = renderer != null ? renderer.sprite : null;
         _baseScale = renderer != null ? renderer.transform.localScale : Vector3.one;
@@ -128,7 +130,7 @@ public class Npc : MonoBehaviour
         else
         {
             // 普通姿势差分（同一角色），没有对应美术就保持普通立绘
-            Sprite poseSprite = GeneratedArt.GetCharacterPoseSprite(characterIndex, pose == PoseType.Smile);
+            Sprite poseSprite = GeneratedArt.GetCharacterPoseSprite(artFolder, pose == PoseType.Smile);
             SetBodySprite(poseSprite != null ? poseSprite : _normalSprite, matchHeight: false);
         }
 

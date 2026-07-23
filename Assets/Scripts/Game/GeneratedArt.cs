@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -17,11 +18,8 @@ public static class GeneratedArt
     static Sprite _digitalCameraOverlaySprite;
     static Sprite _cameraShutterHandSprite;
 
-    const int CharacterCount = 8;
-
-    static Sprite[] _characterSprites;
-    static Sprite[] _yeahSprites;
-    static Sprite[] _smileSprites;
+    static readonly Dictionary<string, Sprite> _characterCache = new Dictionary<string, Sprite>();
+    static readonly Dictionary<string, Sprite> _posesCache = new Dictionary<string, Sprite>();
     static Sprite[] _iconSprites;
     static Sprite[] _propSprites;
     static Sprite[] _forestSprites;
@@ -31,27 +29,26 @@ public static class GeneratedArt
     public static Texture2D GroundTexture =>
         _ground ??= Resources.Load<Texture2D>("Art/town_ground_texture");
 
-    public static Sprite GetCharacterSprite(int index)
+    /// <summary>按角色美术文件夹加载默认立绘（artFolder 例如 Characters/npc_00）。</summary>
+    public static Sprite GetCharacterSprite(string artFolder)
     {
-        if (_characterSprites == null)
-        {
-            _characterSprites = new Sprite[CharacterCount];
-            for (int i = 0; i < _characterSprites.Length; i++)
-                _characterSprites[i] = LoadWholeSprite($"Art/Characters/npc_{i:00}");
-        }
-
-        return _characterSprites[Mathf.Abs(index) % _characterSprites.Length];
+        if (string.IsNullOrEmpty(artFolder)) return null;
+        if (_characterCache.TryGetValue(artFolder, out var s)) return s;
+        s = LoadWholeSprite($"Art/{artFolder}/base");
+        _characterCache[artFolder] = s;
+        return s;
     }
 
-    /// <summary>该 NPC 的姿势差分（比耶 / 笑）。没有对应美术时返回 null，调用方回退到普通立绘。</summary>
-    public static Sprite GetCharacterPoseSprite(int index, bool smile)
+    /// <summary>该角色的姿势差分（比耶 / 笑）。没有对应美术时返回 null，调用方回退到普通立绘。</summary>
+    public static Sprite GetCharacterPoseSprite(string artFolder, bool smile)
     {
-        _yeahSprites ??= new Sprite[CharacterCount];
-        _smileSprites ??= new Sprite[CharacterCount];
-        int i = Mathf.Abs(index) % CharacterCount;
-        var cache = smile ? _smileSprites : _yeahSprites;
+        if (string.IsNullOrEmpty(artFolder)) return null;
         string suffix = smile ? "smile" : "yeah";
-        return cache[i] ??= TryLoadWholeSprite($"Art/Characters/npc_{i:00}_{suffix}");
+        string key = artFolder + "/" + suffix;
+        if (_posesCache.TryGetValue(key, out var s)) return s;
+        s = TryLoadWholeSprite($"Art/{artFolder}/{suffix}");
+        _posesCache[key] = s;
+        return s;
     }
 
     // ---- 伪人露馅立绘（通用，切换时由 Npc 自动匹配身高）----
