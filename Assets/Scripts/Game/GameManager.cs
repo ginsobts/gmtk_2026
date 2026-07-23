@@ -471,35 +471,34 @@ public class GameManager : MonoBehaviour
                 framedNow.Add(npc);
         }
 
-        // 先让本帧正常渲染到屏幕（玩家看到的画面里人都在）
-        yield return new WaitForEndOfFrame();
-
-        // 再把“照片异常”应用到离屏渲染：PhotoMissing 从照片里消失
+        // 关键：不再自己离屏重渲染（那会和屏幕上真正看到的画面不一致），
+        // 而是直接抓取“玩家此刻屏幕上的画面”，再从中裁出取景开口那块区域，
+        // 天然做到所见即所拍。为此先应用照片异常、并把相机外壳/准星藏起来，
+        // 让这一帧屏幕上只剩下场景本身。
         foreach (var npc in Npcs) npc.ApplyPhotoState();
+        UI.SetCameraOverlayVisible(false);
 
-        int sw = Screen.width, sh = Screen.height;
-        RenderTexture rt = RenderTexture.GetTemporary(sw, sh, 24);
-        RenderTexture prevActive = RenderTexture.active;
-        RenderTexture prevTarget = _mainCamera.targetTexture;
+        yield return new WaitForEndOfFrame(); // 渲染出这一帧“干净场景”
 
-        _mainCamera.targetTexture = rt;
-        _mainCamera.Render();
-        RenderTexture.active = rt;
+        Texture2D full = ScreenCapture.CaptureScreenshotAsTexture();
 
-        int x = Mathf.Clamp(Mathf.RoundToInt(vf.x), 0, sw - 1);
-        int y = Mathf.Clamp(Mathf.RoundToInt(vf.y), 0, sh - 1);
-        int w = Mathf.Clamp(Mathf.RoundToInt(vf.width), 1, sw - x);
-        int h = Mathf.Clamp(Mathf.RoundToInt(vf.height), 1, sh - y);
+        // 立即恢复外壳与 NPC 状态
+        UI.SetCameraOverlayVisible(true);
+        foreach (var npc in Npcs) npc.RestorePhotoState();
+
+        // 截图分辨率可能与逻辑屏幕分辨率不同（超采样等），按比例换算取景矩形。
+        int sw = full.width, sh = full.height;
+        float scaleX = sw / (float)Screen.width;
+        float scaleY = sh / (float)Screen.height;
+        int x = Mathf.Clamp(Mathf.RoundToInt(vf.x * scaleX), 0, sw - 1);
+        int y = Mathf.Clamp(Mathf.RoundToInt(vf.y * scaleY), 0, sh - 1);
+        int w = Mathf.Clamp(Mathf.RoundToInt(vf.width * scaleX), 1, sw - x);
+        int h = Mathf.Clamp(Mathf.RoundToInt(vf.height * scaleY), 1, sh - y);
 
         var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
-        tex.ReadPixels(new Rect(x, y, w, h), 0, 0);
+        tex.SetPixels(full.GetPixels(x, y, w, h)); // GetPixels 与屏幕同为左下原点
         tex.Apply();
-
-        _mainCamera.targetTexture = prevTarget;
-        RenderTexture.active = prevActive;
-        RenderTexture.ReleaseTemporary(rt);
-
-        foreach (var npc in Npcs) npc.RestorePhotoState();
+        Destroy(full);
 
         Album.Add(new PhotoEntry { image = tex, framed = framedNow });
         _film--;

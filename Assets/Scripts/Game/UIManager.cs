@@ -503,6 +503,12 @@ public class UIManager : MonoBehaviour
         if (_cameraRoot != null) _cameraRoot.SetActive(false);
     }
 
+    /// <summary>拍照瞬间临时隐藏相机外壳/准星，只让场景入镜（抓屏后立即恢复）。</summary>
+    public void SetCameraOverlayVisible(bool visible)
+    {
+        if (_cameraRoot != null) _cameraRoot.SetActive(visible);
+    }
+
     /// <summary>数码相机的按快门手势：快速向下压，再回到待机位置。</summary>
     public void PlayShutterPress()
     {
