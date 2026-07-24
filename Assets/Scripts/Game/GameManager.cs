@@ -296,9 +296,15 @@ public class GameManager : MonoBehaviour
 
     void BuildPlayerAndCamera()
     {
-        var playerGO = BuildPerson("Player", GeneratedArt.PlayerSprite, 0.47f, out _);
-        playerGO.transform.position = new Vector3(0f, 0f, -6f);
-        playerGO.AddComponent<PlayerController>();
+        var cfg = GameConfig.Instance;
+
+        var playerGO = BuildPerson("Player", GeneratedArt.PlayerSprite, cfg.playerScale, out _);
+        // 场景里若手摆了玩家出生点则用它，否则用配置里的起点
+        var playerSpawn = Object.FindFirstObjectByType<PlayerSpawnPoint>();
+        playerGO.transform.position = playerSpawn != null ? playerSpawn.transform.position : cfg.playerStart;
+        var pc = playerGO.AddComponent<PlayerController>();
+        pc.moveSpeed = cfg.playerMoveSpeed;
+        pc.interactRange = cfg.playerInteractRange;
         _player = playerGO.transform;
 
         var camGO = new GameObject("Main Camera");
@@ -306,12 +312,19 @@ public class GameManager : MonoBehaviour
         _mainCamera = camGO.AddComponent<Camera>();
         _mainCamera.clearFlags = CameraClearFlags.SolidColor;
         _mainCamera.backgroundColor = new Color(0.14f, 0.16f, 0.2f);
-        _mainCamera.fieldOfView = 55f;
+        _mainCamera.fieldOfView = cfg.cameraFieldOfView;
         camGO.AddComponent<AudioListener>();
-        camGO.transform.rotation = Quaternion.Euler(52f, 0f, 0f);
+        camGO.transform.rotation = Quaternion.Euler(cfg.cameraTilt, 0f, 0f);
         var rig = camGO.AddComponent<CameraRig>();
         rig.target = _player;
+        rig.offset = cfg.cameraOffset;
+        rig.followLerp = cfg.cameraFollowLerp;
         camGO.transform.position = _player.position + rig.offset;
+
+        // 运行时调试面板（F1 呼出），仅在编辑器 / 开发包里挂载
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        gameObject.AddComponent<DebugPanel>().Init(_mainCamera, rig);
+#endif
     }
 
     GameObject BuildPerson(string name, Sprite portrait, float scale, out SpriteRenderer body)
@@ -414,23 +427,48 @@ public class GameManager : MonoBehaviour
                 kindByChar[free[i].charId] = impostorPool[i];
         }
 
+        var cfg = GameConfig.Instance;
+
+        // 场景里手摆的出生点（有则优先按它们摆，位置与朝向都用手摆的）。按名字排序保证稳定映射。
+        var spawnPoints = new List<NpcSpawnPoint>(Object.FindObjectsByType<NpcSpawnPoint>(FindObjectsSortMode.None));
+        spawnPoints.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+
         for (int i = 0; i < chosen.Count; i++)
         {
             var def = chosen[i];
             NpcKind kind = kindByChar.TryGetValue(def.charId, out var k) ? k : NpcKind.Normal;
 
             Sprite portrait = GeneratedArt.GetCharacterSprite(def.artFolder);
-            var go = BuildPerson("NPC_" + def.charId, portrait, 1f, out var bodyR);
+            var go = BuildPerson("NPC_" + def.charId, portrait, cfg.npcScale, out var bodyR);
             go.transform.SetParent(_npcRoot, false);
-            go.transform.position = RandomGroundPos();
 
             var npc = go.AddComponent<Npc>();
             npc.Setup(def.DisplayName, kind, def.artFolder, def.dialogueId, bodyR);
+
+            if (i < spawnPoints.Count && spawnPoints[i] != null)
+            {
+                var sp = spawnPoints[i];
+                go.transform.position = sp.transform.position;
+                npc.SetFacing(sp.ResolvedYaw, sp.faceCamera);
+            }
+            else
+            {
+                go.transform.position = RandomGroundPos();
+                float yaw = cfg.npcDefaultYaw + (cfg.npcYawRandom > 0f ? Random.Range(-cfg.npcYawRandom, cfg.npcYawRandom) : 0f);
+                npc.SetFacing(yaw, true);
+            }
+
             Npcs.Add(npc);
         }
     }
 
-    Vector3 RandomGroundPos() => new Vector3(Random.Range(-14f, 14f), 0f, Random.Range(-13f, 13f));
+    Vector3 RandomGroundPos()
+    {
+        var cfg = GameConfig.Instance;
+        return new Vector3(
+            Random.Range(cfg.spawnAreaX.x, cfg.spawnAreaX.y), 0f,
+            Random.Range(cfg.spawnAreaZ.x, cfg.spawnAreaZ.y));
+    }
 
     static void Shuffle<T>(IList<T> list)
     {

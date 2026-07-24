@@ -82,8 +82,8 @@ public class Npc : MonoBehaviour
 
         var gm = GameManager.Instance;
 
-        // 掉帧人：在镜头里时不停抖动 / 瞬移
-        if (kind == NpcKind.FrameDrop)
+        // 掉帧人：在镜头里时不停抖动 / 瞬移（调试冻结时停下）
+        if (kind == NpcKind.FrameDrop && !DebugControl.Frozen)
         {
             if (_inFrame && !_deflated)
             {
@@ -153,6 +153,14 @@ public class Npc : MonoBehaviour
         marked = value;
         if (value) _pulseT = 0.3f;
         RefreshColor();
+    }
+
+    /// <summary>设置该 NPC 的朝向（供出生点 / 配置使用）。</summary>
+    public void SetFacing(float yaw, bool faceCamera)
+    {
+        if (_renderer == null) return;
+        var cf = _renderer.GetComponent<CameraFacingSprite>();
+        if (cf != null) { cf.yawOffset = yaw; cf.faceCamera = faceCamera; }
     }
 
     public void SetNearest(bool value)

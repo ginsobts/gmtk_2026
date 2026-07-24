@@ -174,7 +174,47 @@ python tools/process_art.py   # 去背景 / 裁剪到透明边界 / 按目标身
 
 ---
 
-## 五、如何打包（一键出包）
+## 五、调试与布景（在 Scene 里可视化调）
+
+> 本作**整局是运行时用代码程序化生成的**：编辑模式下 `SampleScene` 基本是空的，Play 后由 `GameBootstrap → GameManager` 搭出相机、玩家、NPC、场景与 UI。为方便可视化调试，提供了下面几套工具，**都不改变这套架构，缺任何配置也能正常跑**。
+
+### 1) GameConfig —— Inspector 调参（免改代码、持久）
+把相机 / 玩家 / NPC 的可调数值集中到一个资产里，改完下次 Play 生效。
+- 菜单 **`GMTK/创建 GameConfig 资产`** → 生成 `Assets/Resources/GameData/GameConfig.asset`。
+- 在 Inspector 里可调：
+  - 相机：`Camera Field Of View`、`Camera Tilt`（俯角）、`Camera Offset`、`Camera Follow Lerp`
+  - 玩家：`Player Start`、`Player Scale`、`Player Move Speed`、`Player Interact Range`
+  - NPC：`Npc Scale`、`Npc Default Yaw`（默认朝向，0=正对相机）、`Npc Yaw Random`（朝向随机抖动）
+  - 随机生成范围：`Spawn Area X / Z`（没有出生点时使用）
+- 关卡数量仍走 `rounds.txt`，不在这里重复。
+- **找不到该资产时用内置默认值**（与旧硬编码一致），所以删掉也不会坏。
+
+### 2) 出生点 —— 在 Scene 里摆 NPC 位置与朝向
+- 菜单 **`GMTK/创建出生点脚手架`** → 场景里生成 1 个 `PlayerSpawn` + 8 个 `NpcSpawn` 空物体。
+- 直接在 Scene 视图里**拖动**改位置、**旋转 Y 轴**改朝向（`NpcSpawnPoint` 带朝向指示线 Gizmo）。
+- 生成时：**有出生点就按出生点摆**（按名字顺序映射，多出的 NPC 随机生成）；没有出生点则整体随机。
+- `NpcSpawnPoint` 上还可勾/取消 `Face Camera`、设 `Extra Yaw`。
+- 出生点是**真正的场景物体**，会随场景保存。
+
+### 3) 场景预览 —— 不按 Play 也能看到画面
+编辑模式下 Scene 里什么都看不到时，用它生成一份可视化预览。
+- 菜单 **`GMTK/预览场景（编辑器）`**（快捷键 `Ctrl+Shift+P`）→ 生成地面 + 游戏相机 + 玩家/NPC 占位，并**自动把 Scene 视角对齐到游戏相机**。
+- 改了 GameConfig 或拖了出生点后，**再按一次 `Ctrl+Shift+P`** 刷新。
+- **`GMTK/Scene 视角对齐游戏相机`**：只重新对准取景，不生成占位。
+- **`GMTK/清除场景预览`**：移除预览。
+- 预览对象带 `DontSave` 标记：**不会存进场景、不会进最终包**，且**进入 Play 会自动清除**，不与运行时生成的内容冲突。缺角色图时用红色占位块顶替。
+
+### 4) 运行时调试面板（F1）
+Play 时按 **`F1`** 呼出（仅编辑器 / 开发包）：
+- **冻结跟随/转向**：暂停相机跟随、billboard 转向、呼吸/摇摆/掉帧抖动——这样能在 Play 时切到 Scene 视图自由观察、拖动而不被代码每帧改回去。
+- 相机 **FOV / 俯角 / 偏移 / 跟随** 实时滑块，即改即看。
+- **保存到 GameConfig**（编辑器内）：把当前相机参数写回资产，不用手抄；**打印当前数值到 Console** 也可以。
+
+> 关于「每个 NPC 独立朝向」：NPC 默认是正对相机的 billboard；`Npc Default Yaw` / 出生点旋转 / `Npc Yaw Random` 可让他们各朝各的方向。角度别太大（约 ±40° 内），否则平面卡片会显得偏薄——这是 2.5D 卡片的固有限制。
+
+---
+
+## 六、如何打包（一键出包）
 
 Unity 顶部菜单栏 **GMTK**：
 - **一键打包（当前平台）**（快捷键 `Ctrl+Shift+B`）：按当前激活的平台出包。
@@ -191,7 +231,8 @@ Unity -quit -batchmode -projectPath . -executeMethod BuildTool.BuildWebGL
 
 ---
 
-## 六、开发环境
+## 七、开发环境
 
 1. 用 Unity **2023.1.22f1** 打开本工程。
 2. 打开任意场景（`Assets/Scenes/SampleScene.unity`）直接 Play 即可运行——场景内容运行时自动生成。
+3. 想在编辑模式下可视化调相机/摆位，见「五、调试与布景」。

@@ -17,6 +17,7 @@ public class IdleBob : MonoBehaviour
 
     void Update()
     {
+        if (DebugControl.Frozen) return;
         var p = _baseLocal;
         p.y += Mathf.Sin(Time.time * speed + _phase) * amplitude;
         transform.localPosition = p;

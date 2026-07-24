@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0beb8123579f5904e973f940765c8699, type: 3}
+  m_Name: GameConfig
+  m_EditorClassIdentifier: 
+  cameraFieldOfView: 55
+  cameraTilt: 52
+  cameraOffset: {x: 0, y: 13, z: -10}
+  cameraFollowLerp: 8
+  playerStart: {x: 0, y: 0, z: -6}
+  playerScale: 0.47
+  playerMoveSpeed: 5.5
+  playerInteractRange: 2.6
+  npcScale: 1
+  npcDefaultYaw: 0
+  npcYawRandom: 0
+  spawnAreaX: {x: -14, y: 14}
+  spawnAreaZ: {x: -13, y: 13}

@@ -18,6 +18,7 @@ public class Sway : MonoBehaviour
 
     void Update()
     {
+        if (DebugControl.Frozen) return;
         var p = _baseLocal;
         p.x += Mathf.Sin(Time.time * speed + _phase) * amplitude;
         transform.localPosition = p;

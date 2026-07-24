@@ -23,6 +23,7 @@ public class CameraRig : MonoBehaviour
 
     void LateUpdate()
     {
+        if (DebugControl.Frozen) return;
         if (target == null) return;
         Vector3 desired = target.position + offset;
         transform.position = Vector3.Lerp(transform.position, desired, followLerp * Time.deltaTime);
