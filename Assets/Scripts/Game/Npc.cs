@@ -18,12 +18,10 @@ public class Npc : MonoBehaviour
     public string dialogueId;   // 普通状态对话 id（可空）
     public bool marked;         // 玩家已标记为嫌疑人（未提交前不告知对错）
     public bool harmless;       // 无害正常人：错认也不算失败（策划 N2）
-    public int talkCount;       // 已对话次数（N5：安安对话 5 次触发真心话）
+    public int dialogueVisitCount;  // count 模式对话已完成次数（GameContent.ResolveDialogue 用；安安第5次真心话即靠它）
 
     public bool IsImposter => kind != NpcKind.Normal;
     public PoseType CurrentPose => _pose;
-
-    const float DeflateContactRadius = 1.15f;
 
     SpriteRenderer _renderer;
     Sprite _normalSprite;
@@ -55,7 +53,7 @@ public class Npc : MonoBehaviour
         this.artFolder = artFolder;
         this.dialogueId = dialogueId;
         this.harmless = harmless;
-        talkCount = 0;
+        dialogueVisitCount = 0;
         _renderer = renderer;
         _normalSprite = renderer != null ? renderer.sprite : null;
         _stageSprite = _normalSprite;
@@ -124,18 +122,8 @@ public class Npc : MonoBehaviour
             }
         }
 
-        // 变瘪人：玩家靠近接触时变瘪（一旦变瘪保持）
-        if (kind == NpcKind.Deflate && !_deflated && gm != null &&
-            gm.State == GameState.Playing && gm.PlayerTransform != null)
-        {
-            float d = Vector3.Distance(gm.PlayerTransform.position, transform.position);
-            if (d < DeflateContactRadius)
-            {
-                _deflated = true;
-                SetBodySprite(GeneratedArt.DeflateRevealSprite, matchHeight: false);
-                RefreshColor();
-            }
-        }
+        // 变瘪人（策划案）：场景里不做变身。破绽在【对话立绘】(袖口露出一小截变瘪的手) + 【对话】(表现抗拒肢体接触)。
+        // 原"靠近整体塌成空衣服"是占位错图(通用成人西装)，已按策划案去掉；_deflated 保留但不再由场景触发。
 
         // 顾映（look-away, N3）：镜头移开时在三表情间循环切换；对准取景框则定格「面无表情」(帧0)
         if (kind == NpcKind.LookAway && !DebugControl.Frozen && !_deflated && !_revealedByPose &&

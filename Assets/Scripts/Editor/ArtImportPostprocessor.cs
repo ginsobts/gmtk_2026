@@ -18,7 +18,8 @@ public class ArtImportPostprocessor : AssetPostprocessor
         bool isCharacterLike =
             p.Contains("/Resources/Art/Characters/") ||
             p.Contains("/Resources/Art/Imposters/") ||
-            p.Contains("/Resources/Art/Camera/");
+            p.Contains("/Resources/Art/Camera/") ||
+            p.Contains("/Resources/Art/Portraits/");   // 对话立绘同样按 Sprite 导入
         if (!isCharacterLike) return;
 
         var ti = (TextureImporter)assetImporter;

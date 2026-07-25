@@ -1,0 +1,5 @@
+# 时间阶段表（Tab 分隔）。threshold 为进入该阶段的最低时间轴值。
+phaseId	order	threshold	name_en	name_zh
+p1	1	0	Morning	上午
+p2	2	30	Afternoon	下午
+p3	3	60	Evening	晚上
