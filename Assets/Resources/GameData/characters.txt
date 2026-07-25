@@ -1,12 +1,16 @@
-# 角色主表（Tab 分隔）。charId 沿用美术编号；artFolder 相对 Resources/Art。
-# dialogueId 留空则普通对话用 generic。name_en / name_zh 为双语显示名。
-# 以 # 开头的行会被忽略。
-charId	artFolder	dialogueId	name_en	name_zh
-npc_00	Characters/npc_00	generic	Leo	小李
-npc_01	Characters/npc_01	generic	Chad	阿强
-npc_02	Characters/npc_02	generic	Walt	老王
-npc_03	Characters/npc_03	generic	Rose	翠花
-npc_04	Characters/npc_04	generic	Bruno	大壮
-npc_05	Characters/npc_05	generic	Jenny	阿珍
-npc_06	Characters/npc_06	generic	Tiger	胖虎
-npc_07	Characters/npc_07	generic	Lily	丽丽
+# 角色主表（Tab 分隔）。kind 写死身份；title 为空则 UI 只显示姓名。
+# title_en / title_zh 为岗位，UI 显示为「名字·岗位」。
+charId	artFolder	dialogueId	name_en	name_zh	kind	title_en	title_zh
+npc_00	Characters/npc_00	generic	Lin Cai	林采	DouBao	PR	公关
+npc_01	Characters/npc_01	generic	Wang Jianguo	王建国	Normal	CEO	老板
+npc_02	Characters/npc_02	generic	Chen Wei	陈维	FrameDrop	Ops	运维
+npc_03	Characters/npc_03	generic	Su Qing	苏晴	Normal	HR	人事
+npc_04	Characters/npc_04	generic	Zhao Yan	赵岩	Deflate	Security	保安
+npc_05	Characters/npc_05	generic	Fang Xiao	方晓	Normal	Staff	职员
+npc_06	Characters/npc_06	generic	Wu Ang	吴昂	Stitched	Algorithm	算法
+npc_07	Characters/npc_07	generic	Lu Yuan	陆远	Normal	Dev	开发
+npc_08	Characters/npc_08	generic	Uncle Wei	魏大爷	DogSkin		
+npc_09	Characters/npc_09	generic	An'an	安安	Normal		
+npc_10	Characters/npc_10	generic	Han Lu	韩露	SixFinger	Reception	前台
+npc_11	Characters/npc_11	generic	Gu Ying	顾映	ScarySmile	Brand	品牌
+npc_12	Characters/npc_12	generic	Cheng Shu	程书	PhotoMissing	Compliance	合规

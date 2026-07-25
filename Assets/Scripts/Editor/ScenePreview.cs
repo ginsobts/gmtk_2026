@@ -73,7 +73,7 @@ public static class ScenePreview
         spawns.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
 
         var chars = GameContent.Characters;
-        int count = spawns.Count > 0 ? spawns.Count : Mathf.Min(8, chars.Count);
+        int count = spawns.Count > 0 ? Mathf.Min(spawns.Count, chars.Count) : chars.Count;
 
         for (int i = 0; i < count; i++)
         {

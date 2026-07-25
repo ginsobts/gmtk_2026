@@ -39,17 +39,16 @@ public static class DebugTools
         player.transform.SetParent(root.transform);
         player.transform.position = new Vector3(0f, 0f, -6f);
 
-        // 8 个 NPC 出生点，摆成两排，默认朝向相机
-        int idx = 0;
-        for (int row = 0; row < 2; row++)
-            for (int col = 0; col < 4; col++)
-            {
-                var sp = new GameObject($"NpcSpawn_{idx:00}");
-                sp.AddComponent<NpcSpawnPoint>();
-                sp.transform.SetParent(root.transform);
-                sp.transform.position = new Vector3(-9f + col * 6f, 0f, 6f - row * 8f);
-                idx++;
-            }
+        // 13 个 NPC 出生点（与本局固定剧本人数一致）
+        for (int idx = 0; idx < 13; idx++)
+        {
+            int row = idx / 4;
+            int col = idx % 4;
+            var sp = new GameObject($"NpcSpawn_{idx:00}");
+            sp.AddComponent<NpcSpawnPoint>();
+            sp.transform.SetParent(root.transform);
+            sp.transform.position = new Vector3(-9f + col * 6f, 0f, 8f - row * 6f);
+        }
 
         Selection.activeGameObject = root;
         Debug.Log("已在场景创建出生点脚手架：拖动 NpcSpawn 改位置、旋转 Y 轴改朝向。多于出生点数量的 NPC 会随机生成。");
