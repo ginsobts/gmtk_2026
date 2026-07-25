@@ -305,13 +305,18 @@ public class GameManager : MonoBehaviour
     {
         var cfg = GameConfig.Instance;
 
-        var playerGO = BuildPerson("Player", GeneratedArt.PlayerSprite, cfg.playerScale, out _);
+        var playerGO = BuildPerson("Player", GeneratedArt.PlayerSprite, cfg.playerScale, out var playerBody);
         // 场景里若手摆了玩家出生点则用它，否则用配置里的起点
         var playerSpawn = Object.FindFirstObjectByType<PlayerSpawnPoint>();
         playerGO.transform.position = playerSpawn != null ? playerSpawn.transform.position : cfg.playerStart;
         var pc = playerGO.AddComponent<PlayerController>();
         pc.moveSpeed = cfg.playerMoveSpeed;
         pc.interactRange = cfg.playerInteractRange;
+        // 2.5D 方向棋子：默认背面(=PlayerSprite)，正/侧缺图时回退到背面
+        pc.body = playerBody;
+        pc.backSprite = GeneratedArt.PlayerSprite;
+        pc.frontSprite = GeneratedArt.PlayerFrontSprite;
+        pc.sideSprite = GeneratedArt.PlayerSideSprite;
         _player = playerGO.transform;
 
         var camGO = new GameObject("Main Camera");

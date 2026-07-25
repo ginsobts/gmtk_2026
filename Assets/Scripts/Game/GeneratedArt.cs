@@ -24,6 +24,8 @@ public static class GeneratedArt
     static Sprite[] _propSprites;
     static Sprite[] _forestSprites;
     static Sprite _playerSprite;
+    static Sprite _playerSideSprite;
+    static Sprite _playerFrontSprite;
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
@@ -110,6 +112,14 @@ public static class GeneratedArt
 
     public static Sprite PlayerSprite =>
         _playerSprite ??= LoadWholeSprite("Art/Characters/player");
+
+    /// <summary>主角侧面棋子（默认朝左；缺图返回 null，调用方回退到背面 PlayerSprite）。</summary>
+    public static Sprite PlayerSideSprite =>
+        _playerSideSprite ??= TryLoadWholeSprite("Art/Characters/player_side");
+
+    /// <summary>主角正面棋子（缺图返回 null，调用方回退到背面 PlayerSprite）。</summary>
+    public static Sprite PlayerFrontSprite =>
+        _playerFrontSprite ??= TryLoadWholeSprite("Art/Characters/player_front");
 
     /// <summary>用于填满地图边缘的宽幅树林卡片。</summary>
     public static Sprite DenseForestEdgeSprite =>
