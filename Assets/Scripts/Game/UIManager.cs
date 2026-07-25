@@ -26,6 +26,7 @@ public class UIManager : MonoBehaviour
     // HUD
     GameObject _hudRoot;
     Text _filmText, _foundText, _promptText;
+    Text _timeText;
 
     // 靠近角色的交互面板
     GameObject _interactRoot;
@@ -252,6 +253,11 @@ public class UIManager : MonoBehaviour
         _filmText = MakeText(hud, "Film", "", 36, TextAnchor.UpperLeft);
         SetRect(_filmText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
             new Vector2(86, -26), new Vector2(400, 60));
+
+        _timeText = MakeText(hud, "TimePoints", "", 30, TextAnchor.UpperLeft);
+        SetRect(_timeText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
+            new Vector2(28, -80), new Vector2(500, 50));
+        _timeText.color = new Color(0.8f, 0.9f, 1f);
 
         MakeIcon(hud, "FoundIcon", GeneratedArt.GetIconSprite(6),
             new Vector2(1, 1), new Vector2(-250, -28), new Vector2(44, 44));
@@ -605,6 +611,11 @@ public class UIManager : MonoBehaviour
     }
 
     // ---------------- HUD / 提示 ----------------
+
+    public void SetTimePoints(int tp)
+    {
+        if (_timeText != null) _timeText.text = Loc.Pick("Time " + tp, "时间点 " + tp);
+    }
 
     public void SetHud(int film, int marked, int total)
     {

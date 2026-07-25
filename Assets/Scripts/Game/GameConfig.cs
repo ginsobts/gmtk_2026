@@ -35,6 +35,11 @@ public class GameConfig : ScriptableObject
     public Vector2 spawnAreaX = new Vector2(-14f, 14f);
     public Vector2 spawnAreaZ = new Vector2(-13f, 13f);
 
+    [Header("时间点（策划 1.2/1.3）")]
+    public int dialogueTimePoints = 3;   // 每完成一次对话 +N
+    public int photoTimePoints = 1;      // 每次拍照 +M
+    public int deathThreshold = 12;      // 时间点到 X 触发死亡演出（阶段五接入）
+
     static GameConfig _instance;
 
     /// <summary>全局配置。资产缺失时返回一份内存默认，不写盘。</summary>
