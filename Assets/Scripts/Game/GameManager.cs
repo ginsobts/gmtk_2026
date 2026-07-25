@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum GameState { MainMenu, Playing, Dialogue, Camera, Album, MarkList, Result }
+public enum GameState { MainMenu, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
 
 /// <summary>相册里的一张照片：截图 + 拍摄时处于取景框内的 NPC 名单。</summary>
 public class PhotoEntry
@@ -34,6 +34,8 @@ public class GameManager : MonoBehaviour
     int _stage = 1;    // 当前时间轴 stage（策划 1.3），从 1 起
     Light _sun;
     Material _groundMat;
+    GameObject _monster;       // 死亡演出追逐怪物
+    bool _deathPerforming;     // 死亡演出幂等标记（避免重复进入）
     bool _submitPending;   // 指认列表里“提交”确认弹窗是否打开
 
     Transform _player;
@@ -399,7 +401,10 @@ public class GameManager : MonoBehaviour
         _timePoints = 0;
         _stage = 1;
         _submitPending = false;
-        ApplyStageVisuals();   // 重置场景表现到 stage1
+        // 清理上一局死亡演出：怪物 + 幂等标记（红光/红地面由 ApplyStageVisuals 还原）
+        if (_monster != null) { Destroy(_monster); _monster = null; }
+        _deathPerforming = false;
+        ApplyStageVisuals();   // 重置场景表现到 stage1（含太阳色/地面色还原）
         State = GameState.Playing;
 
         UI.HideAllPanels();
@@ -533,13 +538,22 @@ public class GameManager : MonoBehaviour
     /// <summary>当前累积时间点。</summary>
     public int TimePoints => _timePoints;
 
-    /// <summary>累加时间点（对话/拍照触发）。到 deathThreshold 触发死亡演出留待阶段五。</summary>
+    /// <summary>累加时间点（对话/拍照触发）。到 deathThreshold 进入死亡演出（策划 5.1）。</summary>
     void AddTimePoints(int n)
     {
         if (n <= 0) return;
         _timePoints += n;
         UpdateStage();
         RefreshHud();
+        // 对话在 Playing 态即时触发；拍照在 Camera 态，延到关相机回 Playing 再触发（见 CloseCamera）
+        if (State == GameState.Playing) TryEnterDeathByTime();
+    }
+
+    /// <summary>时间点到 deathThreshold 且未在死亡演出中，则进入死亡演出（策划 5.1）。</summary>
+    void TryEnterDeathByTime()
+    {
+        if (!_deathPerforming && _timePoints >= GameConfig.Instance.deathThreshold)
+            EnterDeathPerformance();
     }
 
     /// <summary>时间点跨过阈值时推进 stage，并触发场景演变（策划 1.3）。</summary>
@@ -580,7 +594,7 @@ public class GameManager : MonoBehaviour
         var cfg = GameConfig.Instance;
         int maxStage = (cfg.stageThresholds != null ? cfg.stageThresholds.Length : 3) + 1;
         float t = maxStage > 1 ? Mathf.Clamp01((_stage - 1) / (float)(maxStage - 1)) : 0f;
-        if (_sun != null) _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t);
+        if (_sun != null) { _sun.color = Color.white; _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t); } // 色还原，死亡演出才染红
         RenderSettings.ambientLight = Color.Lerp(new Color(0.55f, 0.55f, 0.6f), new Color(0.2f, 0.2f, 0.28f), t);
         if (_groundMat != null) _groundMat.color = Color.Lerp(Color.white, new Color(0.62f, 0.58f, 0.66f), t);
     }
@@ -647,6 +661,9 @@ public class GameManager : MonoBehaviour
             case GameState.Dialogue:
                 if (Input.GetKeyDown(KeyCode.Escape)) EndDialogue();
                 break;
+
+            case GameState.Death:
+                break;   // 死亡演出：无热键，玩家只能逃（移动在 PlayerController）
         }
     }
 
@@ -655,6 +672,12 @@ public class GameManager : MonoBehaviour
     public void BeginDialogue(Npc npc)
     {
         if (State != GameState.Playing || npc == null) return;
+        // 特殊死亡（策划 5.3 / 时间轴 stage3「真面目」）：stage3 起与人皮狗互动即触发
+        if (npc.kind == NpcKind.SkinDog && _stage >= 3)
+        {
+            TriggerSpecialDeath();
+            return;
+        }
         _dialogueNpc = npc;
         npc.talkCount++;
         // 安安（N5）：平时只说“……”，对话满 5 次说出真心话
@@ -716,6 +739,7 @@ public class GameManager : MonoBehaviour
         State = GameState.Playing;
         UI.HideCamera();
         UI.SetHudVisible(true);
+        TryEnterDeathByTime();   // 相机内拍照攒过阈值的死亡，回 Playing 时结算
     }
 
     /// <summary>每帧根据取景框刷新“在镜头中”的 NPC。</summary>
@@ -919,12 +943,24 @@ public class GameManager : MonoBehaviour
 
         bool win = correctImposters >= totalImposters && wrongInnocents == 0;
 
-        // 先弹旁白过场（策划 1.4），点击后再结算（结算面板暂代结局图 / 死亡演出，阶段五接）
+        // 先弹旁白过场（策划 1.4），State=Result 挡住旁白期间输入（EnterDeathPerformance 会再切到 Death）
         State = GameState.Result;
         UI.HideAlbum();
         UI.SetHudVisible(false);
         int c = correctImposters, w = wrongInnocents;
-        UI.ShowNarration(Loc.Get(win ? "narrate.win" : "narrate.lose"), () => EndRound(win, c, w));
+        if (win)
+        {
+            UI.ShowNarration(Loc.Get("narrate.win"), () => EndRound(true, c, w));   // 胜利结局图留待阶段七
+        }
+        else
+        {
+            // 指认错误（策划 4.5.2.1）：旁白「你已经没有机会了」→ 时间点加到 X → 死亡演出
+            UI.ShowNarration(Loc.Get("narrate.lose"), () =>
+            {
+                _timePoints = Mathf.Max(_timePoints, GameConfig.Instance.deathThreshold);
+                EnterDeathPerformance();
+            });
+        }
     }
 
     // ---------------- 标记嫌疑人（不告知对错） ----------------
@@ -1012,6 +1048,70 @@ public class GameManager : MonoBehaviour
         UI.HideAllPanels();
         UI.SetHudVisible(false);
         UI.ShowResult(win, correct, wrong, imposterCount, imposters, Album.Count);
+    }
+
+    // ---------------- 死亡演出（策划 5） ----------------
+
+    /// <summary>进入死亡演出：染红场景 + 生成追逐怪物；玩家此后只能逃。幂等。</summary>
+    void EnterDeathPerformance()
+    {
+        if (_deathPerforming) return;
+        _deathPerforming = true;
+        State = GameState.Death;
+
+        UI.HideAllPanels();
+        UI.SetHudVisible(false);
+        UI.SetInteractPrompt(null);
+
+        // 场景变红 + 地面贴图变色（策划 5.2.1/5.2.2；结局图/音效在阶段六七）
+        if (_sun != null) { _sun.color = new Color(1f, 0.16f, 0.12f); _sun.intensity = 1.35f; }
+        RenderSettings.ambientLight = new Color(0.34f, 0.03f, 0.05f);
+        if (_groundMat != null) _groundMat.color = new Color(0.5f, 0.08f, 0.08f);
+
+        SpawnDeathMonster();
+        UI.ShowToast(Loc.Get("death.flee"), false);
+    }
+
+    void SpawnDeathMonster()
+    {
+        if (_monster != null || _player == null) return;
+        var cfg = GameConfig.Instance;
+        var go = BuildPerson("DeathMonster", GeneratedArt.DeathMonsterSprite, cfg.npcScale * 1.25f, out _);
+        // 在玩家对角远处出生，留出追逐距离
+        Vector3 pp = _player.position;
+        float sx = pp.x >= 0 ? -1f : 1f, sz = pp.z >= 0 ? -1f : 1f;
+        go.transform.position = new Vector3(sx * 14f, 0f, sz * 12f);
+        var m = go.AddComponent<DeathMonster>();
+        m.target = _player;
+        m.speed = cfg.playerMoveSpeed * 1.05f;   // 略快于玩家：可逃一阵，终被逼死
+        m.killRange = 1.3f;
+        _monster = go;
+    }
+
+    /// <summary>怪物抓到玩家（策划 5.2.3）。</summary>
+    public void PlayerCaughtByMonster()
+    {
+        if (State != GameState.Death) return;
+        PlayerDied(false);
+    }
+
+    /// <summary>特殊死亡（策划 5.3）：对话分支 / stage3 真面目互动触发，直接结束。</summary>
+    public void TriggerSpecialDeath()
+    {
+        if (State == GameState.Result) return;
+        PlayerDied(true);
+    }
+
+    /// <summary>死亡结算：清理怪物 → 死亡旁白（占位结局图）→ 揭示伪人的结果面板。</summary>
+    void PlayerDied(bool special)
+    {
+        if (_monster != null) { Destroy(_monster); _monster = null; }
+        State = GameState.Result;
+        UI.HideAllPanels();
+        UI.SetHudVisible(false);
+        // 死亡结局图 + 死亡音效留待阶段七/六；这里用全屏旁白占位，点击后进结果面板
+        string key = special ? "death.special" : "death.normal";
+        UI.ShowNarration(Loc.Get(key), () => EndRound(false, 0, 0));
     }
 
     public static string KindLabel(NpcKind k) => GameContent.KindLabel(k);
