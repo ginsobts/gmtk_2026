@@ -12,16 +12,14 @@ public class PhotoEntry
 }
 
 /// <summary>
-/// 游戏总控。程序化搭建场景，管理胶卷、状态机、拍照截图、相册指认与胜负。
+/// 游戏总控。程序化搭建场景，管理状态机、时间轴、拍照截图、相册指认与胜负。
 /// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
     [Header("关卡参数")]
-    public int npcCount = 8;
-    public int imposterCount = 3;
-    public int filmMax = 10;
+    public int imposterCount = 0;   // 本局炼化人数量：StartRound 按 characters 表 kind!=Normal 统计
 
     public GameState State { get; private set; } = GameState.MainMenu;
     bool _creditsOpen;
@@ -29,9 +27,9 @@ public class GameManager : MonoBehaviour
     public UIManager UI { get; private set; }
     public List<PhotoEntry> Album { get; private set; } = new List<PhotoEntry>();
 
-    int _film;
-    int _timePoints;   // 当前累积时间点（对话/拍照，策划 1.3）
-    int _stage = 1;    // 当前时间轴 stage（策划 1.3），从 1 起
+    // 时间轴（合并 wxc 数据驱动 phase）：对话/拍照累加，跨 phases.txt 阈值推进阶段（策划 1.3）
+    public int TimelineValue { get; private set; }
+    public int CurrentPhase { get; private set; } = 1;
     Light _sun;
     Material _groundMat;
     GameObject _monster;       // 死亡演出追逐怪物
@@ -50,8 +48,9 @@ public class GameManager : MonoBehaviour
 
     // 对话态
     Npc _dialogueNpc;
-    string[] _dialogueLines;
+    DialogueLine[] _dialogueLines;
     int _dialogueIndex;
+    bool _dialogueCompleted;
 
     // 取景态
     readonly List<Npc> _framed = new List<Npc>();
@@ -387,19 +386,14 @@ public class GameManager : MonoBehaviour
             if (entry.image != null) Destroy(entry.image);
         Album.Clear();
 
-        // 关卡参数来自 rounds.txt（缺省沿用 Inspector 里的默认值）。
-        var round = GameContent.GetDefaultRound();
-        if (round != null)
-        {
-            npcCount = round.npcCount;
-            imposterCount = round.imposterCount;
-            filmMax = round.film;
-        }
+        // 本局炼化人数量 = characters 表里 kind != Normal 的角色数（wxc 固定剧本，身份写死在表）
+        imposterCount = 0;
+        foreach (var c in GameContent.Characters)
+            if (c.kind != NpcKind.Normal) imposterCount++;
 
-        SpawnNpcs(round);
-        _film = filmMax;
-        _timePoints = 0;
-        _stage = 1;
+        SpawnNpcs();
+        TimelineValue = 0;
+        CurrentPhase = GameContent.GetPhaseForTimeline(0);
         _submitPending = false;
         // 清理上一局死亡演出：怪物 + 幂等标记（红光/红地面由 ApplyStageVisuals 还原）
         if (_monster != null) { Destroy(_monster); _monster = null; }
@@ -414,69 +408,14 @@ public class GameManager : MonoBehaviour
         UI.PlayFadeIn();
     }
 
-    void SpawnNpcs(RoundDef round)
+    void SpawnNpcs()
     {
         foreach (var n in Npcs)
             if (n != null) Destroy(n.gameObject);
         Npcs.Clear();
 
-        // 决定本关出场角色 chosen 与各自身份 kindByChar。
-        var kindByChar = new Dictionary<string, NpcKind>();
-        List<CharacterDef> chosen;
-
-        if (round != null && round.roster.Count > 0)
-        {
-            // 固定剧本阵容：出场角色与身份都按 rounds 表 assign 固定，不随机（策划 N1）。
-            chosen = new List<CharacterDef>();
-            var byId = new Dictionary<string, CharacterDef>();
-            foreach (var c in GameContent.Characters) byId[c.charId] = c;
-            foreach (var entry in round.roster)
-            {
-                if (byId.TryGetValue(entry.Key, out var def))
-                {
-                    chosen.Add(def);
-                    kindByChar[def.charId] = entry.Value;   // 含 Normal
-                }
-                else Debug.LogWarning($"[SpawnNpcs] 固定阵容角色 {entry.Key} 不在 characters 表，已跳过。");
-            }
-        }
-        else
-        {
-            // 无固定阵容：从角色池随机抽 npcCount 个，再随机补足伪人。
-            var pool = new List<CharacterDef>(GameContent.Characters);
-            Shuffle(pool);
-            int count = Mathf.Min(npcCount, pool.Count);
-            chosen = pool.GetRange(0, count);
-
-            int assigned = 0;
-            if (round != null)
-            {
-                foreach (var c in chosen)
-                    if (round.assign.TryGetValue(c.charId, out var k) && k != NpcKind.Normal)
-                    {
-                        kindByChar[c.charId] = k;
-                        assigned++;
-                    }
-            }
-
-            int need = Mathf.Max(0, imposterCount - assigned);
-            if (need > 0)
-            {
-                var impostorPool = new List<NpcKind>
-                {
-                    NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
-                    NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate,
-                    NpcKind.LookAway, NpcKind.SkinDog
-                };
-                Shuffle(impostorPool);
-                var free = new List<CharacterDef>();
-                foreach (var c in chosen) if (!kindByChar.ContainsKey(c.charId)) free.Add(c);
-                Shuffle(free);
-                for (int i = 0; i < need && i < free.Count && i < impostorPool.Count; i++)
-                    kindByChar[free[i].charId] = impostorPool[i];
-            }
-        }
-
+        // 固定剧本（wxc）：全部 characters 出场，身份直接取表里的 kind，不随机。
+        var chosen = new List<CharacterDef>(GameContent.Characters);
         var cfg = GameConfig.Instance;
 
         // 场景里手摆的出生点（有则优先按它们摆，位置与朝向都用手摆的）。按名字排序保证稳定映射。
@@ -486,14 +425,13 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < chosen.Count; i++)
         {
             var def = chosen[i];
-            NpcKind kind = kindByChar.TryGetValue(def.charId, out var k) ? k : NpcKind.Normal;
 
             Sprite portrait = GeneratedArt.GetCharacterSprite(def.artFolder);
             var go = BuildPerson("NPC_" + def.charId, portrait, cfg.npcScale, out var bodyR);
             go.transform.SetParent(_npcRoot, false);
 
             var npc = go.AddComponent<Npc>();
-            npc.Setup(def.DisplayName, def.charId, kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
+            npc.Setup(def.DisplayLabel, def.charId, def.kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
 
             if (i < spawnPoints.Count && spawnPoints[i] != null)
             {
@@ -531,69 +469,56 @@ public class GameManager : MonoBehaviour
 
     void RefreshHud()
     {
-        UI.SetHud(_film, MarkedCount, imposterCount);
-        UI.SetTimePoints(_timePoints, _stage);
+        UI.SetHud(MarkedCount, imposterCount, CurrentPhase, TimelineValue);
     }
 
-    /// <summary>当前累积时间点。</summary>
-    public int TimePoints => _timePoints;
+    /// <summary>当前时间轴值（对话/拍照累加）。</summary>
+    public int TimePoints => TimelineValue;
 
-    /// <summary>累加时间点（对话/拍照触发）。到 deathThreshold 进入死亡演出（策划 5.1）。</summary>
-    void AddTimePoints(int n)
+    /// <summary>累加时间轴（对话 +N/拍照 +M）：跨阈值推进 phase → 触发场景演变；满格 → 死亡演出（策划 1.3/5.1）。</summary>
+    void AdvanceTimeline(int delta)
     {
-        if (n <= 0) return;
-        _timePoints += n;
-        UpdateStage();
+        if (delta <= 0 || _deathPerforming) return;
+        int maxT = GameContent.GetTimelineMax();
+        int oldPhase = CurrentPhase;
+        TimelineValue = Mathf.Min(TimelineValue + delta, maxT);
+        CurrentPhase = GameContent.GetPhaseForTimeline(TimelineValue);
         RefreshHud();
-        // 对话在 Playing 态即时触发；拍照在 Camera 态，延到关相机回 Playing 再触发（见 CloseCamera）
+        if (CurrentPhase != oldPhase) OnStageChanged();   // 立绘/移位/光暗 + 阶段旁白
+        // 对话在 Playing 态即时结算死亡；拍照在 Camera 态，延到关相机回 Playing（见 CloseCamera）
         if (State == GameState.Playing) TryEnterDeathByTime();
     }
 
-    /// <summary>时间点到 deathThreshold 且未在死亡演出中，则进入死亡演出（策划 5.1）。</summary>
+    /// <summary>时间轴满格（超末阶段）且未在死亡演出中，则进入死亡演出（策划 5.1）。</summary>
     void TryEnterDeathByTime()
     {
-        if (!_deathPerforming && _timePoints >= GameConfig.Instance.deathThreshold)
+        if (!_deathPerforming && TimelineValue >= GameContent.GetTimelineMax())
             EnterDeathPerformance();
     }
 
-    /// <summary>时间点跨过阈值时推进 stage，并触发场景演变（策划 1.3）。</summary>
-    void UpdateStage()
-    {
-        var cfg = GameConfig.Instance;
-        int newStage = 1;
-        if (cfg.stageThresholds != null)
-            for (int i = 0; i < cfg.stageThresholds.Length; i++)
-                if (_timePoints >= cfg.stageThresholds[i]) newStage = i + 2;
-        if (newStage != _stage)
-        {
-            _stage = newStage;
-            OnStageChanged();
-        }
-    }
-
+    /// <summary>进入新 phase：NPC 立绘随阶段(T4) + 位置微移(T3) + 光暗地色(T6/T9) + 阶段旁白。对话组随 phase 由 ResolveDialogue 自动处理(T5)。</summary>
     void OnStageChanged()
     {
         var cfg = GameConfig.Instance;
         foreach (var n in Npcs)
         {
             if (n == null) continue;
-            n.ApplyStage(_stage);   // T4/N4：立绘随 stage（魏大爷扒皮）
-            // T3：位置随 stage 小幅移动（表现"人走动了"；精确走位待策划数据）
+            n.ApplyStage(CurrentPhase);   // T4/N4：立绘随阶段（魏大爷扒皮）
             Vector3 p = n.transform.position + new Vector3(Random.Range(-2.5f, 2.5f), 0f, Random.Range(-2.5f, 2.5f));
             p.x = Mathf.Clamp(p.x, cfg.spawnAreaX.x, cfg.spawnAreaX.y);
             p.z = Mathf.Clamp(p.z, cfg.spawnAreaZ.x, cfg.spawnAreaZ.y);
             n.transform.position = p;
         }
         ApplyStageVisuals();
-        // TODO T5 对话组随 stage（待对话明细表内容）；stage4 → 死亡演出（阶段五）
+        var phaseDef = GameContent.GetPhaseDef(CurrentPhase);
+        if (phaseDef != null) UI.ShowToast(Loc.Format("phase.enter", phaseDef.DisplayName), true);
     }
 
-    /// <summary>按当前 stage 应用场景表现：光线渐暗(T6) + 地面色调(T9)。</summary>
+    /// <summary>按当前 phase 应用场景表现：光线渐暗(T6) + 地面色调(T9)。</summary>
     void ApplyStageVisuals()
     {
-        var cfg = GameConfig.Instance;
-        int maxStage = (cfg.stageThresholds != null ? cfg.stageThresholds.Length : 3) + 1;
-        float t = maxStage > 1 ? Mathf.Clamp01((_stage - 1) / (float)(maxStage - 1)) : 0f;
+        int phaseCount = GameContent.Phases != null ? GameContent.Phases.Count : 3;
+        float t = phaseCount > 1 ? Mathf.Clamp01((CurrentPhase - 1) / (float)(phaseCount - 1)) : 0f;
         if (_sun != null) { _sun.color = Color.white; _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t); } // 色还原，死亡演出才染红
         RenderSettings.ambientLight = Color.Lerp(new Color(0.55f, 0.55f, 0.6f), new Color(0.2f, 0.2f, 0.28f), t);
         if (_groundMat != null) _groundMat.color = Color.Lerp(Color.white, new Color(0.62f, 0.58f, 0.66f), t);
@@ -672,24 +597,24 @@ public class GameManager : MonoBehaviour
     public void BeginDialogue(Npc npc)
     {
         if (State != GameState.Playing || npc == null) return;
-        // 特殊死亡（策划 5.3 / 时间轴 stage3「真面目」）：stage3 起与人皮狗互动即触发
-        if (npc.kind == NpcKind.SkinDog && _stage >= 3)
+        // 特殊死亡（策划 5.3 / 时间轴 phase3「真面目」）：phase3 起与人皮狗互动即触发
+        if (npc.kind == NpcKind.SkinDog && CurrentPhase >= 3)
         {
             TriggerSpecialDeath();
             return;
         }
         _dialogueNpc = npc;
-        npc.talkCount++;
-        // 安安（N5）：平时只说“……”，对话满 5 次说出真心话
-        if (npc.charId == "an_an")
-            _dialogueLines = new[] { npc.talkCount >= 5 ? Loc.Pick("Die, you pedo.", "炼铜癖去死") : "……" };
-        else
-            _dialogueLines = GameContent.GetDialogue(npc.kind, npc.dialogueId);
+        // 对话组随 phase/count 由 ResolveDialogue 解析（安安第5次真心话即走 count 表；带每句立绘）
+        _dialogueLines = GameContent.ResolveDialogue(npc, CurrentPhase);
         _dialogueIndex = 0;
+        _dialogueCompleted = false;
         State = GameState.Dialogue;
         UI.SetInteractPrompt(null);
         UI.SetHudVisible(false);
-        UI.ShowDialogue(npc.npcName, _dialogueLines[0]);
+        if (_dialogueLines.Length > 0)
+            UI.ShowDialogue(npc.npcName, _dialogueLines[0]);
+        else
+            EndDialogue();
     }
 
     public void DialogueNext()
@@ -698,6 +623,7 @@ public class GameManager : MonoBehaviour
         _dialogueIndex++;
         if (_dialogueIndex >= _dialogueLines.Length)
         {
+            _dialogueCompleted = true;
             EndDialogue();
             return;
         }
@@ -706,12 +632,21 @@ public class GameManager : MonoBehaviour
 
     public void EndDialogue()
     {
+        var npc = _dialogueNpc;
+        bool completed = _dialogueCompleted;
         bool wasInDialogue = State == GameState.Dialogue;
         _dialogueNpc = null;
+        _dialogueCompleted = false;
         if (State == GameState.Dialogue) State = GameState.Playing;
         UI.HideDialogue();
         UI.SetHudVisible(true);
-        if (wasInDialogue) AddTimePoints(GameConfig.Instance.dialogueTimePoints);   // 整段对话 +N
+        // 完整读完一段对话才计：count 模式递增到访次数（安安等靠它推进）+ 时间轴 +N
+        if (wasInDialogue && completed)
+        {
+            if (npc != null && GameContent.GetDialogueMode(npc.charId) == NpcDialogueMode.Count)
+                npc.dialogueVisitCount++;
+            AdvanceTimeline(GameConfig.Instance.dialogueTimePoints);
+        }
     }
 
     // ---------------- 相机 / 取景 / 拍照 ----------------
@@ -771,11 +706,6 @@ public class GameManager : MonoBehaviour
     public void OnShutter()
     {
         if (State != GameState.Camera || _capturing) return;
-        if (_film <= 0)
-        {
-            UI.ShowToast(Loc.Get("cam.nofilm"), false);
-            return;
-        }
         UI.PlayShutterPress();
         StartCoroutine(CapturePhoto());
     }
@@ -825,10 +755,9 @@ public class GameManager : MonoBehaviour
         Destroy(full);
 
         Album.Add(new PhotoEntry { image = tex, framed = framedNow });
-        _film--;
-        AddTimePoints(GameConfig.Instance.photoTimePoints);   // 拍照 +M
+        AdvanceTimeline(GameConfig.Instance.photoTimePoints);   // 拍照 +M 时间轴（无限张，无胶卷）
         RefreshHud();
-        UI.ShowToast(Loc.Format("cam.shot", _film), true);
+        UI.ShowToast(Loc.Get("cam.shot"), true);
 
         // 拍照手感：先来一下震屏（此时已抓完帧，不影响成片），
         // 再把刚拍的照片“飞”出去，最后短暂定格一下。
@@ -954,10 +883,10 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // 指认错误（策划 4.5.2.1）：旁白「你已经没有机会了」→ 时间点加到 X → 死亡演出
+            // 指认错误（策划 4.5.2.1）：旁白「你已经没有机会了」→ 时间轴拉满 → 死亡演出
             UI.ShowNarration(Loc.Get("narrate.lose"), () =>
             {
-                _timePoints = Mathf.Max(_timePoints, GameConfig.Instance.deathThreshold);
+                TimelineValue = GameContent.GetTimelineMax();
                 EnterDeathPerformance();
             });
         }
