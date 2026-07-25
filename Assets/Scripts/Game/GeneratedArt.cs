@@ -69,6 +69,17 @@ public static class GeneratedArt
         return s != null ? s : GetCharacterSprite(artFolder);
     }
 
+    /// <summary>角色命名差分棋子（如顾映 look-away 的 reveal_smile/reveal_sad）。缺失返回 null，调用方自行回退。</summary>
+    public static Sprite GetCharacterVariantSprite(string artFolder, string variant)
+    {
+        if (string.IsNullOrEmpty(artFolder) || string.IsNullOrEmpty(variant)) return null;
+        string key = artFolder + "/" + variant;
+        if (_posesCache.TryGetValue(key, out var s)) return s;
+        s = TryLoadWholeSprite($"Art/{artFolder}/{variant}");
+        _posesCache[key] = s;
+        return s;
+    }
+
     // ---- 伪人露馅立绘（通用，切换时由 Npc 自动匹配身高）----
     public static Sprite SixFingerRevealSprite =>
         _sixFingerReveal ??= LoadWholeSprite("Art/Imposters/six_finger_reveal");
