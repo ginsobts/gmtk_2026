@@ -11,8 +11,10 @@ using UnityEngine;
 public class GameConfig : ScriptableObject
 {
     [Header("相机")]
-    public float cameraFieldOfView = 55f;
-    public float cameraTilt = 52f;                        // 俯角（绕 X）
+    public bool cameraOrthographic = true;                // 正交投影（策划 1.1：2.5D 正交）
+    public float cameraOrthographicSize = 8.5f;           // 正交视野半高（策划：size 8.5）
+    public float cameraFieldOfView = 55f;                 // 透视时用（cameraOrthographic=false 时生效）
+    public float cameraTilt = 35f;                        // 俯角（绕 X，策划：x 旋转 35）
     public Vector3 cameraOffset = new Vector3(0f, 13f, -10f);
     public float cameraFollowLerp = 8f;
 

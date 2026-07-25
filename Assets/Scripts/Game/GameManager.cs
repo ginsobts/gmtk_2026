@@ -127,6 +127,7 @@ public class GameManager : MonoBehaviour
     {
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
+        ground.transform.rotation = Quaternion.Euler(0f, 45f, 0f);   // 策划 S2：地面绕 Y 轴转 45°
         ground.transform.localScale = new Vector3(4f, 1f, 4f);
         var groundMaterial = ground.GetComponent<Renderer>().material;
         groundMaterial.mainTexture = GeneratedArt.GroundTexture;
@@ -312,7 +313,15 @@ public class GameManager : MonoBehaviour
         _mainCamera = camGO.AddComponent<Camera>();
         _mainCamera.clearFlags = CameraClearFlags.SolidColor;
         _mainCamera.backgroundColor = new Color(0.14f, 0.16f, 0.2f);
-        _mainCamera.fieldOfView = cfg.cameraFieldOfView;
+        if (cfg.cameraOrthographic)
+        {
+            _mainCamera.orthographic = true;
+            _mainCamera.orthographicSize = cfg.cameraOrthographicSize;
+        }
+        else
+        {
+            _mainCamera.fieldOfView = cfg.cameraFieldOfView;
+        }
         camGO.AddComponent<AudioListener>();
         camGO.transform.rotation = Quaternion.Euler(cfg.cameraTilt, 0f, 0f);
         var rig = camGO.AddComponent<CameraRig>();
