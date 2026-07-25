@@ -30,6 +30,7 @@ public class GameManager : MonoBehaviour
     public List<PhotoEntry> Album { get; private set; } = new List<PhotoEntry>();
 
     int _film;
+    int _timePoints;   // 当前累积时间点（对话/拍照，策划 1.3）
     bool _submitPending;   // 指认列表里“提交”确认弹窗是否打开
 
     Transform _player;
@@ -385,6 +386,7 @@ public class GameManager : MonoBehaviour
 
         SpawnNpcs(round);
         _film = filmMax;
+        _timePoints = 0;
         _submitPending = false;
         State = GameState.Playing;
 
@@ -488,7 +490,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void RefreshHud() => UI.SetHud(_film, MarkedCount, imposterCount);
+    void RefreshHud()
+    {
+        UI.SetHud(_film, MarkedCount, imposterCount);
+        UI.SetTimePoints(_timePoints);
+    }
+
+    /// <summary>当前累积时间点。</summary>
+    public int TimePoints => _timePoints;
+
+    /// <summary>累加时间点（对话/拍照触发）。到 deathThreshold 触发死亡演出留待阶段五。</summary>
+    void AddTimePoints(int n)
+    {
+        if (n <= 0) return;
+        _timePoints += n;
+        RefreshHud();
+    }
 
     /// <summary>当前被玩家标记为嫌疑人的数量。</summary>
     public int MarkedCount
@@ -583,10 +600,12 @@ public class GameManager : MonoBehaviour
 
     public void EndDialogue()
     {
+        bool wasInDialogue = State == GameState.Dialogue;
         _dialogueNpc = null;
         if (State == GameState.Dialogue) State = GameState.Playing;
         UI.HideDialogue();
         UI.SetHudVisible(true);
+        if (wasInDialogue) AddTimePoints(GameConfig.Instance.dialogueTimePoints);   // 整段对话 +N
     }
 
     // ---------------- 相机 / 取景 / 拍照 ----------------
@@ -700,6 +719,7 @@ public class GameManager : MonoBehaviour
 
         Album.Add(new PhotoEntry { image = tex, framed = framedNow });
         _film--;
+        AddTimePoints(GameConfig.Instance.photoTimePoints);   // 拍照 +M
         RefreshHud();
         UI.ShowToast(Loc.Format("cam.shot", _film), true);
 
