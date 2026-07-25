@@ -38,7 +38,11 @@ public class GameConfig : ScriptableObject
     [Header("时间点（策划 1.2/1.3）")]
     public int dialogueTimePoints = 3;   // 每完成一次对话 +N
     public int photoTimePoints = 1;      // 每次拍照 +M
-    public int deathThreshold = 12;      // 时间点到 X 触发死亡演出（阶段五接入）
+    public int deathThreshold = 60;      // 时间点到 X 触发死亡演出（= stageThresholds 末值，阶段五接入）
+
+    [Header("时间轴 stage（策划 1.3）")]
+    // 阈值放大留足调查余量（安安对话 5 次就 15 点）：stage2=20 / stage3=40 / stage4(死亡)=60
+    public int[] stageThresholds = new int[] { 20, 40, 60 };
 
     static GameConfig _instance;
 

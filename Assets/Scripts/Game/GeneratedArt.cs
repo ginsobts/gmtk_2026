@@ -83,6 +83,17 @@ public static class GeneratedArt
         return s;
     }
 
+    /// <summary>该角色在某 stage 的正常立绘（T4：Art/&lt;folder&gt;/s{stage}.png）。缺失时回退到 base 立绘。</summary>
+    public static Sprite GetCharacterStageSprite(string artFolder, int stage)
+    {
+        if (stage <= 1 || string.IsNullOrEmpty(artFolder)) return GetCharacterSprite(artFolder);
+        string key = artFolder + "/s" + stage;
+        if (_posesCache.TryGetValue(key, out var s)) return s != null ? s : GetCharacterSprite(artFolder);
+        s = TryLoadWholeSprite($"Art/{artFolder}/s{stage}");
+        _posesCache[key] = s;
+        return s != null ? s : GetCharacterSprite(artFolder);
+    }
+
     // ---- 伪人露馅立绘（通用，切换时由 Npc 自动匹配身高）----
     public static Sprite SixFingerRevealSprite =>
         _sixFingerReveal ??= LoadWholeSprite("Art/Imposters/six_finger_reveal");

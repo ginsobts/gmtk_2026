@@ -200,5 +200,7 @@ public static class Loc
         ["kind.stitched"] = new[] { "Stitched", "拼接人" },
         ["kind.photomissing"] = new[] { "Photo-Ghost", "照片消失人" },
         ["kind.deflate"] = new[] { "Deflate", "变瘪人" },
+        ["kind.lookaway"] = new[] { "Look-Away", "悲工坊人" },
+        ["kind.skindog"] = new[] { "Skin-Dog", "人皮狗" },
     };
 }

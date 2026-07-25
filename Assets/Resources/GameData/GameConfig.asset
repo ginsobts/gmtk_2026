@@ -27,3 +27,10 @@ MonoBehaviour:
   npcYawRandom: 0
   spawnAreaX: {x: -14, y: 14}
   spawnAreaZ: {x: -13, y: 13}
+  dialogueTimePoints: 3
+  photoTimePoints: 1
+  deathThreshold: 60
+  stageThresholds:
+  - 20
+  - 40
+  - 60
