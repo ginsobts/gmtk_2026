@@ -665,9 +665,9 @@ public class UIManager : MonoBehaviour
 
     // ---------------- HUD / 提示 ----------------
 
-    public void SetTimePoints(int tp)
+    public void SetTimePoints(int tp, int stage)
     {
-        if (_timeText != null) _timeText.text = Loc.Pick("Time " + tp, "时间点 " + tp);
+        if (_timeText != null) _timeText.text = Loc.Pick($"Time {tp}  ·  Stage {stage}", $"时间点 {tp}  ·  第 {stage} 阶段");
     }
 
     public void SetHud(int film, int marked, int total)

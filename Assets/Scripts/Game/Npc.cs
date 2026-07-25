@@ -12,11 +12,13 @@ public enum PoseType { None, Yeah, Smile }
 public class Npc : MonoBehaviour
 {
     public string npcName;
+    public string charId;       // 角色 id（如 an_an），用于特定角色逻辑（N5）
     public NpcKind kind;
-    public string artFolder;    // 该角色的美术文件夹，例如 Characters/npc_00
+    public string artFolder;    // 该角色的美术文件夹，例如 Characters/wei_daye
     public string dialogueId;   // 普通状态对话 id（可空）
     public bool marked;         // 玩家已标记为嫌疑人（未提交前不告知对错）
     public bool harmless;       // 无害正常人：错认也不算失败（策划 N2）
+    public int talkCount;       // 已对话次数（N5：安安对话 5 次触发真心话）
 
     public bool IsImposter => kind != NpcKind.Normal;
     public PoseType CurrentPose => _pose;
@@ -25,6 +27,7 @@ public class Npc : MonoBehaviour
 
     SpriteRenderer _renderer;
     Sprite _normalSprite;
+    Sprite _stageSprite;        // 当前 stage 的正常立绘（T4：随时间轴换，如魏大爷扒皮）
     Sprite _activeSprite;       // 当前逻辑立绘（拍照异常恢复时用）
     Vector3 _baseScale;
     Vector3 _activeScale;
@@ -34,6 +37,8 @@ public class Npc : MonoBehaviour
     PoseType _pose;
     bool _revealedByPose;       // 因摆动作而露馅（六指 / 可怕笑）
     bool _deflated;             // 变瘪人已被接触
+    float _lookAwayTimer;       // 顾映表情切换计时（N3）
+    bool _lookAwayCreepy;       // 顾映当前是否诡异表情
 
     // 头顶标记 / 靠近提示
     SpriteRenderer _marker;
@@ -41,15 +46,18 @@ public class Npc : MonoBehaviour
     float _pulseT;
     float _markerPhase;
 
-    public void Setup(string name, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer, bool harmless = false)
+    public void Setup(string name, string charId, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer, bool harmless = false)
     {
         npcName = name;
+        this.charId = charId;
         this.kind = kind;
         this.artFolder = artFolder;
         this.dialogueId = dialogueId;
         this.harmless = harmless;
+        talkCount = 0;
         _renderer = renderer;
         _normalSprite = renderer != null ? renderer.sprite : null;
+        _stageSprite = _normalSprite;
         _baseScale = renderer != null ? renderer.transform.localScale : Vector3.one;
         _basePortraitPos = renderer != null ? renderer.transform.localPosition : Vector3.zero;
 
@@ -111,6 +119,19 @@ public class Npc : MonoBehaviour
                 _deflated = true;
                 SetBodySprite(GeneratedArt.DeflateRevealSprite, matchHeight: false);
                 RefreshColor();
+            }
+        }
+
+        // 顾映（look-away）：不在取景框对准时，表情周期性切成诡异（N3）；被取景对准则定格正常
+        if (kind == NpcKind.LookAway && !DebugControl.Frozen && !_deflated && !_revealedByPose &&
+            gm != null && (gm.State == GameState.Playing || gm.State == GameState.Camera))
+        {
+            _lookAwayTimer -= Time.deltaTime;
+            if (_lookAwayTimer <= 0f)
+            {
+                _lookAwayCreepy = !_lookAwayCreepy && !_inFrame;
+                SetBodySprite(_lookAwayCreepy ? GeneratedArt.ScarySmileRevealSprite : _stageSprite, matchHeight: _lookAwayCreepy);
+                _lookAwayTimer = 1.2f;
             }
         }
 
@@ -177,6 +198,16 @@ public class Npc : MonoBehaviour
         RefreshColor();
     }
 
+    /// <summary>按时间轴 stage 切换该 NPC 的正常立绘（T4/N4：如魏大爷随 stage 被扒皮）。</summary>
+    public void ApplyStage(int stage)
+    {
+        if (_renderer == null) return;
+        Sprite s = GeneratedArt.GetCharacterStageSprite(artFolder, stage);
+        _stageSprite = s != null ? s : _normalSprite;
+        if (_pose == PoseType.None && !_revealedByPose && !_deflated)
+            SetBodySprite(_stageSprite, matchHeight: false);
+    }
+
     /// <summary>指挥该 NPC 摆动作。所有 NPC 都会换成对应姿势立绘；部分伪人会当场露馅。</summary>
     public void SetPose(PoseType pose)
     {
@@ -196,7 +227,7 @@ public class Npc : MonoBehaviour
         }
         else if (pose == PoseType.None)
         {
-            SetBodySprite(_normalSprite, matchHeight: false);
+            SetBodySprite(_stageSprite, matchHeight: false);
         }
         else
         {

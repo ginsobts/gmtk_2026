@@ -20,7 +20,9 @@ public enum NpcKind
     FrameDrop,
     Stitched,
     PhotoMissing,
-    Deflate
+    Deflate,
+    LookAway,   // 顾映：镜头移开时表情变诡异（N3）
+    SkinDog     // 魏大爷：随时间被狗扒皮（露馅 = 时间轴立绘 T4/N4，无额外露馅逻辑）
 }
 
 /// <summary>一个可配置角色（来自 characters.txt）。名字支持中英双语。</summary>
@@ -105,6 +107,8 @@ public static class GameContent
             case NpcKind.Stitched: return Loc.Get("kind.stitched");
             case NpcKind.PhotoMissing: return Loc.Get("kind.photomissing");
             case NpcKind.Deflate: return Loc.Get("kind.deflate");
+            case NpcKind.LookAway: return Loc.Get("kind.lookaway");
+            case NpcKind.SkinDog: return Loc.Get("kind.skindog");
             default: return Loc.Get("kind.normal");
         }
     }
@@ -129,6 +133,8 @@ public static class GameContent
             case NpcKind.Stitched: return "stitched";
             case NpcKind.PhotoMissing: return "photomissing";
             case NpcKind.Deflate: return "deflate";
+            case NpcKind.LookAway: return "lookaway";
+            case NpcKind.SkinDog: return "skindog";
             default: return "generic";
         }
     }

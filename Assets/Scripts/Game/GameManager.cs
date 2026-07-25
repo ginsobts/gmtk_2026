@@ -31,6 +31,9 @@ public class GameManager : MonoBehaviour
 
     int _film;
     int _timePoints;   // 当前累积时间点（对话/拍照，策划 1.3）
+    int _stage = 1;    // 当前时间轴 stage（策划 1.3），从 1 起
+    Light _sun;
+    Material _groundMat;
     bool _submitPending;   // 指认列表里“提交”确认弹窗是否打开
 
     Transform _player;
@@ -134,6 +137,7 @@ public class GameManager : MonoBehaviour
         groundMaterial.mainTexture = GeneratedArt.GroundTexture;
         groundMaterial.mainTextureScale = new Vector2(5f, 5f);
         groundMaterial.color = Color.white;
+        _groundMat = groundMaterial;
 
         var lightGO = new GameObject("Sun");
         var light = lightGO.AddComponent<Light>();
@@ -141,6 +145,7 @@ public class GameManager : MonoBehaviour
         light.intensity = 1.1f;
         lightGO.transform.rotation = Quaternion.Euler(50f, -40f, 0f);
         RenderSettings.ambientLight = new Color(0.55f, 0.55f, 0.6f);
+        _sun = light;
 
         _npcRoot = new GameObject("NPCs").transform;
         BuildTownProps();
@@ -387,7 +392,9 @@ public class GameManager : MonoBehaviour
         SpawnNpcs(round);
         _film = filmMax;
         _timePoints = 0;
+        _stage = 1;
         _submitPending = false;
+        ApplyStageVisuals();   // 重置场景表现到 stage1
         State = GameState.Playing;
 
         UI.HideAllPanels();
@@ -448,7 +455,8 @@ public class GameManager : MonoBehaviour
                 var impostorPool = new List<NpcKind>
                 {
                     NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
-                    NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate
+                    NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate,
+                    NpcKind.LookAway, NpcKind.SkinDog
                 };
                 Shuffle(impostorPool);
                 var free = new List<CharacterDef>();
@@ -475,7 +483,7 @@ public class GameManager : MonoBehaviour
             go.transform.SetParent(_npcRoot, false);
 
             var npc = go.AddComponent<Npc>();
-            npc.Setup(def.DisplayName, kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
+            npc.Setup(def.DisplayName, def.charId, kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
 
             if (i < spawnPoints.Count && spawnPoints[i] != null)
             {
@@ -514,7 +522,7 @@ public class GameManager : MonoBehaviour
     void RefreshHud()
     {
         UI.SetHud(_film, MarkedCount, imposterCount);
-        UI.SetTimePoints(_timePoints);
+        UI.SetTimePoints(_timePoints, _stage);
     }
 
     /// <summary>当前累积时间点。</summary>
@@ -525,7 +533,51 @@ public class GameManager : MonoBehaviour
     {
         if (n <= 0) return;
         _timePoints += n;
+        UpdateStage();
         RefreshHud();
+    }
+
+    /// <summary>时间点跨过阈值时推进 stage，并触发场景演变（策划 1.3）。</summary>
+    void UpdateStage()
+    {
+        var cfg = GameConfig.Instance;
+        int newStage = 1;
+        if (cfg.stageThresholds != null)
+            for (int i = 0; i < cfg.stageThresholds.Length; i++)
+                if (_timePoints >= cfg.stageThresholds[i]) newStage = i + 2;
+        if (newStage != _stage)
+        {
+            _stage = newStage;
+            OnStageChanged();
+        }
+    }
+
+    void OnStageChanged()
+    {
+        var cfg = GameConfig.Instance;
+        foreach (var n in Npcs)
+        {
+            if (n == null) continue;
+            n.ApplyStage(_stage);   // T4/N4：立绘随 stage（魏大爷扒皮）
+            // T3：位置随 stage 小幅移动（表现"人走动了"；精确走位待策划数据）
+            Vector3 p = n.transform.position + new Vector3(Random.Range(-2.5f, 2.5f), 0f, Random.Range(-2.5f, 2.5f));
+            p.x = Mathf.Clamp(p.x, cfg.spawnAreaX.x, cfg.spawnAreaX.y);
+            p.z = Mathf.Clamp(p.z, cfg.spawnAreaZ.x, cfg.spawnAreaZ.y);
+            n.transform.position = p;
+        }
+        ApplyStageVisuals();
+        // TODO T5 对话组随 stage（待对话明细表内容）；stage4 → 死亡演出（阶段五）
+    }
+
+    /// <summary>按当前 stage 应用场景表现：光线渐暗(T6) + 地面色调(T9)。</summary>
+    void ApplyStageVisuals()
+    {
+        var cfg = GameConfig.Instance;
+        int maxStage = (cfg.stageThresholds != null ? cfg.stageThresholds.Length : 3) + 1;
+        float t = maxStage > 1 ? Mathf.Clamp01((_stage - 1) / (float)(maxStage - 1)) : 0f;
+        if (_sun != null) _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t);
+        RenderSettings.ambientLight = Color.Lerp(new Color(0.55f, 0.55f, 0.6f), new Color(0.2f, 0.2f, 0.28f), t);
+        if (_groundMat != null) _groundMat.color = Color.Lerp(Color.white, new Color(0.62f, 0.58f, 0.66f), t);
     }
 
     /// <summary>当前被玩家标记为嫌疑人的数量。</summary>
@@ -599,7 +651,12 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Playing || npc == null) return;
         _dialogueNpc = npc;
-        _dialogueLines = GameContent.GetDialogue(npc.kind, npc.dialogueId);
+        npc.talkCount++;
+        // 安安（N5）：平时只说“……”，对话满 5 次说出真心话
+        if (npc.charId == "an_an")
+            _dialogueLines = new[] { npc.talkCount >= 5 ? Loc.Pick("Die, you pedo.", "炼铜癖去死") : "……" };
+        else
+            _dialogueLines = GameContent.GetDialogue(npc.kind, npc.dialogueId);
         _dialogueIndex = 0;
         State = GameState.Dialogue;
         UI.SetInteractPrompt(null);

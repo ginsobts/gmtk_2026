@@ -69,3 +69,5 @@ kind.framedrop	Frame-Drop	掉帧人
 kind.stitched	Stitched	拼接人
 kind.photomissing	Photo-Ghost	照片消失人
 kind.deflate	Deflate	变瘪人
+kind.lookaway	Look-Away	悲工坊人
+kind.skindog	Skin-Dog	人皮狗
