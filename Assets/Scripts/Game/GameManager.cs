@@ -403,39 +403,60 @@ public class GameManager : MonoBehaviour
             if (n != null) Destroy(n.gameObject);
         Npcs.Clear();
 
-        // 选出参与本关的角色（表里可能多于 npcCount，随机取一批）。
-        var pool = new List<CharacterDef>(GameContent.Characters);
-        Shuffle(pool);
-        int count = Mathf.Min(npcCount, pool.Count);
-        var chosen = pool.GetRange(0, count);
-
-        // 决定每个角色的身份：优先用关卡表的 assign，其余按随机补足伪人。
+        // 决定本关出场角色 chosen 与各自身份 kindByChar。
         var kindByChar = new Dictionary<string, NpcKind>();
-        int assigned = 0;
-        if (round != null)
-        {
-            foreach (var c in chosen)
-                if (round.assign.TryGetValue(c.charId, out var k) && k != NpcKind.Normal)
-                {
-                    kindByChar[c.charId] = k;
-                    assigned++;
-                }
-        }
+        List<CharacterDef> chosen;
 
-        int need = Mathf.Max(0, imposterCount - assigned);
-        if (need > 0)
+        if (round != null && round.roster.Count > 0)
         {
-            var impostorPool = new List<NpcKind>
+            // 固定剧本阵容：出场角色与身份都按 rounds 表 assign 固定，不随机（策划 N1）。
+            chosen = new List<CharacterDef>();
+            var byId = new Dictionary<string, CharacterDef>();
+            foreach (var c in GameContent.Characters) byId[c.charId] = c;
+            foreach (var entry in round.roster)
             {
-                NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
-                NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate
-            };
-            Shuffle(impostorPool);
-            var free = new List<CharacterDef>();
-            foreach (var c in chosen) if (!kindByChar.ContainsKey(c.charId)) free.Add(c);
-            Shuffle(free);
-            for (int i = 0; i < need && i < free.Count && i < impostorPool.Count; i++)
-                kindByChar[free[i].charId] = impostorPool[i];
+                if (byId.TryGetValue(entry.Key, out var def))
+                {
+                    chosen.Add(def);
+                    kindByChar[def.charId] = entry.Value;   // 含 Normal
+                }
+                else Debug.LogWarning($"[SpawnNpcs] 固定阵容角色 {entry.Key} 不在 characters 表，已跳过。");
+            }
+        }
+        else
+        {
+            // 无固定阵容：从角色池随机抽 npcCount 个，再随机补足伪人。
+            var pool = new List<CharacterDef>(GameContent.Characters);
+            Shuffle(pool);
+            int count = Mathf.Min(npcCount, pool.Count);
+            chosen = pool.GetRange(0, count);
+
+            int assigned = 0;
+            if (round != null)
+            {
+                foreach (var c in chosen)
+                    if (round.assign.TryGetValue(c.charId, out var k) && k != NpcKind.Normal)
+                    {
+                        kindByChar[c.charId] = k;
+                        assigned++;
+                    }
+            }
+
+            int need = Mathf.Max(0, imposterCount - assigned);
+            if (need > 0)
+            {
+                var impostorPool = new List<NpcKind>
+                {
+                    NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
+                    NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate
+                };
+                Shuffle(impostorPool);
+                var free = new List<CharacterDef>();
+                foreach (var c in chosen) if (!kindByChar.ContainsKey(c.charId)) free.Add(c);
+                Shuffle(free);
+                for (int i = 0; i < need && i < free.Count && i < impostorPool.Count; i++)
+                    kindByChar[free[i].charId] = impostorPool[i];
+            }
         }
 
         var cfg = GameConfig.Instance;
@@ -454,7 +475,7 @@ public class GameManager : MonoBehaviour
             go.transform.SetParent(_npcRoot, false);
 
             var npc = go.AddComponent<Npc>();
-            npc.Setup(def.DisplayName, kind, def.artFolder, def.dialogueId, bodyR);
+            npc.Setup(def.DisplayName, kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
 
             if (i < spawnPoints.Count && spawnPoints[i] != null)
             {
@@ -772,7 +793,7 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Playing) return;
         State = GameState.Album;
         UI.SetHudVisible(false);
-        UI.ShowAlbum(Album, Loc.Format("album.titleAll", Album.Count));
+        UI.ShowAlbum(Album, Loc.Format("album.titleAll", Album.Count), allowAccuse: true);
     }
 
     /// <summary>查看某个角色出现过的照片（靠近该角色时触发）。</summary>
@@ -794,6 +815,54 @@ public class GameManager : MonoBehaviour
         State = GameState.Playing;
         UI.HideAlbum();
         UI.SetHudVisible(true);
+    }
+
+    /// <summary>
+    /// 相册指认（策划 1.4）：用勾选的照片判定是否揪出全部伪人。
+    /// 判定①勾选≥1；判定②勾选照片覆盖的 NPC == 全部伪人（不漏伪人、不错勾非豁免正常人）。
+    /// </summary>
+    public void AccuseWithPhotos(List<Npc> covered) => AccuseCovered(covered);
+
+    public void AccuseWithPhotos(List<PhotoEntry> selected)
+    {
+        if (State != GameState.Album) return;
+        if (selected == null || selected.Count < 1)
+        {
+            UI.ShowToast(Loc.Get("accuse.needphoto"), false);   // 判定①失败
+            return;
+        }
+
+        // 勾选照片覆盖的 NPC 并集
+        var covered = new HashSet<Npc>();
+        foreach (var e in selected)
+            if (e != null)
+                foreach (var n in e.framed)
+                    if (n != null) covered.Add(n);
+        AccuseCovered(new List<Npc>(covered));
+    }
+
+    void AccuseCovered(List<Npc> covered)
+    {
+        int correctImposters = 0, wrongInnocents = 0;
+        if (covered != null)
+            foreach (var n in covered)
+            {
+                if (n == null) continue;
+                if (n.IsImposter) correctImposters++;
+                else if (!n.harmless) wrongInnocents++;   // 无害正常人(N2)不计错
+            }
+
+        int totalImposters = 0;
+        foreach (var n in Npcs) if (n != null && n.IsImposter) totalImposters++;
+
+        bool win = correctImposters >= totalImposters && wrongInnocents == 0;
+
+        // 先弹旁白过场（策划 1.4），点击后再结算（结算面板暂代结局图 / 死亡演出，阶段五接）
+        State = GameState.Result;
+        UI.HideAlbum();
+        UI.SetHudVisible(false);
+        int c = correctImposters, w = wrongInnocents;
+        UI.ShowNarration(Loc.Get(win ? "narrate.win" : "narrate.lose"), () => EndRound(win, c, w));
     }
 
     // ---------------- 标记嫌疑人（不告知对错） ----------------

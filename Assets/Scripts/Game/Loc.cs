@@ -108,7 +108,7 @@ public static class Loc
     static Dictionary<string, string[]> Defaults() => new Dictionary<string, string[]>
     {
         // 主菜单
-        ["menu.title"] = new[] { "The Imposter Hunt", "寻找炼化人" },
+        ["menu.title"] = new[] { "The Imposter Hunt", "寻找伪人" },
         ["menu.subtitle"] = new[] { "A 2.5D observation game", "2.5D 观察解谜小游戏" },
         ["menu.start"] = new[] { "Start Game", "开始游戏" },
         ["menu.credits"] = new[] { "Credits", "制作者名单" },
@@ -119,13 +119,12 @@ public static class Loc
         ["credits.body"] = new[]
         {
             "The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity",
-            "寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作"
+            "寻找伪人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作"
         },
 
         // HUD
         ["hud.film"] = new[] { "Film {0}", "胶卷 {0}" },
-        ["hud.marked"] = new[] { "Marked {0} (imposters: {1})", "已标记 {0}（炼化人共 {1}）" },
-        ["phase.enter"] = new[] { "Phase shift: {0}", "阶段切换：{0}" },
+        ["hud.marked"] = new[] { "Marked {0} (imposters: {1})", "已标记 {0}（伪人共 {1}）" },
         ["hud.prompt"] = new[] { "Move [WASD]   Photo [Space]   Album [Tab]   Accuse List [M]", "移动 [WASD]　拍照 [空格]　相册 [Tab]　指认列表 [M]" },
         ["btn.camera"] = new[] { "Camera (Space)", "相机 (空格)" },
         ["btn.album"] = new[] { "Album (Tab)", "相册 (Tab)" },
@@ -153,7 +152,7 @@ public static class Loc
         ["cam.poseSmile"] = new[] { "\u201CEveryone smile~\u201D", "\u201C大家笑一个～\u201D" },
         ["cam.posePeace"] = new[] { "\u201CGive me a peace sign!\u201D", "\u201C来，比个耶！\u201D" },
         ["cam.nofilm"] = new[] { "No film left!", "没有胶卷了！" },
-        ["cam.shot"] = new[] { "Snap! Saved to album.", "咔嚓！进相册了。" },
+        ["cam.shot"] = new[] { "Snap! Saved to album (film left {0})", "咔嚓！进相册了（剩余胶卷 {0}）" },
 
         // 相册
         ["album.titleAll"] = new[] { "Album — All Photos ({0})", "相册 —— 全部照片（{0} 张）" },
@@ -162,7 +161,7 @@ public static class Loc
         ["album.close"] = new[] { "Close (Esc)", "关闭 (Esc)" },
         ["album.inphoto"] = new[] { "In photo: {0}", "照片里：{0}" },
         ["album.accuse"] = new[] { "Accuse (ticked)", "指认（勾选的）" },
-        ["album.accuseHint"] = new[] { "Tick the photos of ALL imposters, then Accuse.", "勾选出所有炼化人的照片，再点指认。" },
+        ["album.accuseHint"] = new[] { "Tick the photos of ALL imposters, then Accuse.", "勾选出所有伪人的照片，再点指认。" },
         ["accuse.needphoto"] = new[] { "Please tick at least one photo first.", "请先勾选照片。" },
 
         // 指认列表 / 提交
@@ -175,8 +174,8 @@ public static class Loc
         ["confirm.title"] = new[] { "Confirm Accusation", "确认提交指认" },
         ["confirm.yes"] = new[] { "Confirm", "确认提交" },
         ["confirm.no"] = new[] { "Reconsider", "再想想" },
-        ["confirm.body"] = new[] { "You will accuse these {0} as imposters:\n\n{1}\n\nThe round ends immediately and can't be changed. Sure?", "你将指认以下 {0} 人为炼化人：\n\n{1}\n\n提交后本局立即结束，且无法修改。确定吗？" },
-        ["confirm.bodyEmpty"] = new[] { "You haven't marked anyone.\nSubmitting now counts as \u201Cfound no imposters\u201D.\n\nThe round ends immediately. Sure?", "你还没有标记任何人。\n若直接提交，将视为\u201C没有找出任何炼化人\u201D。\n\n提交后本局立即结束，确定吗？" },
+        ["confirm.body"] = new[] { "You will accuse these {0} as imposters:\n\n{1}\n\nThe round ends immediately and can't be changed. Sure?", "你将指认以下 {0} 人为伪人：\n\n{1}\n\n提交后本局立即结束，且无法修改。确定吗？" },
+        ["confirm.bodyEmpty"] = new[] { "You haven't marked anyone.\nSubmitting now counts as \u201Cfound no imposters\u201D.\n\nThe round ends immediately. Sure?", "你还没有标记任何人。\n若直接提交，将视为\u201C没有找出任何伪人\u201D。\n\n提交后本局立即结束，确定吗？" },
 
         // Toast
         ["toast.marked"] = new[] { "Marked \u201C{0}\u201D as a suspect (pending)", "已标记\u300C{0}\u300D为嫌疑人（待提交）" },
@@ -187,15 +186,12 @@ public static class Loc
         ["result.lose"] = new[] { "Investigation Over", "调查结束" },
         ["narrate.win"] = new[] { "You're safe... for now.", "你安全了，暂时。" },
         ["narrate.lose"] = new[] { "You're out of chances.", "你已经没有机会了。" },
-        ["death.flee"] = new[] { "Something is coming. RUN.", "有什么东西来了。快跑。" },
-        ["death.normal"] = new[] { "It caught you.", "它抓住了你。" },
-        ["death.special"] = new[] { "You shouldn't have looked closer.", "你不该再靠近看的。" },
-        ["result.detail"] = new[] { "Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}", "指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的炼化人是：\n{4}" },
+        ["result.detail"] = new[] { "Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}", "指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的伪人是：\n{4}" },
         ["result.none"] = new[] { "(none)", "（无）" },
         ["result.replay"] = new[] { "Play Again", "再玩一次" },
         ["result.menu"] = new[] { "Main Menu", "返回主菜单" },
 
-        // 炼化人类型名
+        // 伪人类型名
         ["kind.normal"] = new[] { "Normal", "普通人" },
         ["kind.doubao"] = new[] { "AI Bot", "豆包人" },
         ["kind.sixfinger"] = new[] { "Six-Finger", "六指人" },
@@ -204,7 +200,5 @@ public static class Loc
         ["kind.stitched"] = new[] { "Stitched", "拼接人" },
         ["kind.photomissing"] = new[] { "Photo-Ghost", "照片消失人" },
         ["kind.deflate"] = new[] { "Deflate", "变瘪人" },
-        ["kind.lookaway"] = new[] { "Look-Away", "悲工坊人" },
-        ["kind.skindog"] = new[] { "Skin-Dog", "人皮狗" },
     };
 }
