@@ -1,9 +1,3 @@
-# 关卡表（Tab 分隔）。游戏默认使用第一行有效关卡。
-# npcCount 本关出场角色数；imposterCount 伪人数；film 胶卷数。
-# assign：本关出场阵容 + 身份，charId=Kind，多个用英文逗号分隔。
-#   - 非空 = 固定剧本阵容：只出场这里列出的角色、身份也固定（Normal=正常人），每局一致。
-#   - 留空 = 随机：从 characters 表随机抽 npcCount 个、随机分 imposterCount 个伪人。
-# Kind 可选值：Normal DouBao SixFinger ScarySmile FrameDrop Stitched PhotoMissing Deflate
-# 注：顾映(gu_ying 镜头移开变脸) / 魏大爷(wei_daye 随时间扒皮) 是阶段四新增机制，现暂为 Normal。
-roundId	npcCount	imposterCount	film	assign
-r1	13	6	10	wei_daye=Normal,lin_cai=DouBao,wang_jianguo=Normal,gu_ying=Normal,han_lu=SixFinger,cheng_shu=PhotoMissing,chen_wei=FrameDrop,wu_ang=Stitched,shrink_girl=Deflate,fang_xiao=Normal,an_an=Normal,lu_yuan=Normal,su_qing=Normal
+# 关卡表（Tab 分隔）。单局固定剧本，仅 roundId 占位。
+roundId
+r1
