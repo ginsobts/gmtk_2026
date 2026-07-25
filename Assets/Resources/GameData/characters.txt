@@ -1,12 +1,18 @@
-# 角色主表（Tab 分隔）。charId 沿用美术编号；artFolder 相对 Resources/Art。
-# dialogueId 留空则普通对话用 generic。name_en / name_zh 为双语显示名。
-# 以 # 开头的行会被忽略。
-charId	artFolder	dialogueId	name_en	name_zh
-npc_00	Characters/npc_00	generic	Leo	小李
-npc_01	Characters/npc_01	generic	Chad	阿强
-npc_02	Characters/npc_02	generic	Walt	老王
-npc_03	Characters/npc_03	generic	Rose	翠花
-npc_04	Characters/npc_04	generic	Bruno	大壮
-npc_05	Characters/npc_05	generic	Jenny	阿珍
-npc_06	Characters/npc_06	generic	Tiger	胖虎
-npc_07	Characters/npc_07	generic	Lily	丽丽
+# 角色主表（Tab 分隔）。charId 为角色拼音标识；美术文件夹 = Resources/Art/Characters/<charId>/base.png（+ smile/yeah）。
+# dialogueId 留空/generic 则普通对话用 generic；伪人对话由身份(kind)决定，与此列无关。
+# name_en / name_zh 为双语显示名。harmless=1 表示无害正常人（指认错也不算失败，策划 N2）。
+# 以 # 开头的行会被忽略。缺美术图时 GeneratedArt 程序兜底占位，不崩。
+charId	artFolder	dialogueId	name_en	name_zh	harmless
+wei_daye	Characters/wei_daye	generic	Wei Daye	魏大爷	0
+lin_cai	Characters/lin_cai	generic	Lin Cai	林采	0
+wang_jianguo	Characters/wang_jianguo	generic	Wang Jianguo	王建国	1
+gu_ying	Characters/gu_ying	generic	Gu Ying	顾映	0
+han_lu	Characters/han_lu	generic	Han Lu	韩露	0
+cheng_shu	Characters/cheng_shu	generic	Cheng Shu	程书	0
+chen_wei	Characters/chen_wei	generic	Chen Wei	陈维	0
+wu_ang	Characters/wu_ang	generic	Wu Ang	吴昂	0
+shrink_girl	Characters/shrink_girl	generic	Shrink	变瘪人	0
+fang_xiao	Characters/fang_xiao	generic	Fang Xiao	方晓	0
+an_an	Characters/an_an	generic	An An	安安	0
+lu_yuan	Characters/lu_yuan	generic	Lu Yuan	陆远	0
+su_qing	Characters/su_qing	generic	Su Qing	苏晴	0

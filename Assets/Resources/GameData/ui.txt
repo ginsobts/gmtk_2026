@@ -55,6 +55,8 @@ toast.marked	Marked “{0}” as a suspect (pending)	已标记「{0}」为嫌疑
 toast.unmarked	Unmarked “{0}”	已取消标记「{0}」
 result.win	All Uncovered!	全部识破！
 result.lose	Investigation Over	调查结束
+narrate.win	You're safe... for now.	你安全了，暂时。
+narrate.lose	You're out of chances.	你已经没有机会了。
 result.detail	Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}	指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的伪人是：\n{4}
 result.none	(none)	（无）
 result.replay	Play Again	再玩一次

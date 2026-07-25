@@ -160,6 +160,9 @@ public static class Loc
         ["album.empty"] = new[] { "No photos yet. Take some with the camera first.", "还没有照片，先用相机拍几张吧。" },
         ["album.close"] = new[] { "Close (Esc)", "关闭 (Esc)" },
         ["album.inphoto"] = new[] { "In photo: {0}", "照片里：{0}" },
+        ["album.accuse"] = new[] { "Accuse (ticked)", "指认（勾选的）" },
+        ["album.accuseHint"] = new[] { "Tick the photos of ALL imposters, then Accuse.", "勾选出所有伪人的照片，再点指认。" },
+        ["accuse.needphoto"] = new[] { "Please tick at least one photo first.", "请先勾选照片。" },
 
         // 指认列表 / 提交
         ["mark.title"] = new[] { "Accuse List — Your Suspects", "指认列表 —— 你标记的嫌疑人" },
@@ -181,6 +184,8 @@ public static class Loc
         // 结算
         ["result.win"] = new[] { "All Uncovered!", "全部识破！" },
         ["result.lose"] = new[] { "Investigation Over", "调查结束" },
+        ["narrate.win"] = new[] { "You're safe... for now.", "你安全了，暂时。" },
+        ["narrate.lose"] = new[] { "You're out of chances.", "你已经没有机会了。" },
         ["result.detail"] = new[] { "Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}", "指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的伪人是：\n{4}" },
         ["result.none"] = new[] { "(none)", "（无）" },
         ["result.replay"] = new[] { "Play Again", "再玩一次" },

@@ -29,8 +29,9 @@ public class CharacterDef
     public string charId;
     public string nameEn;
     public string nameZh;
-    public string artFolder;    // 相对 Resources/Art，例如 Characters/npc_00
+    public string artFolder;    // 相对 Resources/Art，例如 Characters/wei_daye
     public string dialogueId;   // 普通状态用的对话 id，可空
+    public bool harmless;       // 无害正常人：指认错也不算失败（策划 N2）
 
     /// <summary>按当前语言返回显示名。</summary>
     public string DisplayName => Loc.Pick(nameEn, nameZh);
@@ -44,6 +45,8 @@ public class RoundDef
     public int imposterCount = 3;
     public int film = 10;
     public Dictionary<string, NpcKind> assign = new Dictionary<string, NpcKind>();
+    // 固定剧本阵容（有序：出场角色 + 身份，Normal=正常人）。非空则 SpawnNpcs 按此固定，不随机。
+    public List<KeyValuePair<string, NpcKind>> roster = new List<KeyValuePair<string, NpcKind>>();
 }
 
 /// <summary>
@@ -155,20 +158,22 @@ public static class GameContent
     {
         var rows = ReadTable("GameData/characters");
         if (rows == null) return;
-        // 列：charId  artFolder  dialogueId  name_en  name_zh
+        // 列：charId  artFolder  dialogueId  name_en  name_zh  harmless
         _characters = new List<CharacterDef>();
         foreach (var r in rows)
         {
             if (r.Length < 2 || string.IsNullOrEmpty(r[0])) continue;
             string en = r.Length > 3 ? r[3].Trim() : "";
             string zh = r.Length > 4 ? r[4].Trim() : "";
+            bool harmless = r.Length > 5 && r[5].Trim() == "1";
             _characters.Add(new CharacterDef
             {
                 charId = r[0].Trim(),
                 artFolder = r[1].Trim(),
                 dialogueId = r.Length > 2 ? r[2].Trim() : "",
                 nameEn = en,
-                nameZh = zh
+                nameZh = zh,
+                harmless = harmless
             });
         }
     }
@@ -218,7 +223,12 @@ public static class GameContent
                 {
                     var kv = pair.Split('=');
                     if (kv.Length == 2)
-                        rd.assign[kv[0].Trim()] = ParseKind(kv[1]);
+                    {
+                        string cid = kv[0].Trim();
+                        NpcKind k = ParseKind(kv[1]);
+                        rd.assign[cid] = k;
+                        rd.roster.Add(new KeyValuePair<string, NpcKind>(cid, k));   // 有序，供固定阵容用
+                    }
                 }
             }
             _rounds.Add(rd);
