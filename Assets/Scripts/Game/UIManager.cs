@@ -25,7 +25,10 @@ public class UIManager : MonoBehaviour
 
     // HUD
     GameObject _hudRoot;
-    Text _filmText, _foundText, _promptText;
+    Text _foundText, _promptText;
+    Image _timelineFill;
+    RectTransform _timelineFillRt;
+    readonly List<Text> _phaseLabels = new List<Text>();
 
     // 靠近角色的交互面板
     GameObject _interactRoot;
@@ -45,6 +48,8 @@ public class UIManager : MonoBehaviour
     // 对话
     GameObject _dialogueRoot;
     Text _dialogueName, _dialogueLine;
+    Image _dialoguePortrait;
+    GameObject _dialoguePortraitRoot;
 
     // 相机
     GameObject _cameraRoot;
@@ -93,7 +98,7 @@ public class UIManager : MonoBehaviour
     Coroutine _fadeCo;
     Image _recDot;
     Text _recLabel;
-    int _lastFilm = int.MinValue, _lastMarked = int.MinValue;
+    int _lastMarked = int.MinValue;
 
     // ---------------- 构建 ----------------
 
@@ -247,17 +252,13 @@ public class UIManager : MonoBehaviour
         SetRect(vignette.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40));
         vignette.transform.SetAsFirstSibling();
 
-        MakeIcon(hud, "FilmIcon", GeneratedArt.GetIconSprite(0),
-            new Vector2(0, 1), new Vector2(28, -28), new Vector2(46, 46));
-        _filmText = MakeText(hud, "Film", "", 36, TextAnchor.UpperLeft);
-        SetRect(_filmText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
-            new Vector2(86, -26), new Vector2(400, 60));
-
         MakeIcon(hud, "FoundIcon", GeneratedArt.GetIconSprite(6),
             new Vector2(1, 1), new Vector2(-250, -28), new Vector2(44, 44));
         _foundText = MakeText(hud, "Found", "", 36, TextAnchor.UpperRight);
         SetRect(_foundText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1),
             new Vector2(-30, -26), new Vector2(400, 60));
+
+        BuildTimelineBar(hud);
 
         _promptText = MakeLocText(hud, "Prompt", "hud.prompt", 26, TextAnchor.LowerCenter);
         SetRect(_promptText.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
@@ -329,12 +330,22 @@ public class UIManager : MonoBehaviour
         SetRect(_dialogueRoot.GetComponent<RectTransform>(), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
             new Vector2(0, 200), new Vector2(1200, 300));
 
+        _dialoguePortraitRoot = new GameObject("Portrait", typeof(RectTransform));
+        _dialoguePortraitRoot.transform.SetParent(_dialogueRoot.transform, false);
+        SetRect(_dialoguePortraitRoot.GetComponent<RectTransform>(),
+            new Vector2(0, 0), new Vector2(0, 1), new Vector2(0, 0.5f),
+            new Vector2(20, 10), new Vector2(200, 280));
+        _dialoguePortrait = _dialoguePortraitRoot.AddComponent<Image>();
+        _dialoguePortrait.preserveAspect = true;
+        _dialoguePortrait.color = Color.white;
+        _dialoguePortraitRoot.SetActive(false);
+
         _dialogueName = MakeText(_dialogueRoot.transform, "DName", "", 36, TextAnchor.UpperLeft);
-        SetRect(_dialogueName.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -24), new Vector2(600, 50));
+        SetRect(_dialogueName.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(240, -24), new Vector2(600, 50));
         _dialogueName.color = new Color(1f, 0.85f, 0.5f);
 
         _dialogueLine = MakeText(_dialogueRoot.transform, "DLine", "", 32, TextAnchor.UpperLeft);
-        SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, -90), new Vector2(-80, 120));
+        SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(240, -90), new Vector2(-80, 120));
 
         MakeButton(_dialogueRoot.transform, "dlg.next", 30, () => GameManager.Instance.DialogueNext(),
             new Vector2(1, 0), new Vector2(-150, 50), new Vector2(220, 66));
@@ -606,15 +617,109 @@ public class UIManager : MonoBehaviour
 
     // ---------------- HUD / 提示 ----------------
 
-    public void SetHud(int film, int marked, int total)
+    public void SetHud(int marked, int total, int phaseOrder, int timeline)
     {
-        _filmText.text = Loc.Format("hud.film", film);
-        _filmText.color = film <= 2 ? new Color(1f, 0.4f, 0.4f) : Color.white;
         _foundText.text = Loc.Format("hud.marked", marked, total);
+        UpdateTimelineBar(phaseOrder, timeline);
 
-        if (_lastFilm != int.MinValue && film != _lastFilm) StartCoroutine(PunchText(_filmText.rectTransform));
         if (_lastMarked != int.MinValue && marked != _lastMarked) StartCoroutine(PunchText(_foundText.rectTransform));
-        _lastFilm = film; _lastMarked = marked;
+        _lastMarked = marked;
+    }
+
+    void BuildTimelineBar(Transform hud)
+    {
+        const float barW = 520f;
+        const float barH = 10f;
+
+        var root = new GameObject("TimelineBar", typeof(RectTransform));
+        root.transform.SetParent(hud, false);
+        SetRect(root.GetComponent<RectTransform>(), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1),
+            new Vector2(0, -58), new Vector2(barW, 52));
+
+        var track = MakePanel(root.transform, "Track", new Color(0.12f, 0.14f, 0.19f, 0.92f));
+        SetRect(track.GetComponent<RectTransform>(), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1),
+            new Vector2(0, -18), new Vector2(barW, barH));
+
+        var fillGO = new GameObject("Fill", typeof(RectTransform));
+        fillGO.transform.SetParent(track.transform, false);
+        _timelineFill = fillGO.AddComponent<Image>();
+        _timelineFill.color = TimelineFillColor(1);
+        _timelineFill.raycastTarget = false;
+        _timelineFillRt = fillGO.GetComponent<RectTransform>();
+        _timelineFillRt.anchorMin = Vector2.zero;
+        _timelineFillRt.anchorMax = new Vector2(0f, 1f);
+        _timelineFillRt.pivot = new Vector2(0f, 0.5f);
+        _timelineFillRt.offsetMin = Vector2.zero;
+        _timelineFillRt.offsetMax = Vector2.zero;
+
+        int maxT = GameContent.GetTimelineMax();
+        var phases = GameContent.Phases;
+        for (int i = 0; i < phases.Count; i++)
+        {
+            var p = phases[i];
+            if (p.threshold > 0)
+                AddTimelineDivider(track.transform, p.threshold / (float)maxT);
+
+            float segStart = p.threshold;
+            float segEnd = (i + 1 < phases.Count) ? phases[i + 1].threshold : maxT;
+            float center = (segStart + segEnd) * 0.5f / maxT;
+
+            var label = MakeText(root.transform, "PhaseLabel" + p.order, p.DisplayName, 22, TextAnchor.UpperCenter);
+            SetRect(label.rectTransform, new Vector2(center, 1), new Vector2(center, 1), new Vector2(0.5f, 1),
+                new Vector2(0, 0), new Vector2(120, 28));
+            label.color = new Color(0.55f, 0.6f, 0.68f, 0.85f);
+            _phaseLabels.Add(label);
+        }
+    }
+
+    static void AddTimelineDivider(Transform track, float normalizedX)
+    {
+        var go = new GameObject("Divider", typeof(RectTransform));
+        go.transform.SetParent(track, false);
+        var img = go.AddComponent<Image>();
+        img.color = new Color(0.92f, 0.94f, 1f, 0.42f);
+        img.raycastTarget = false;
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(normalizedX, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(2f, 18f);
+        rt.anchoredPosition = Vector2.zero;
+    }
+
+    static Color TimelineFillColor(int phaseOrder)
+    {
+        switch (phaseOrder)
+        {
+            case 1: return new Color(0.95f, 0.78f, 0.38f);   // 上午 — 暖金
+            case 2: return new Color(0.42f, 0.72f, 0.96f);   // 下午 — 天蓝
+            case 3: return new Color(0.72f, 0.42f, 0.88f);   // 晚上 — 紫
+            default: return new Color(0.55f, 0.62f, 0.75f);
+        }
+    }
+
+    void UpdateTimelineBar(int phaseOrder, int timeline)
+    {
+        if (_timelineFill == null || _timelineFillRt == null) return;
+
+        int maxT = Mathf.Max(1, GameContent.GetTimelineMax());
+        float progress = Mathf.Clamp01(timeline / (float)maxT);
+        if (timeline > 0 && progress < 0.015f) progress = 0.015f;
+        _timelineFillRt.anchorMax = new Vector2(progress, 1f);
+        _timelineFill.color = TimelineFillColor(phaseOrder);
+
+        var phases = GameContent.Phases;
+        for (int i = 0; i < _phaseLabels.Count && i < phases.Count; i++)
+        {
+            var p = phases[i];
+            var label = _phaseLabels[i];
+            if (label == null) continue;
+            label.text = p.DisplayName;
+            bool active = p.order == phaseOrder;
+            label.color = active
+                ? TimelineFillColor(phaseOrder)
+                : new Color(0.55f, 0.6f, 0.68f, 0.85f);
+            label.fontSize = active ? 24 : 22;
+        }
     }
 
     IEnumerator PunchText(RectTransform rt)
@@ -636,12 +741,21 @@ public class UIManager : MonoBehaviour
 
     // ---------------- 对话 ----------------
 
-    public void ShowDialogue(string name, string line)
+    public void ShowDialogue(string name, DialogueLine line)
     {
         bool wasActive = _dialogueRoot.activeSelf;
         _dialogueRoot.SetActive(true);
         _dialogueName.text = name;
-        _dialogueLine.text = line;
+        _dialogueLine.text = line != null && !string.IsNullOrEmpty(line.text) ? line.text : "";
+
+        var portrait = line != null ? PortraitArt.GetPortrait(line.portraitId) : null;
+        if (_dialoguePortraitRoot != null)
+        {
+            bool show = portrait != null;
+            _dialoguePortraitRoot.SetActive(show);
+            if (show) _dialoguePortrait.sprite = portrait;
+        }
+
         if (!wasActive) PlayShow(_dialogueRoot);
     }
 
@@ -880,7 +994,8 @@ public class UIManager : MonoBehaviour
 
         string imposterList = (imposters != null && imposters.Count > 0)
             ? string.Join("\n", imposters) : Loc.Get("result.none");
-        _resultDetail.text = Loc.Format("result.detail", correct, total, wrong, photos, imposterList);
+        string story = Loc.Get(win ? "result.win.body" : "result.lose.body");
+        _resultDetail.text = Loc.Format("result.detail", correct, total, wrong, photos, imposterList, story);
     }
 
     public void HideAllPanels()
@@ -1129,7 +1244,16 @@ public class UIManager : MonoBehaviour
         foreach (var e in _locStatic)
             if (e.text != null) e.text.text = Loc.Get(e.key);
         if (_menuLangLabel != null) _menuLangLabel.text = Loc.Format("menu.language", Loc.LanguageName);
-        if (GameManager.Instance != null) GameManager.Instance.OnLanguageChanged();
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.OnLanguageChanged();
+        }
+        else if (_timelineFill != null && _phaseLabels.Count > 0)
+        {
+            var phases = GameContent.Phases;
+            for (int i = 0; i < _phaseLabels.Count && i < phases.Count; i++)
+                if (_phaseLabels[i] != null) _phaseLabels[i].text = phases[i].DisplayName;
+        }
     }
 
     void OnDestroy() { Loc.OnChanged -= Relocalize; }

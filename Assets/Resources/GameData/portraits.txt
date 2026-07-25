@@ -1,0 +1,19 @@
+# 对话 UI 立绘映射表。imagePath 相对 Resources/Art/。
+portraitId	imagePath
+lin_neutral	Portraits/npc_00/neutral
+lin_smile	Portraits/npc_00/smile
+lin_think	Portraits/npc_00/think
+boss_neutral	Portraits/npc_01/neutral
+boss_stern	Portraits/npc_01/serious
+hr_phone	Portraits/npc_03/neutral
+fang_tired	Portraits/npc_05/tired
+fang_dazed	Portraits/npc_05/dazed
+lu_eyes	Portraits/npc_07/eyes
+lu_pain	Portraits/npc_07/pain
+generic_neutral	Portraits/npc_02/neutral
+doubao_calm	Portraits/npc_05/neutral
+doubao_glitch	Portraits/npc_05/glitch
+uncle_normal	Portraits/npc_08/normal
+uncle_anxious	Portraits/npc_08/anxious
+uncle_horror	Portraits/npc_08/horror
+girl_blank	Portraits/npc_09/blank

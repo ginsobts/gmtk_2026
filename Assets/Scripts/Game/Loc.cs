@@ -108,8 +108,8 @@ public static class Loc
     static Dictionary<string, string[]> Defaults() => new Dictionary<string, string[]>
     {
         // 主菜单
-        ["menu.title"] = new[] { "The Imposter Hunt", "寻找伪人" },
-        ["menu.subtitle"] = new[] { "A 2.5D observation game", "2.5D 观察解谜小游戏" },
+        ["menu.title"] = new[] { "Human Company", "人类公司" },
+        ["menu.subtitle"] = new[] { "You came to film. They came to replace.", "你来拍视频。他们来换人。" },
         ["menu.start"] = new[] { "Start Game", "开始游戏" },
         ["menu.credits"] = new[] { "Credits", "制作者名单" },
         ["menu.quit"] = new[] { "Quit", "退出游戏" },
@@ -118,22 +118,24 @@ public static class Loc
         ["credits.back"] = new[] { "Back", "返回" },
         ["credits.body"] = new[]
         {
-            "The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity",
-            "寻找伪人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作"
+            "Human Company\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity",
+            "人类公司\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作"
         },
 
         // HUD
-        ["hud.film"] = new[] { "Film {0}", "胶卷 {0}" },
-        ["hud.marked"] = new[] { "Marked {0} (imposters: {1})", "已标记 {0}（伪人共 {1}）" },
-        ["hud.prompt"] = new[] { "Move [WASD]   Photo [Space]   Album [Tab]   Accuse List [M]", "移动 [WASD]　拍照 [空格]　相册 [Tab]　指认列表 [M]" },
+        ["hud.marked"] = new[] { "Marked {0} (shells: {1})", "已标记 {0}（炼化人共 {1}）" },
+        ["hud.phase"] = new[] { "{0}  ·  Timeline {1}", "{0}  ·  时间轴 {1}" },
+        ["phase.enter"] = new[] { "Phase shift: {0}", "阶段切换：{0}" },
+        ["timeline.full"] = new[] { "Timeline full — submit your screening list to end the day.", "时间轴已满——请提交甄别名单以结束本日拍摄。" },
+        ["hud.prompt"] = new[] { "Move [WASD]   Photo [Space]   Album [Tab]   Screening List [M]", "移动 [WASD]　拍照 [空格]　相册 [Tab]　甄别名单 [M]" },
         ["btn.camera"] = new[] { "Camera (Space)", "相机 (空格)" },
         ["btn.album"] = new[] { "Album (Tab)", "相册 (Tab)" },
-        ["btn.marklist"] = new[] { "Accuse List (M)", "指认列表 (M)" },
+        ["btn.marklist"] = new[] { "Screening List (M)", "甄别名单 (M)" },
 
         // 靠近交互
         ["interact.talk"] = new[] { "Talk [E]", "交谈 [E]" },
         ["interact.viewphotos"] = new[] { "View Photos [Q]", "查看照片 [Q]" },
-        ["interact.mark"] = new[] { "Mark Suspect [F]", "标记嫌疑人 [F]" },
+        ["interact.mark"] = new[] { "Mark Shell [F]", "标记炼化人 [F]" },
         ["interact.unmark"] = new[] { "Unmark [F]", "取消标记 [F]" },
         ["interact.markedSuffix"] = new[] { " (marked)", "（已标记）" },
 
@@ -151,49 +153,63 @@ public static class Loc
         ["cam.exit"] = new[] { "Exit [Esc]", "退出 [Esc]" },
         ["cam.poseSmile"] = new[] { "\u201CEveryone smile~\u201D", "\u201C大家笑一个～\u201D" },
         ["cam.posePeace"] = new[] { "\u201CGive me a peace sign!\u201D", "\u201C来，比个耶！\u201D" },
-        ["cam.nofilm"] = new[] { "No film left!", "没有胶卷了！" },
-        ["cam.shot"] = new[] { "Snap! Saved to album (film left {0})", "咔嚓！进相册了（剩余胶卷 {0}）" },
+        ["cam.shot"] = new[] { "Snap! Saved to album.", "已保存至相册。" },
 
         // 相册
-        ["album.titleAll"] = new[] { "Album — All Photos ({0})", "相册 —— 全部照片（{0} 张）" },
-        ["album.titleChar"] = new[] { "{0}'s Photos ({1})", "{0} 的照片（{1} 张）" },
-        ["album.empty"] = new[] { "No photos yet. Take some with the camera first.", "还没有照片，先用相机拍几张吧。" },
+        ["album.titleAll"] = new[] { "Album — All Footage ({0})", "相册 —— 全部素材（{0} 段）" },
+        ["album.titleChar"] = new[] { "{0}'s Footage ({1})", "{0} 的素材（{1} 段）" },
+        ["album.empty"] = new[] { "No footage yet. Take some with the camera first.", "还没有素材，先用相机拍几段吧。" },
         ["album.close"] = new[] { "Close (Esc)", "关闭 (Esc)" },
-        ["album.inphoto"] = new[] { "In photo: {0}", "照片里：{0}" },
+        ["album.inphoto"] = new[] { "In shot: {0}", "镜头里：{0}" },
 
         // 指认列表 / 提交
-        ["mark.title"] = new[] { "Accuse List — Your Suspects", "指认列表 —— 你标记的嫌疑人" },
-        ["mark.sub"] = new[] { "Click \u201CSubmit\u201D when you are sure. Note: the round ends immediately after submitting.", "确认无误后点击\u201C提交指认\u201D。注意：提交后本局立即结束。" },
-        ["mark.empty"] = new[] { "You haven't marked anyone.\nGo near an NPC and press [F] to mark a suspect.", "你还没有标记任何人。\n回到场景靠近 NPC 按 [F] 标记你怀疑的对象。" },
-        ["mark.submit"] = new[] { "Submit Accusation", "提交指认" },
+        ["mark.title"] = new[] { "Screening List — Marked Shells", "甄别名单 —— 你标记的炼化人" },
+        ["mark.sub"] = new[] { "Mark who you believe are refined shells, then submit. You cannot undo.", "标记你认为是炼化人的人，确认后提交。提交后无法撤回。" },
+        ["mark.empty"] = new[] { "You haven't marked anyone.\nGo near an employee and press [F] to mark a suspected shell.", "你还没有标记任何人。\n靠近职员按 [F] 标记可疑炼化体。" },
+        ["mark.submit"] = new[] { "Submit Screening", "提交甄别" },
         ["mark.back"] = new[] { "Back [Esc]", "返回场景 [Esc]" },
         ["mark.remove"] = new[] { "Remove", "移除标记" },
-        ["confirm.title"] = new[] { "Confirm Accusation", "确认提交指认" },
+        ["confirm.title"] = new[] { "Confirm Screening", "确认提交甄别" },
         ["confirm.yes"] = new[] { "Confirm", "确认提交" },
         ["confirm.no"] = new[] { "Reconsider", "再想想" },
-        ["confirm.body"] = new[] { "You will accuse these {0} as imposters:\n\n{1}\n\nThe round ends immediately and can't be changed. Sure?", "你将指认以下 {0} 人为伪人：\n\n{1}\n\n提交后本局立即结束，且无法修改。确定吗？" },
-        ["confirm.bodyEmpty"] = new[] { "You haven't marked anyone.\nSubmitting now counts as \u201Cfound no imposters\u201D.\n\nThe round ends immediately. Sure?", "你还没有标记任何人。\n若直接提交，将视为\u201C没有找出任何伪人\u201D。\n\n提交后本局立即结束，确定吗？" },
+        ["confirm.body"] = new[] { "You will accuse these {0} as refined shells:\n\n{1}\n\nThe round ends immediately. A wrong mark may trigger the Boss. Sure?", "你将指认以下 {0} 人为炼化人：\n\n{1}\n\n提交后本局立即结束。误指可能触发 Boss。确定吗？" },
+        ["confirm.bodyEmpty"] = new[] { "You haven't marked anyone.\nSubmitting now counts as \u201Cfound no shells\u201D.\n\nThe round ends immediately. Sure?", "你还没有标记任何人。\n若直接提交，将视为\u201C没有找出任何炼化人\u201D。\n\n提交后本局立即结束，确定吗？" },
 
         // Toast
-        ["toast.marked"] = new[] { "Marked \u201C{0}\u201D as a suspect (pending)", "已标记\u300C{0}\u300D为嫌疑人（待提交）" },
+        ["toast.marked"] = new[] { "Marked \u201C{0}\u201D as a suspected shell (pending)", "已标记\u300C{0}\u300D为可疑炼化体（待提交）" },
         ["toast.unmarked"] = new[] { "Unmarked \u201C{0}\u201D", "已取消标记\u300C{0}\u300D" },
 
         // 结算
-        ["result.win"] = new[] { "All Uncovered!", "全部识破！" },
-        ["result.lose"] = new[] { "Investigation Over", "调查结束" },
-        ["result.detail"] = new[] { "Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}", "指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的伪人是：\n{4}" },
+        ["result.win"] = new[] { "Evacuation Success", "撤离成功" },
+        ["result.lose"] = new[] { "You Have Been Refined", "你已被炼化" },
+        ["result.win.body"] = new[]
+        {
+            "Screening correct. Real employees evacuated with you. Your footage is handed to authorities. Human Company's refining black site is exposed.",
+            "甄别正确。你带领真人职员撤离，相册素材交予警方。人类公司的炼化黑幕曝光。"
+        },
+        ["result.lose.body"] = new[]
+        {
+            "A wrong mark. The Chief Efficiency Officer steps from the monitors. Your camera drops. Days later your account auto-posts: empty hallways, lip-sync loops, uncanny smiles — fans think you're still updating.",
+            "甄别失误。首席效率官从监控后走出，你的相机掉落。数日后你的账号自动发布：空镜走廊、重复口型、异常微笑——粉丝以为仍是你在更新。"
+        },
+        ["result.detail"] = new[]
+        {
+            "Correct {0}/{1}   Wrong {2}\nFootage captured: {3}\n\nRefined shells this round:\n{4}\n\n{5}",
+            "指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 段素材\n\n本局炼化人名单：\n{4}\n\n{5}"
+        },
         ["result.none"] = new[] { "(none)", "（无）" },
         ["result.replay"] = new[] { "Play Again", "再玩一次" },
         ["result.menu"] = new[] { "Main Menu", "返回主菜单" },
 
-        // 伪人类型名
-        ["kind.normal"] = new[] { "Normal", "普通人" },
-        ["kind.doubao"] = new[] { "AI Bot", "豆包人" },
-        ["kind.sixfinger"] = new[] { "Six-Finger", "六指人" },
-        ["kind.scarysmile"] = new[] { "Scary Smile", "一笑变可怕人" },
-        ["kind.framedrop"] = new[] { "Frame-Drop", "掉帧人" },
-        ["kind.stitched"] = new[] { "Stitched", "拼接人" },
-        ["kind.photomissing"] = new[] { "Photo-Ghost", "照片消失人" },
-        ["kind.deflate"] = new[] { "Deflate", "变瘪人" },
+        // 炼化人类型名
+        ["kind.normal"] = new[] { "Real Employee", "真人职员" },
+        ["kind.doubao"] = new[] { "Script Shell", "话术炼化体" },
+        ["kind.sixfinger"] = new[] { "Limb Glitch", "肢体渲染异常体" },
+        ["kind.scarysmile"] = new[] { "Smile Map Fail", "表情映射失败体" },
+        ["kind.framedrop"] = new[] { "Frame Desync", "帧同步异常体" },
+        ["kind.stitched"] = new[] { "Patchwork Shell", "模型拼接体" },
+        ["kind.photomissing"] = new[] { "Capture Null", "光学消隐体" },
+        ["kind.deflate"] = new[] { "Hollow Shell", "空壳皮囊体" },
+        ["kind.dogskin"] = new[] { "Dog-Skin Shell", "狗皮人" },
     };
 }

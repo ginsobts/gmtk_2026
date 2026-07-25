@@ -11,11 +11,13 @@ public enum PoseType { None, Yeah, Smile }
 /// </summary>
 public class Npc : MonoBehaviour
 {
+    public string charId;
     public string npcName;
     public NpcKind kind;
-    public string artFolder;    // 该角色的美术文件夹，例如 Characters/npc_00
-    public string dialogueId;   // 普通状态对话 id（可空）
-    public bool marked;         // 玩家已标记为嫌疑人（未提交前不告知对错）
+    public string artFolder;
+    public string dialogueId;
+    public int dialogueVisitCount;
+    public bool marked;
 
     public bool IsImposter => kind != NpcKind.Normal;
     public PoseType CurrentPose => _pose;
@@ -40,12 +42,14 @@ public class Npc : MonoBehaviour
     float _pulseT;
     float _markerPhase;
 
-    public void Setup(string name, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer)
+    public void Setup(string charId, string name, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer)
     {
+        this.charId = charId;
         npcName = name;
         this.kind = kind;
         this.artFolder = artFolder;
         this.dialogueId = dialogueId;
+        dialogueVisitCount = 0;
         _renderer = renderer;
         _normalSprite = renderer != null ? renderer.sprite : null;
         _baseScale = renderer != null ? renderer.transform.localScale : Vector3.one;
