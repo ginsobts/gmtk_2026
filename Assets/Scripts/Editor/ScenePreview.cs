@@ -44,10 +44,9 @@ public static class ScenePreview
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "PreviewGround";
         ground.transform.SetParent(root.transform);
-        ground.transform.localScale = new Vector3(4f, 1f, 4f);
-        var mat = new Material(Shader.Find("Standard")) { hideFlags = Ephemeral };
-        mat.mainTexture = GeneratedArt.GroundTexture;
-        mat.mainTextureScale = new Vector2(5f, 5f);
+        ground.transform.localScale = new Vector3(6f, 1f, 6f);
+        var mat = GeneratedArt.CreateGroundMaterial();
+        mat.hideFlags = Ephemeral;
         ground.GetComponent<Renderer>().sharedMaterial = mat;
 
         // 游戏相机（用于取景/对齐 Scene 视角）

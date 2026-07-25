@@ -129,11 +129,9 @@ public class GameManager : MonoBehaviour
     {
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
-        ground.transform.localScale = new Vector3(4f, 1f, 4f);
-        var groundMaterial = ground.GetComponent<Renderer>().material;
-        groundMaterial.mainTexture = GeneratedArt.GroundTexture;
-        groundMaterial.mainTextureScale = new Vector2(5f, 5f);
-        groundMaterial.color = Color.white;
+        ground.transform.localScale = new Vector3(6f, 1f, 6f);
+        var groundMaterial = GeneratedArt.CreateGroundMaterial();
+        ground.GetComponent<Renderer>().material = groundMaterial;
 
         var lightGO = new GameObject("Sun");
         var light = lightGO.AddComponent<Light>();

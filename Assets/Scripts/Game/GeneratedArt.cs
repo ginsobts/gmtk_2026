@@ -29,8 +29,36 @@ public static class GeneratedArt
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
     static Sprite _blobShadow, _softDot, _downArrow, _vignette, _recDot;
 
-    public static Texture2D GroundTexture =>
-        _ground ??= Resources.Load<Texture2D>("Art/town_ground_texture");
+    public static Texture2D GroundTexture
+    {
+        get
+        {
+            if (_ground == null)
+            {
+                _ground = Resources.Load<Texture2D>("Art/town_ground_texture");
+                PrepareGroundTexture(_ground);
+            }
+            return _ground;
+        }
+    }
+
+    /// <summary>地面贴图采样设置：Clamp、高各向异性，斜视角下尽量保持清晰。</summary>
+    static void PrepareGroundTexture(Texture2D tex)
+    {
+        if (tex == null) return;
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        tex.anisoLevel = 16;
+    }
+
+    /// <summary>创建地面材质：Unlit 不受光照影响，贴图颜色原样显示。</summary>
+    public static Material CreateGroundMaterial()
+    {
+        var mat = new Material(Shader.Find("Unlit/Texture"));
+        mat.mainTexture = GroundTexture;
+        mat.mainTextureScale = Vector2.one;
+        return mat;
+    }
 
     /// <summary>按角色美术文件夹加载默认立绘（artFolder 例如 Characters/npc_00）。</summary>
     public static Sprite GetCharacterSprite(string artFolder)
