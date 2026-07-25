@@ -63,10 +63,11 @@ public static class GeneratedArt
     /// <summary>按角色美术文件夹加载默认立绘（artFolder 例如 Characters/npc_00）。</summary>
     public static Sprite GetCharacterSprite(string artFolder)
     {
-        if (string.IsNullOrEmpty(artFolder)) return null;
-        if (_characterCache.TryGetValue(artFolder, out var s)) return s;
-        s = LoadWholeSprite($"Art/{artFolder}/base");
-        _characterCache[artFolder] = s;
+        string key = string.IsNullOrEmpty(artFolder) ? "<none>" : artFolder;
+        if (_characterCache.TryGetValue(key, out var s)) return s;
+        s = TryLoadWholeSprite($"Art/{artFolder}/base");   // 缺图安静返回 null
+        if (s == null) s = MakeCharacterPlaceholder(key);  // 兜底：程序占位立绘（缺美术图也可见、不崩）
+        _characterCache[key] = s;
         return s;
     }
 
@@ -197,6 +198,40 @@ public static class GeneratedArt
 
     /// <summary>REC 小红点（实心圆）。</summary>
     public static Sprite RecDotSprite => _recDot ??= MakeRadialSprite(32, new Color(1f, 0.25f, 0.25f, 1f), 6f);
+
+    /// <summary>缺角色美术图时的程序占位立绘：按名字上色的纸片小人（头+身），脚底为轴。</summary>
+    static Sprite MakeCharacterPlaceholder(string seed)
+    {
+        int w = 96, h = 192;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        int hash = seed != null ? seed.GetHashCode() : 0;
+        float hue = (Mathf.Abs(hash) % 360) / 360f;
+        Color body = Color.HSVToRGB(hue, 0.45f, 0.85f);
+        Color head = Color.HSVToRGB(hue, 0.30f, 0.95f);
+        var px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float cx = x / (float)(w - 1) - 0.5f;
+                float fy = y / (float)(h - 1);
+                bool inside; Color c;
+                if (fy > 0.70f)
+                {
+                    float hy = (fy - 0.85f) / 0.15f;             // 头部椭圆
+                    inside = (cx * cx) / (0.22f * 0.22f) + hy * hy < 1f;
+                    c = head;
+                }
+                else
+                {
+                    float bw = 0.34f - 0.10f * (fy / 0.70f);     // 身体：上宽下窄
+                    inside = Mathf.Abs(cx) < bw && fy > 0.02f;
+                    c = body;
+                }
+                px[y * w + x] = inside ? c : new Color(0, 0, 0, 0);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
+    }
 
     static Sprite MakeRadialSprite(int size, Color color, float falloff)
     {

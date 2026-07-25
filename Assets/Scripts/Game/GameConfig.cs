@@ -20,7 +20,7 @@ public class GameConfig : ScriptableObject
 
     [Header("玩家")]
     public Vector3 playerStart = new Vector3(0f, 0f, -6f);
-    public float playerScale = 0.47f;
+    public float playerScale = 1.0f;
     public float playerMoveSpeed = 5.5f;
     public float playerInteractRange = 2.6f;
 

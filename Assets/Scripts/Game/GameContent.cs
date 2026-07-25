@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 炼化人种类。每种对应一条侦查线（露馅方式）：
+/// 伪人种类。每种对应一条侦查线（露馅方式）：
 /// DouBao      —— 对话线：说话一股 AI 官方腔
 /// SixFinger   —— 取景线：命令「比耶」时露出六根手指
 /// ScarySmile  —— 取景线：命令「笑」时变成恐怖脸
@@ -10,7 +10,6 @@ using UnityEngine;
 /// Stitched    —— 相册线：拍出的照片里身体是拼接的
 /// PhotoMissing—— 相册线：真人在取景框里，但照片里没有 TA
 /// Deflate     —— 世界线：玩家靠近接触时会“变瘪”
-/// DogSkin     —— 对话线：三阶段差分，最终恐怖立绘
 /// </summary>
 public enum NpcKind
 {
@@ -21,25 +20,7 @@ public enum NpcKind
     FrameDrop,
     Stitched,
     PhotoMissing,
-    Deflate,
-    DogSkin
-}
-
-public enum NpcDialogueMode { Static, Phase, Count }
-
-/// <summary>运行时一句对话（已本地化 + 立绘 id）。</summary>
-public class DialogueLine
-{
-    public string portraitId;
-    public string text;
-}
-
-/// <summary>表内一句台词原始数据。</summary>
-class DialogueLineDef
-{
-    public string portraitId;
-    public string en;
-    public string zh;
+    Deflate
 }
 
 /// <summary>一个可配置角色（来自 characters.txt）。名字支持中英双语。</summary>
@@ -48,66 +29,39 @@ public class CharacterDef
     public string charId;
     public string nameEn;
     public string nameZh;
-    public string artFolder;
-    public string dialogueId;
-    public NpcKind kind = NpcKind.Normal;
-    public string titleEn;
-    public string titleZh;
+    public string artFolder;    // 相对 Resources/Art，例如 Characters/wei_daye
+    public string dialogueId;   // 普通状态用的对话 id，可空
+    public bool harmless;       // 无害正常人：指认错也不算失败（策划 N2）
 
+    /// <summary>按当前语言返回显示名。</summary>
     public string DisplayName => Loc.Pick(nameEn, nameZh);
-
-    /// <summary>UI 显示名：有岗位时为「名字·岗位」。</summary>
-    public string DisplayLabel
-    {
-        get
-        {
-            string title = Loc.Pick(titleEn, titleZh);
-            if (string.IsNullOrEmpty(title)) return DisplayName;
-            return $"{DisplayName}·{title}";
-        }
-    }
 }
 
-/// <summary>单局占位（来自 rounds.txt，仅 roundId）。</summary>
+/// <summary>一关的配置（来自 rounds.txt）。</summary>
 public class RoundDef
 {
     public string roundId = "r1";
-}
-
-/// <summary>时间阶段（来自 phases.txt）。</summary>
-public class PhaseDef
-{
-    public string phaseId;
-    public int order;
-    public int threshold;
-    public string nameEn;
-    public string nameZh;
-
-    public string DisplayName => Loc.Pick(nameEn, nameZh);
-}
-
-class NpcDialogueEntry
-{
-    public NpcDialogueMode mode;
-    public int index;
-    public string dialogueId;
+    public int npcCount = 8;
+    public int imposterCount = 3;
+    public int film = 10;
+    public Dictionary<string, NpcKind> assign = new Dictionary<string, NpcKind>();
+    // 固定剧本阵容（有序：出场角色 + 身份，Normal=正常人）。非空则 SpawnNpcs 按此固定，不随机。
+    public List<KeyValuePair<string, NpcKind>> roster = new List<KeyValuePair<string, NpcKind>>();
 }
 
 /// <summary>
 /// 内容层：从 Resources/GameData/*.txt（Tab 分隔）读取姓名、对话、关卡配置。
+/// 读表失败或字段缺失时回退到内置默认值，保证游戏始终可运行。
+/// 策划改表即可，无需改代码。
 /// </summary>
 public static class GameContent
 {
     static bool _loaded;
     static List<CharacterDef> _characters;
-    static Dictionary<string, List<DialogueLineDef>> _dialogue;
+    static Dictionary<string, List<string[]>> _dialogue;   // dialogueId -> 台词序列，每句 [en, zh]
     static List<RoundDef> _rounds;
-    static List<PhaseDef> _phases;
-    static Dictionary<string, List<NpcDialogueEntry>> _npcDialogues;
-    static Dictionary<string, string> _portraits;
 
     public static IReadOnlyList<CharacterDef> Characters { get { EnsureLoaded(); return _characters; } }
-    public static IReadOnlyList<PhaseDef> Phases { get { EnsureLoaded(); return _phases; } }
 
     public static RoundDef GetDefaultRound()
     {
@@ -115,133 +69,31 @@ public static class GameContent
         return (_rounds != null && _rounds.Count > 0) ? _rounds[0] : new RoundDef();
     }
 
-    /// <summary>按时间轴数值推导当前阶段 order（1 起）。</summary>
-    public static int GetPhaseForTimeline(int timelineValue)
+    /// <summary>返回该 NPC 的一组对话（逐句显示，按当前语言）。charDialogueId 用于普通角色的专属闲聊。</summary>
+    public static string[] GetDialogue(NpcKind kind, string charDialogueId = null)
     {
         EnsureLoaded();
-        int phase = 1;
-        if (_phases == null) return phase;
-        foreach (var p in _phases)
-        {
-            if (timelineValue >= p.threshold && p.order >= phase)
-                phase = p.order;
-        }
-        return phase;
-    }
+        string id = kind == NpcKind.Normal
+            ? (string.IsNullOrEmpty(charDialogueId) ? "generic" : charDialogueId)
+            : KindDialogueId(kind);
 
-    public static PhaseDef GetPhaseDef(int phaseOrder)
-    {
-        EnsureLoaded();
-        if (_phases == null) return null;
-        foreach (var p in _phases)
-            if (p.order == phaseOrder) return p;
-        return _phases.Count > 0 ? _phases[0] : null;
-    }
-
-    /// <summary>时间轴进度条满格值：末阶段 threshold + 与上一段等长的余量。</summary>
-    public static int GetTimelineMax()
-    {
-        EnsureLoaded();
-        if (_phases == null || _phases.Count == 0) return 90;
-        var sorted = new List<PhaseDef>(_phases);
-        sorted.Sort((a, b) => a.order.CompareTo(b.order));
-        var last = sorted[sorted.Count - 1];
-        if (sorted.Count >= 2)
-        {
-            var prev = sorted[sorted.Count - 2];
-            return last.threshold + System.Math.Max(1, last.threshold - prev.threshold);
-        }
-        return last.threshold + 15;
-    }
-
-    /// <summary>查 portraits.txt，返回相对 Resources/Art/ 的路径；缺失返回 null。</summary>
-    public static string GetPortraitPath(string portraitId)
-    {
-        if (string.IsNullOrEmpty(portraitId)) return null;
-        EnsureLoaded();
-        if (_portraits != null && _portraits.TryGetValue(portraitId, out var path))
-            return path;
-        return null;
-    }
-
-    public static NpcDialogueMode GetDialogueMode(string charId)
-    {
-        EnsureLoaded();
-        if (string.IsNullOrEmpty(charId) || _npcDialogues == null) return NpcDialogueMode.Static;
-        if (!_npcDialogues.TryGetValue(charId, out var entries) || entries == null || entries.Count == 0)
-            return NpcDialogueMode.Static;
-        return entries[0].mode;
-    }
-
-    /// <summary>解析该 NPC 当前应播放的一组对话。</summary>
-    public static DialogueLine[] ResolveDialogue(Npc npc, int currentPhase)
-    {
-        EnsureLoaded();
-        if (npc == null) return System.Array.Empty<DialogueLine>();
-
-        string dialogueId = ResolveDialogueId(npc, currentPhase);
-        if (TryGetLines(dialogueId, out var lines))
+        if (_dialogue != null && _dialogue.TryGetValue(id, out var lines) && lines != null && lines.Count > 0)
             return PickLines(lines);
-        return PickLines(FallbackGenericDialogue());
+        return PickLines(FallbackDialogue(kind));
     }
 
-    static string ResolveDialogueId(Npc npc, int currentPhase)
+    static string[] PickLines(List<string[]> lines)
     {
-        if (!string.IsNullOrEmpty(npc.charId) &&
-            _npcDialogues != null &&
-            _npcDialogues.TryGetValue(npc.charId, out var entries) &&
-            entries != null && entries.Count > 0)
-        {
-            var mode = entries[0].mode;
-            if (mode == NpcDialogueMode.Static)
-            {
-                foreach (var e in entries)
-                    if (e.index == 0) return e.dialogueId;
-                return entries[0].dialogueId;
-            }
-            if (mode == NpcDialogueMode.Phase)
-            {
-                foreach (var e in entries)
-                    if (e.index == currentPhase) return e.dialogueId;
-            }
-            else if (mode == NpcDialogueMode.Count)
-            {
-                int target = npc.dialogueVisitCount + 1;
-                string last = null;
-                foreach (var e in entries)
-                {
-                    if (e.index <= target) last = e.dialogueId;
-                    if (e.index == target) return e.dialogueId;
-                }
-                if (!string.IsNullOrEmpty(last)) return last;
-            }
-        }
-
-        return string.IsNullOrEmpty(npc.dialogueId) ? "generic" : npc.dialogueId;
-    }
-
-    static bool TryGetLines(string dialogueId, out List<DialogueLineDef> lines)
-    {
-        lines = null;
-        if (string.IsNullOrEmpty(dialogueId) || _dialogue == null) return false;
-        return _dialogue.TryGetValue(dialogueId, out lines) && lines != null && lines.Count > 0;
-    }
-
-    static DialogueLine[] PickLines(List<DialogueLineDef> lines)
-    {
-        var arr = new DialogueLine[lines.Count];
+        var arr = new string[lines.Count];
         for (int i = 0; i < lines.Count; i++)
         {
-            var def = lines[i];
-            arr[i] = new DialogueLine
-            {
-                portraitId = def.portraitId,
-                text = Loc.Pick(def.en, def.zh)
-            };
+            var pair = lines[i];
+            arr[i] = Loc.Pick(pair.Length > 0 ? pair[0] : "", pair.Length > 1 ? pair[1] : "");
         }
         return arr;
     }
 
+    /// <summary>用于结算/指认提示的伪人类型名（按当前语言）。</summary>
     public static string KindLabel(NpcKind kind)
     {
         switch (kind)
@@ -253,11 +105,11 @@ public static class GameContent
             case NpcKind.Stitched: return Loc.Get("kind.stitched");
             case NpcKind.PhotoMissing: return Loc.Get("kind.photomissing");
             case NpcKind.Deflate: return Loc.Get("kind.deflate");
-            case NpcKind.DogSkin: return Loc.Get("kind.dogskin");
             default: return Loc.Get("kind.normal");
         }
     }
 
+    /// <summary>把表里的字符串解析成 NpcKind，无法识别返回 Normal。</summary>
     public static NpcKind ParseKind(string s)
     {
         if (!string.IsNullOrEmpty(s) &&
@@ -266,14 +118,18 @@ public static class GameContent
         return NpcKind.Normal;
     }
 
-    static NpcDialogueMode ParseDialogueMode(string s)
+    static string KindDialogueId(NpcKind kind)
     {
-        if (string.IsNullOrEmpty(s)) return NpcDialogueMode.Static;
-        switch (s.Trim().ToLowerInvariant())
+        switch (kind)
         {
-            case "phase": return NpcDialogueMode.Phase;
-            case "count": return NpcDialogueMode.Count;
-            default: return NpcDialogueMode.Static;
+            case NpcKind.DouBao: return "doubao";
+            case NpcKind.SixFinger: return "sixfinger";
+            case NpcKind.ScarySmile: return "scarysmile";
+            case NpcKind.FrameDrop: return "framedrop";
+            case NpcKind.Stitched: return "stitched";
+            case NpcKind.PhotoMissing: return "photomissing";
+            case NpcKind.Deflate: return "deflate";
+            default: return "generic";
         }
     }
 
@@ -288,9 +144,6 @@ public static class GameContent
             LoadCharacters();
             LoadDialogue();
             LoadRounds();
-            LoadPhases();
-            LoadNpcDialogues();
-            LoadPortraits();
         }
         catch (System.Exception e)
         {
@@ -299,29 +152,28 @@ public static class GameContent
         if (_characters == null || _characters.Count == 0) _characters = DefaultCharacters();
         if (_dialogue == null || _dialogue.Count == 0) _dialogue = DefaultDialogue();
         if (_rounds == null || _rounds.Count == 0) _rounds = new List<RoundDef> { new RoundDef() };
-        if (_phases == null || _phases.Count == 0) _phases = DefaultPhases();
-        if (_npcDialogues == null) _npcDialogues = new Dictionary<string, List<NpcDialogueEntry>>();
-        if (_portraits == null) _portraits = new Dictionary<string, string>();
     }
 
     static void LoadCharacters()
     {
         var rows = ReadTable("GameData/characters");
         if (rows == null) return;
+        // 列：charId  artFolder  dialogueId  name_en  name_zh  harmless
         _characters = new List<CharacterDef>();
         foreach (var r in rows)
         {
             if (r.Length < 2 || string.IsNullOrEmpty(r[0])) continue;
+            string en = r.Length > 3 ? r[3].Trim() : "";
+            string zh = r.Length > 4 ? r[4].Trim() : "";
+            bool harmless = r.Length > 5 && r[5].Trim() == "1";
             _characters.Add(new CharacterDef
             {
                 charId = r[0].Trim(),
                 artFolder = r[1].Trim(),
                 dialogueId = r.Length > 2 ? r[2].Trim() : "",
-                nameEn = r.Length > 3 ? r[3].Trim() : "",
-                nameZh = r.Length > 4 ? r[4].Trim() : "",
-                kind = r.Length > 5 ? ParseKind(r[5]) : NpcKind.Normal,
-                titleEn = r.Length > 6 ? r[6].Trim() : "",
-                titleZh = r.Length > 7 ? r[7].Trim() : ""
+                nameEn = en,
+                nameZh = zh,
+                harmless = harmless
             });
         }
     }
@@ -330,37 +182,23 @@ public static class GameContent
     {
         var rows = ReadTable("GameData/dialogue");
         if (rows == null) return;
-        var tmp = new Dictionary<string, SortedList<int, DialogueLineDef>>();
+        // 列：dialogueId  order  en  zh
+        // dialogueId -> (order -> [en, zh])
+        var tmp = new Dictionary<string, SortedList<int, string[]>>();
         foreach (var r in rows)
         {
             if (r.Length < 3 || string.IsNullOrEmpty(r[0])) continue;
             string id = r[0].Trim();
             int order = ParseInt(r[1], 0);
-
-            string portraitId = "";
-            string en, zh;
-            if (r.Length >= 5)
-            {
-                portraitId = r[2].Trim();
-                en = Unescape(r[3]);
-                zh = Unescape(r[4]);
-            }
-            else
-            {
-                en = Unescape(r[2]);
-                zh = Unescape(r.Length > 3 ? r[3] : "");
-            }
-
-            if (!tmp.TryGetValue(id, out var sl)) { sl = new SortedList<int, DialogueLineDef>(); tmp[id] = sl; }
-            while (sl.ContainsKey(order)) order++;
-            sl[order] = new DialogueLineDef { portraitId = portraitId, en = en, zh = zh };
+            string en = Unescape(r.Length > 2 ? r[2] : "");
+            string zh = Unescape(r.Length > 3 ? r[3] : "");
+            if (!tmp.TryGetValue(id, out var sl)) { sl = new SortedList<int, string[]>(); tmp[id] = sl; }
+            while (sl.ContainsKey(order)) order++; // 容错：order 重复时顺延
+            sl[order] = new[] { en, zh };
         }
-        _dialogue = new Dictionary<string, List<DialogueLineDef>>();
+        _dialogue = new Dictionary<string, List<string[]>>();
         foreach (var kv in tmp)
-        {
-            var list = new List<DialogueLineDef>(kv.Value.Values);
-            _dialogue[kv.Key] = list;
-        }
+            _dialogue[kv.Key] = new List<string[]>(kv.Value.Values);
     }
 
     static void LoadRounds()
@@ -370,69 +208,34 @@ public static class GameContent
         _rounds = new List<RoundDef>();
         foreach (var r in rows)
         {
-            if (string.IsNullOrEmpty(r[0])) continue;
-            _rounds.Add(new RoundDef { roundId = r[0].Trim() });
-        }
-    }
-
-    static void LoadPhases()
-    {
-        var rows = ReadTable("GameData/phases");
-        if (rows == null) return;
-        _phases = new List<PhaseDef>();
-        foreach (var r in rows)
-        {
             if (r.Length < 4 || string.IsNullOrEmpty(r[0])) continue;
-            _phases.Add(new PhaseDef
+            var rd = new RoundDef
             {
-                phaseId = r[0].Trim(),
-                order = ParseInt(r[1], 1),
-                threshold = ParseInt(r[2], 0),
-                nameEn = r.Length > 3 ? r[3].Trim() : "",
-                nameZh = r.Length > 4 ? r[4].Trim() : ""
-            });
-        }
-        _phases.Sort((a, b) => a.order.CompareTo(b.order));
-    }
-
-    static void LoadNpcDialogues()
-    {
-        var rows = ReadTable("GameData/npc_dialogues");
-        if (rows == null) return;
-        _npcDialogues = new Dictionary<string, List<NpcDialogueEntry>>();
-        foreach (var r in rows)
-        {
-            if (r.Length < 4 || string.IsNullOrEmpty(r[0])) continue;
-            string charId = r[0].Trim();
-            var entry = new NpcDialogueEntry
-            {
-                mode = ParseDialogueMode(r[1]),
-                index = ParseInt(r[2], 0),
-                dialogueId = r[3].Trim()
+                roundId = r[0].Trim(),
+                npcCount = ParseInt(r[1], 8),
+                imposterCount = ParseInt(r[2], 3),
+                film = ParseInt(r[3], 10)
             };
-            if (!_npcDialogues.TryGetValue(charId, out var list))
+            string assign = r.Length > 4 ? r[4].Trim() : "";
+            if (!string.IsNullOrEmpty(assign))
             {
-                list = new List<NpcDialogueEntry>();
-                _npcDialogues[charId] = list;
+                foreach (var pair in assign.Split(','))
+                {
+                    var kv = pair.Split('=');
+                    if (kv.Length == 2)
+                    {
+                        string cid = kv[0].Trim();
+                        NpcKind k = ParseKind(kv[1]);
+                        rd.assign[cid] = k;
+                        rd.roster.Add(new KeyValuePair<string, NpcKind>(cid, k));   // 有序，供固定阵容用
+                    }
+                }
             }
-            list.Add(entry);
-        }
-        foreach (var kv in _npcDialogues)
-            kv.Value.Sort((a, b) => a.index.CompareTo(b.index));
-    }
-
-    static void LoadPortraits()
-    {
-        var rows = ReadTable("GameData/portraits");
-        if (rows == null) return;
-        _portraits = new Dictionary<string, string>();
-        foreach (var r in rows)
-        {
-            if (r.Length < 2 || string.IsNullOrEmpty(r[0])) continue;
-            _portraits[r[0].Trim()] = r[1].Trim();
+            _rounds.Add(rd);
         }
     }
 
+    /// <summary>读取 Tab 分隔表：跳过空行、以 # 开头的注释行与表头，返回数据行的列数组。</summary>
     static List<string[]> ReadTable(string resourcePath)
     {
         var asset = Resources.Load<TextAsset>(resourcePath);
@@ -459,64 +262,71 @@ public static class GameContent
     static string Unescape(string s)
         => string.IsNullOrEmpty(s) ? s : s.Replace("\\n", "\n").Trim();
 
-    // ---------------- 内置默认 ----------------
+    // ---------------- 内置默认（读表失败时的回退） ----------------
 
     static List<CharacterDef> DefaultCharacters()
     {
-        var list = new List<CharacterDef>
+        string[] en = { "Leo", "Chad", "Walt", "Rose", "Bruno", "Jenny", "Tiger", "Lily" };
+        string[] zh = { "小李", "阿强", "老王", "翠花", "大壮", "阿珍", "胖虎", "丽丽" };
+        var list = new List<CharacterDef>();
+        for (int i = 0; i < en.Length; i++)
         {
-            C("npc_00", "Lin Cai", "林采", NpcKind.DouBao, "PR", "公关"),
-            C("npc_01", "Wang Jianguo", "王建国", NpcKind.Normal, "CEO", "老板"),
-            C("npc_02", "Chen Wei", "陈维", NpcKind.FrameDrop, "Ops", "运维"),
-            C("npc_03", "Su Qing", "苏晴", NpcKind.Normal, "HR", "人事"),
-            C("npc_04", "Zhao Yan", "赵岩", NpcKind.Deflate, "Security", "保安"),
-            C("npc_05", "Fang Xiao", "方晓", NpcKind.Normal, "Staff", "职员"),
-            C("npc_06", "Wu Ang", "吴昂", NpcKind.Stitched, "Algorithm", "算法"),
-            C("npc_07", "Lu Yuan", "陆远", NpcKind.Normal, "Dev", "开发"),
-            C("npc_08", "Uncle Wei", "魏大爷", NpcKind.DogSkin),
-            C("npc_09", "An'an", "安安", NpcKind.Normal),
-            C("npc_10", "Han Lu", "韩露", NpcKind.SixFinger, "Reception", "前台"),
-            C("npc_11", "Gu Ying", "顾映", NpcKind.ScarySmile, "Brand", "品牌"),
-            C("npc_12", "Cheng Shu", "程书", NpcKind.PhotoMissing, "Compliance", "合规"),
-        };
+            string id = $"npc_{i:00}";
+            list.Add(new CharacterDef
+            {
+                charId = id,
+                nameEn = en[i],
+                nameZh = zh[i],
+                artFolder = $"Characters/{id}",
+                dialogueId = "generic"
+            });
+        }
         return list;
     }
 
-    static CharacterDef C(string id, string en, string zh, NpcKind kind, string titleEn = "", string titleZh = "") => new CharacterDef
-    {
-        charId = id,
-        nameEn = en,
-        nameZh = zh,
-        artFolder = $"Characters/{id}",
-        dialogueId = "generic",
-        kind = kind,
-        titleEn = titleEn,
-        titleZh = titleZh
-    };
+    static List<string[]> L(params string[][] pairs) => new List<string[]>(pairs);
 
-    static List<PhaseDef> DefaultPhases() => new List<PhaseDef>
-    {
-        new PhaseDef { phaseId = "p1", order = 1, threshold = 0, nameEn = "Morning", nameZh = "上午" },
-        new PhaseDef { phaseId = "p2", order = 2, threshold = 30, nameEn = "Afternoon", nameZh = "下午" },
-        new PhaseDef { phaseId = "p3", order = 3, threshold = 60, nameEn = "Evening", nameZh = "晚上" }
-    };
-
-    static List<DialogueLineDef> L(params DialogueLineDef[] lines) => new List<DialogueLineDef>(lines);
-
-    static DialogueLineDef D(string en, string zh, string portraitId = "") =>
-        new DialogueLineDef { en = en, zh = zh, portraitId = portraitId };
-
-    static Dictionary<string, List<DialogueLineDef>> DefaultDialogue() => new Dictionary<string, List<DialogueLineDef>>
+    static Dictionary<string, List<string[]>> DefaultDialogue() => new Dictionary<string, List<string[]>>
     {
         ["generic"] = L(
-            D("Nice weather today, just out for a stroll.", "排期表上写着六点收工，希望这次是真的。"),
-            D("You're at the market too? Quite a crowd.", "他们老把「效率改革」挂在嘴边，也没人说清楚到底改什么。"),
-            D("Need something? I'm a bit busy.", "好歹茶水间有免费零食，咖啡机记得去试试。"),
-            D("I come to this street every day, know it well.", "你要拍素材的话，最好别进机房，容易惹麻烦。"))
+            new[] { "Nice weather today, just out for a stroll.", "今天天气不错，出来走走。" },
+            new[] { "You're at the market too? Quite a crowd.", "你也在逛集市啊？人挺多的。" },
+            new[] { "Need something? I'm a bit busy.", "有事吗？我还挺忙的。" },
+            new[] { "I come to this street every day, know it well.", "这条街我天天来，熟得很。" }),
+        ["doubao"] = L(
+            new[] { "Hello! I am a local resident and I'm happy to help you.", "您好！我是本地居民，很高兴能为您提供帮助。" },
+            new[] { "That's an interesting question; we can analyze it from multiple dimensions.", "这个问题很有意思，我们可以从多个维度来分析它。" },
+            new[] { "In summary, specifics require specific analysis. I hope this helps.", "总的来说，具体情况需要具体分析，希望以上回答对您有帮助。" },
+            new[] { "Sorry, as an ordinary citizen, I cannot provide more information.", "抱歉，作为一名普通市民，我暂时无法提供更多相关信息。" }),
+        ["sixfinger"] = L(
+            new[] { "Hi there. A handshake? ...maybe not.", "你好呀，握手就……还是算了吧。" },
+            new[] { "I'm shy, I'll keep my hands to myself, ha.", "我这人怕生，手就不伸出来了哈。" },
+            new[] { "Photos are fine, but let's skip the peace sign, okay?", "拍照可以，比耶什么的就免了吧？" }),
+        ["scarysmile"] = L(
+            new[] { "Hey, hello there.", "嗨，你好呀。" },
+            new[] { "I look great smiling — want to take a photo of me?", "我笑起来可好看了，要不要给我拍张照？" },
+            new[] { "Don't just chat, come on, smile for a photo.", "别光顾着聊天，来，笑一个拍张照嘛。" }),
+        ["framedrop"] = L(
+            new[] { "Uh... h-hello.", "呃……你、你好。" },
+            new[] { "Did I... did I just glitch for a second?", "我……我刚才是不是卡了一下？" },
+            new[] { "D-don't keep staring at me, it's unsettling.", "别、别老盯着我看，怪不自在的。" }),
+        ["stitched"] = L(
+            new[] { "Hello, lovely weather today, isn't it?", "你好，今天天气真不错呢。" },
+            new[] { "These clothes? Just a random mix of bits and pieces.", "我这身衣服？东拼西凑随便穿的啦。" },
+            new[] { "Don't get too close... photos look better from afar.", "别离太近……离远点拍照更好看。" }),
+        ["photomissing"] = L(
+            new[] { "Hello.", "你好。" },
+            new[] { "I'm very photogenic, take a photo of me quick.", "我可上镜了，快给我拍张照。" },
+            new[] { "Be sure to get me in the shot when you take a photo.", "拍照的时候一定要把我拍进去哦。" }),
+        ["deflate"] = L(
+            new[] { "Hi there, d-don't bump into me.", "你好呀，别、别撞过来。" },
+            new[] { "My skin is pretty sensitive, better not touch me.", "我皮肤比较敏感，最好别碰我。" },
+            new[] { "Keep your distance please, thanks for understanding.", "保持距离哈，谢谢配合。" })
     };
 
-    static List<DialogueLineDef> FallbackGenericDialogue()
+    static List<string[]> FallbackDialogue(NpcKind kind)
     {
-        return DefaultDialogue()["generic"];
+        var d = DefaultDialogue();
+        return d.TryGetValue(KindDialogueId(kind), out var lines) ? lines : d["generic"];
     }
 }
