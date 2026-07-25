@@ -12,14 +12,16 @@ public class PhotoEntry
 }
 
 /// <summary>
-/// 游戏总控。程序化搭建场景，管理状态机、拍照截图、相册指认与胜负。
+/// 游戏总控。程序化搭建场景，管理胶卷、状态机、拍照截图、相册指认与胜负。
 /// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
     [Header("关卡参数")]
-    public int imposterCount = 4;
+    public int npcCount = 8;
+    public int imposterCount = 3;
+    public int filmMax = 10;
 
     public GameState State { get; private set; } = GameState.MainMenu;
     bool _creditsOpen;
@@ -27,11 +29,8 @@ public class GameManager : MonoBehaviour
     public UIManager UI { get; private set; }
     public List<PhotoEntry> Album { get; private set; } = new List<PhotoEntry>();
 
-    public int TimelineValue { get; private set; }
-    public int CurrentPhase { get; private set; } = 1;
-
+    int _film;
     bool _submitPending;   // 指认列表里“提交”确认弹窗是否打开
-    bool _timelineForcedEnd; // 时间轴已满，强制进入提交甄别
 
     Transform _player;
     Transform _npcRoot;
@@ -45,9 +44,8 @@ public class GameManager : MonoBehaviour
 
     // 对话态
     Npc _dialogueNpc;
-    DialogueLine[] _dialogueLines;
+    string[] _dialogueLines;
     int _dialogueIndex;
-    bool _dialogueCompleted;
 
     // 取景态
     readonly List<Npc> _framed = new List<Npc>();
@@ -129,9 +127,12 @@ public class GameManager : MonoBehaviour
     {
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
-        ground.transform.localScale = new Vector3(6f, 1f, 6f);
-        var groundMaterial = GeneratedArt.CreateGroundMaterial();
-        ground.GetComponent<Renderer>().material = groundMaterial;
+        ground.transform.rotation = Quaternion.Euler(0f, 45f, 0f);   // 策划 S2：地面绕 Y 轴转 45°
+        ground.transform.localScale = new Vector3(4f, 1f, 4f);
+        var groundMaterial = ground.GetComponent<Renderer>().material;
+        groundMaterial.mainTexture = GeneratedArt.GroundTexture;
+        groundMaterial.mainTextureScale = new Vector2(5f, 5f);
+        groundMaterial.color = Color.white;
 
         var lightGO = new GameObject("Sun");
         var light = lightGO.AddComponent<Light>();
@@ -312,7 +313,15 @@ public class GameManager : MonoBehaviour
         _mainCamera = camGO.AddComponent<Camera>();
         _mainCamera.clearFlags = CameraClearFlags.SolidColor;
         _mainCamera.backgroundColor = new Color(0.14f, 0.16f, 0.2f);
-        _mainCamera.fieldOfView = cfg.cameraFieldOfView;
+        if (cfg.cameraOrthographic)
+        {
+            _mainCamera.orthographic = true;
+            _mainCamera.orthographicSize = cfg.cameraOrthographicSize;
+        }
+        else
+        {
+            _mainCamera.fieldOfView = cfg.cameraFieldOfView;
+        }
         camGO.AddComponent<AudioListener>();
         camGO.transform.rotation = Quaternion.Euler(cfg.cameraTilt, 0f, 0f);
         var rig = camGO.AddComponent<CameraRig>();
@@ -365,15 +374,18 @@ public class GameManager : MonoBehaviour
             if (entry.image != null) Destroy(entry.image);
         Album.Clear();
 
-        imposterCount = 0;
-        foreach (var c in GameContent.Characters)
-            if (c.kind != NpcKind.Normal) imposterCount++;
+        // 关卡参数来自 rounds.txt（缺省沿用 Inspector 里的默认值）。
+        var round = GameContent.GetDefaultRound();
+        if (round != null)
+        {
+            npcCount = round.npcCount;
+            imposterCount = round.imposterCount;
+            filmMax = round.film;
+        }
 
-        SpawnNpcs();
+        SpawnNpcs(round);
+        _film = filmMax;
         _submitPending = false;
-        TimelineValue = 0;
-        CurrentPhase = GameContent.GetPhaseForTimeline(0);
-        _timelineForcedEnd = false;
         State = GameState.Playing;
 
         UI.HideAllPanels();
@@ -383,29 +395,64 @@ public class GameManager : MonoBehaviour
         UI.PlayFadeIn();
     }
 
-    void SpawnNpcs()
+    void SpawnNpcs(RoundDef round)
     {
         foreach (var n in Npcs)
             if (n != null) Destroy(n.gameObject);
         Npcs.Clear();
 
-        var chosen = new List<CharacterDef>(GameContent.Characters);
+        // 选出参与本关的角色（表里可能多于 npcCount，随机取一批）。
+        var pool = new List<CharacterDef>(GameContent.Characters);
+        Shuffle(pool);
+        int count = Mathf.Min(npcCount, pool.Count);
+        var chosen = pool.GetRange(0, count);
+
+        // 决定每个角色的身份：优先用关卡表的 assign，其余按随机补足伪人。
+        var kindByChar = new Dictionary<string, NpcKind>();
+        int assigned = 0;
+        if (round != null)
+        {
+            foreach (var c in chosen)
+                if (round.assign.TryGetValue(c.charId, out var k) && k != NpcKind.Normal)
+                {
+                    kindByChar[c.charId] = k;
+                    assigned++;
+                }
+        }
+
+        int need = Mathf.Max(0, imposterCount - assigned);
+        if (need > 0)
+        {
+            var impostorPool = new List<NpcKind>
+            {
+                NpcKind.DouBao, NpcKind.SixFinger, NpcKind.ScarySmile,
+                NpcKind.FrameDrop, NpcKind.Stitched, NpcKind.PhotoMissing, NpcKind.Deflate
+            };
+            Shuffle(impostorPool);
+            var free = new List<CharacterDef>();
+            foreach (var c in chosen) if (!kindByChar.ContainsKey(c.charId)) free.Add(c);
+            Shuffle(free);
+            for (int i = 0; i < need && i < free.Count && i < impostorPool.Count; i++)
+                kindByChar[free[i].charId] = impostorPool[i];
+        }
+
         var cfg = GameConfig.Instance;
 
+        // 场景里手摆的出生点（有则优先按它们摆，位置与朝向都用手摆的）。按名字排序保证稳定映射。
         var spawnPoints = new List<NpcSpawnPoint>(Object.FindObjectsByType<NpcSpawnPoint>(FindObjectsSortMode.None));
         spawnPoints.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
 
         for (int i = 0; i < chosen.Count; i++)
         {
             var def = chosen[i];
-            NpcKind kind = def.kind;
+            NpcKind kind = kindByChar.TryGetValue(def.charId, out var k) ? k : NpcKind.Normal;
 
             Sprite portrait = GeneratedArt.GetCharacterSprite(def.artFolder);
             var go = BuildPerson("NPC_" + def.charId, portrait, cfg.npcScale, out var bodyR);
             go.transform.SetParent(_npcRoot, false);
 
             var npc = go.AddComponent<Npc>();
-            npc.Setup(def.charId, def.DisplayLabel, kind, def.artFolder, def.dialogueId, bodyR);
+            npc.Setup(def.DisplayName, kind, def.artFolder, def.dialogueId, bodyR);
 
             if (i < spawnPoints.Count && spawnPoints[i] != null)
             {
@@ -432,62 +479,16 @@ public class GameManager : MonoBehaviour
             Random.Range(cfg.spawnAreaZ.x, cfg.spawnAreaZ.y));
     }
 
-    void RefreshHud()
+    static void Shuffle<T>(IList<T> list)
     {
-        UI.SetHud(MarkedCount, imposterCount, CurrentPhase, TimelineValue);
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 
-    void AdvanceTimeline(int delta)
-    {
-        if (delta <= 0 || _timelineForcedEnd) return;
-        int maxT = GameContent.GetTimelineMax();
-        int oldPhase = CurrentPhase;
-        TimelineValue = Mathf.Min(TimelineValue + delta, maxT);
-        CurrentPhase = GameContent.GetPhaseForTimeline(TimelineValue);
-        RefreshHud();
-        if (CurrentPhase != oldPhase)
-        {
-            var phaseDef = GameContent.GetPhaseDef(CurrentPhase);
-            if (phaseDef != null)
-                UI.ShowToast(Loc.Format("phase.enter", phaseDef.DisplayName), true);
-        }
-        if (TimelineValue >= maxT)
-            TriggerTimelineSubmit();
-    }
-
-    /// <summary>时间轴满格：关闭其它界面，打开甄别名单并弹出提交确认。</summary>
-    void TriggerTimelineSubmit()
-    {
-        if (_timelineForcedEnd) return;
-        _timelineForcedEnd = true;
-
-        if (State == GameState.Dialogue)
-        {
-            _dialogueNpc = null;
-            _dialogueCompleted = false;
-            UI.HideDialogue();
-        }
-        else if (State == GameState.Camera)
-        {
-            foreach (var npc in Npcs)
-            {
-                if (npc == null) continue;
-                npc.SetInFrame(false);
-                npc.SetPose(PoseType.None);
-            }
-            _framed.Clear();
-            UI.HideCamera();
-        }
-        else if (State == GameState.Album)
-            UI.HideAlbum();
-
-        State = GameState.MarkList;
-        _submitPending = false;
-        UI.SetHudVisible(false);
-        UI.ShowMarkList(MarkedNpcs);
-        UI.ShowToast(Loc.Get("timeline.full"), false);
-        RequestSubmit();
-    }
+    void RefreshHud() => UI.SetHud(_film, MarkedCount, imposterCount);
 
     /// <summary>当前被玩家标记为嫌疑人的数量。</summary>
     public int MarkedCount
@@ -560,16 +561,12 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Playing || npc == null) return;
         _dialogueNpc = npc;
-        _dialogueLines = GameContent.ResolveDialogue(npc, CurrentPhase);
+        _dialogueLines = GameContent.GetDialogue(npc.kind, npc.dialogueId);
         _dialogueIndex = 0;
-        _dialogueCompleted = false;
         State = GameState.Dialogue;
         UI.SetInteractPrompt(null);
         UI.SetHudVisible(false);
-        if (_dialogueLines.Length > 0)
-            UI.ShowDialogue(npc.npcName, _dialogueLines[0]);
-        else
-            EndDialogue();
+        UI.ShowDialogue(npc.npcName, _dialogueLines[0]);
     }
 
     public void DialogueNext()
@@ -578,7 +575,6 @@ public class GameManager : MonoBehaviour
         _dialogueIndex++;
         if (_dialogueIndex >= _dialogueLines.Length)
         {
-            _dialogueCompleted = true;
             EndDialogue();
             return;
         }
@@ -587,20 +583,10 @@ public class GameManager : MonoBehaviour
 
     public void EndDialogue()
     {
-        var npc = _dialogueNpc;
-        bool completed = _dialogueCompleted;
         _dialogueNpc = null;
-        _dialogueCompleted = false;
         if (State == GameState.Dialogue) State = GameState.Playing;
         UI.HideDialogue();
         UI.SetHudVisible(true);
-
-        if (npc != null && completed)
-        {
-            if (GameContent.GetDialogueMode(npc.charId) == NpcDialogueMode.Count)
-                npc.dialogueVisitCount++;
-            AdvanceTimeline(3);
-        }
     }
 
     // ---------------- 相机 / 取景 / 拍照 ----------------
@@ -659,6 +645,11 @@ public class GameManager : MonoBehaviour
     public void OnShutter()
     {
         if (State != GameState.Camera || _capturing) return;
+        if (_film <= 0)
+        {
+            UI.ShowToast(Loc.Get("cam.nofilm"), false);
+            return;
+        }
         UI.PlayShutterPress();
         StartCoroutine(CapturePhoto());
     }
@@ -708,9 +699,9 @@ public class GameManager : MonoBehaviour
         Destroy(full);
 
         Album.Add(new PhotoEntry { image = tex, framed = framedNow });
+        _film--;
         RefreshHud();
-        UI.ShowToast(Loc.Get("cam.shot"), true);
-        AdvanceTimeline(1);
+        UI.ShowToast(Loc.Format("cam.shot", _film), true);
 
         // 拍照手感：先来一下震屏（此时已抓完帧，不影响成片），
         // 再把刚拍的照片“飞”出去，最后短暂定格一下。
@@ -801,7 +792,7 @@ public class GameManager : MonoBehaviour
 
     public void OpenMarkList()
     {
-        if (State != GameState.Playing || _timelineForcedEnd) return;
+        if (State != GameState.Playing) return;
         State = GameState.MarkList;
         _submitPending = false;
         UI.SetHudVisible(false);
@@ -810,7 +801,7 @@ public class GameManager : MonoBehaviour
 
     public void CloseMarkList()
     {
-        if (State != GameState.MarkList || _timelineForcedEnd) return;
+        if (State != GameState.MarkList) return;
         _submitPending = false;
         State = GameState.Playing;
         UI.HideMarkList();
@@ -861,7 +852,7 @@ public class GameManager : MonoBehaviour
     {
         State = GameState.Result;
 
-        // 结算时揭示全部真正的炼化人
+        // 结算时揭示全部真正的伪人
         var imposters = new List<string>();
         foreach (var n in Npcs)
             if (n != null && n.IsImposter)

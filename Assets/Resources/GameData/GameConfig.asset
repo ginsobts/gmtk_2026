@@ -12,8 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0beb8123579f5904e973f940765c8699, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: 
+  cameraOrthographic: 1
+  cameraOrthographicSize: 8.5
   cameraFieldOfView: 55
-  cameraTilt: 52
+  cameraTilt: 35
   cameraOffset: {x: 0, y: 13, z: -10}
   cameraFollowLerp: 8
   playerStart: {x: 0, y: 0, z: -6}
