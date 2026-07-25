@@ -23,12 +23,17 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         var gm = GameManager.Instance;
-        if (gm == null || gm.State != GameState.Playing) return;
+        if (gm == null) return;
+        bool playing = gm.State == GameState.Playing;
+        // 死亡演出中玩家仍可移动逃跑，但不能交互
+        if (!playing && gm.State != GameState.Death) return;
 
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
         HandleMovement(h, v);
         UpdateFacing(h, v);
+
+        if (!playing) return;   // Death：只能逃，不做最近 NPC 查找 / 交互
         FindNearestNpc();
 
         if (_nearest != null)

@@ -26,6 +26,7 @@ public static class GeneratedArt
     static Sprite _playerSprite;
     static Sprite _playerSideSprite;
     static Sprite _playerFrontSprite;
+    static Sprite _deathMonsterSprite;
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
@@ -120,6 +121,10 @@ public static class GeneratedArt
     /// <summary>主角正面棋子（缺图返回 null，调用方回退到背面 PlayerSprite）。</summary>
     public static Sprite PlayerFrontSprite =>
         _playerFrontSprite ??= TryLoadWholeSprite("Art/Characters/player_front");
+
+    /// <summary>死亡演出追逐怪物的占位立绘（暗色发光眼；真怪物美术留待阶段七）。</summary>
+    public static Sprite DeathMonsterSprite =>
+        _deathMonsterSprite ??= (TryLoadWholeSprite("Art/Imposters/death_monster") ?? MakeMonsterPlaceholder());
 
     /// <summary>用于填满地图边缘的宽幅树林卡片。</summary>
     public static Sprite DenseForestEdgeSprite =>
@@ -249,6 +254,46 @@ public static class GeneratedArt
                     c = body;
                 }
                 px[y * w + x] = inside ? c : new Color(0, 0, 0, 0);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
+    }
+
+    /// <summary>死亡演出怪物占位：暗红近黑的诡异人形 + 两点发光眼，脚底为轴。</summary>
+    static Sprite MakeMonsterPlaceholder()
+    {
+        int w = 128, h = 208;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        Color bodyDark = new Color(0.06f, 0.02f, 0.03f, 1f);   // 近黑带暗红
+        Color eye = new Color(1f, 0.82f, 0.35f, 1f);           // 发光眼
+        float exOff = 0.085f, eyeY = 0.83f, eyeR = 0.032f;
+        var px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float cx = x / (float)(w - 1) - 0.5f;
+                float fy = y / (float)(h - 1);
+                bool inside;
+                if (fy > 0.66f)
+                {
+                    float hy = (fy - 0.86f) / 0.16f;                          // 头部椭圆
+                    inside = (cx * cx) / (0.19f * 0.19f) + hy * hy < 1f;
+                }
+                else
+                {
+                    // 身体：上宽下窄 + 轻微起伏轮廓（诡异感）
+                    float bw = (0.30f - 0.10f * (fy / 0.66f)) + 0.02f * Mathf.Sin(fy * 22f);
+                    inside = Mathf.Abs(cx) < bw && fy > 0.02f;
+                }
+                Color c = new Color(0, 0, 0, 0);
+                if (inside)
+                {
+                    c = bodyDark;
+                    float dy = fy - eyeY;
+                    float dxL = cx + exOff, dxR = cx - exOff;
+                    if (dxL * dxL + dy * dy < eyeR * eyeR || dxR * dxR + dy * dy < eyeR * eyeR) c = eye;
+                }
+                px[y * w + x] = c;
             }
         tex.SetPixels(px); tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
