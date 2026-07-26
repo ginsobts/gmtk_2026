@@ -559,6 +559,18 @@ public class GameManager : MonoBehaviour
         if (State == GameState.Playing) TryEnterDeathByTime();
     }
 
+    /// <summary>快进时间轴到下一阶段 threshold（调试/便捷；末阶段「晚上」不可用）。</summary>
+    public void SkipToNextPhase()
+    {
+        if (State != GameState.Playing || _deathPerforming) return;
+        if (GameContent.IsLastPhase(CurrentPhase)) return;
+        int nextThreshold = GameContent.GetNextPhaseThreshold(CurrentPhase);
+        if (nextThreshold < 0) return;
+        int delta = nextThreshold - TimelineValue;
+        if (delta <= 0) return;
+        AdvanceTimeline(delta);
+    }
+
     /// <summary>时间轴满格（超末阶段）且未在死亡演出中，则进入死亡演出（策划 5.1）。</summary>
     void TryEnterDeathByTime()
     {
@@ -1152,12 +1164,14 @@ public class GameManager : MonoBehaviour
     {
         if (_monster != null || _player == null) return;
         var cfg = GameConfig.Instance;
-        var go = BuildPerson("DeathMonster", GeneratedArt.DeathMonsterSprite, cfg.npcScale * 1.25f, out _);
+        var walkFrames = GeneratedArt.DeathMonsterWalkFrames;
+        var go = BuildPerson("DeathMonster", walkFrames[0], cfg.npcScale * 1.25f, out var body);
         // 在玩家对角远处出生，留出追逐距离
         Vector3 pp = _player.position;
         float sx = pp.x >= 0 ? -1f : 1f, sz = pp.z >= 0 ? -1f : 1f;
         go.transform.position = new Vector3(sx * 14f, 0f, sz * 12f);
         var m = go.AddComponent<DeathMonster>();
+        m.Setup(body, walkFrames, 10f);
         m.target = _player;
         m.speed = cfg.playerMoveSpeed * 1.05f;   // 略快于玩家：可逃一阵，终被逼死
         m.killRange = 1.3f;

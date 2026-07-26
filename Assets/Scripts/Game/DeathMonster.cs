@@ -10,7 +10,17 @@ public class DeathMonster : MonoBehaviour
     public float speed = 5.8f;
     public float killRange = 1.3f;
 
+    SpriteFrameLoop _walkAnim;
     bool _done;
+
+    public void Setup(SpriteRenderer body, Sprite[] walkFrames, float animFps = 10f)
+    {
+        if (body == null || walkFrames == null || walkFrames.Length == 0) return;
+        _walkAnim = body.gameObject.AddComponent<SpriteFrameLoop>();
+        _walkAnim.target = body;
+        _walkAnim.fps = animFps;
+        _walkAnim.SetFrames(walkFrames);
+    }
 
     void Update()
     {
@@ -21,12 +31,16 @@ public class DeathMonster : MonoBehaviour
         Vector3 to = target.position - transform.position;
         to.y = 0f;
         float d = to.magnitude;
-        if (d > 0.001f)
+        bool moving = d > 0.001f;
+        _walkAnim?.SetPlaying(moving);
+
+        if (moving)
             transform.position += to.normalized * speed * Time.deltaTime;
 
         if (d <= killRange)
         {
             _done = true;
+            _walkAnim?.SetPlaying(false);
             gm.PlayerCaughtByMonster();
         }
     }

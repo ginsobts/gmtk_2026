@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 自动给美术资源配置导入设置，省去美术手动调 Importer，也避免忘设置导致的坑。
-/// 作用范围：Resources/Art/Characters、Resources/Art/Imposters、Resources/Art/Camera。
+/// 作用范围：Resources/Art/Characters、Resources/Art/Imposters、Resources/Art/Camera、Resources/Art/Anim。
 /// - 统一：Sprite 类型、底部中心轴、100 PPU、无 mipmap、Clamp、alphaIsTransparency、不压缩（2D 立绘更清晰）。
 /// - 相机外壳等需要在运行时读像素（自动量取取景开口），额外开启 isReadable。
 /// 其它图集/地面贴图不在范围内，保持原样，避免回归。
@@ -21,7 +21,8 @@ public class ArtImportPostprocessor : AssetPostprocessor
             p.Contains("/Resources/Art/Camera/") ||
             p.Contains("/Resources/Art/Portraits/") ||   // 对话立绘同样按 Sprite 导入
             p.Contains("/Resources/Art/Props/") ||        // 场景道具（树/灌木/椅子/垃圾桶/健身器材）
-            p.Contains("/Resources/Art/Endings/");        // 结算大图（胜/负）
+            p.Contains("/Resources/Art/Endings/") ||       // 结算大图（胜/负）
+            p.Contains("/Resources/Art/Anim/");            // 死亡演出怪物行走帧
         if (!isCharacterLike) return;
 
         var ti = (TextureImporter)assetImporter;

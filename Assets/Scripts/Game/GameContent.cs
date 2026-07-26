@@ -218,6 +218,32 @@ public static class GameContent
         return last.threshold + 15;
     }
 
+    /// <summary>是否已是最后一个时间阶段（如「晚上」）。</summary>
+    public static bool IsLastPhase(int phaseOrder)
+    {
+        EnsureLoaded();
+        if (_phases == null || _phases.Count == 0) return true;
+        int maxOrder = 1;
+        foreach (var p in _phases)
+            if (p.order > maxOrder) maxOrder = p.order;
+        return phaseOrder >= maxOrder;
+    }
+
+    /// <summary>下一阶段的 threshold；已是末阶段则返回 -1。</summary>
+    public static int GetNextPhaseThreshold(int currentPhaseOrder)
+    {
+        EnsureLoaded();
+        if (_phases == null || _phases.Count == 0) return -1;
+        var sorted = new List<PhaseDef>(_phases);
+        sorted.Sort((a, b) => a.order.CompareTo(b.order));
+        for (int i = 0; i < sorted.Count; i++)
+        {
+            if (sorted[i].order != currentPhaseOrder) continue;
+            return i + 1 < sorted.Count ? sorted[i + 1].threshold : -1;
+        }
+        return -1;
+    }
+
     /// <summary>查 portraits.txt，返回相对 Resources/Art/ 的路径；缺失返回 null。</summary>
     public static string GetPortraitPath(string portraitId)
     {
