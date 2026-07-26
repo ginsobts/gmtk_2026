@@ -4,85 +4,135 @@ generic	1	generic_neutral	The shoot schedule says we're wrapping by six. Hope th
 generic	2	generic_neutral	They keep talking about the efficiency reform. Nobody explains what it means.	他们老把「效率改革」挂在嘴边，也没人说清楚到底改什么。
 generic	3	generic_neutral	Free snacks in the pantry, at least. Don't miss the coffee machine.	好歹茶水间有免费零食，咖啡机记得去试试。
 generic	4	generic_neutral	If you're filming, stay out of the server room. Bad idea.	你要拍素材的话，最好别进机房，容易惹麻烦。
-lin_p1	1	lin_neutral	Welcome to Human Company! We're thrilled to have you document our culture.	欢迎来到人类公司！特别欢迎你来做这次纪录拍摄。
-lin_p1	2	lin_smile	Follow the tour route and you'll see how transparent we are.	跟着参观路线走一圈，你会看到我们有多「透明」。
-lin_p1	3	doubao_calm	Hello! I am a Human Company representative and I'm happy to assist you.	您好！我是人类公司的代表，很高兴为您提供服务。
-lin_p2	1	lin_neutral	Thank you for your interest. Your feedback is valuable to us.	感谢你的关注，你的反馈对我们很重要。
-lin_p2	2	lin_think	According to public information, all procedures are fully compliant.	根据公开信息，我们的各项流程都是完全合规的。
-lin_p2	3	doubao_glitch	That's an interesting question; we can analyze it from multiple dimensions.	您提的这个问题很有意思，我们可以从多个维度来分析一下。
-lin_p2	4	doubao_calm	In summary, specifics require specific analysis. I hope this helps.	总的来说，具体情况还需要具体分析，希望以上信息对您有所帮助。
-lin_p3	1	lin_neutral	We suggest you conclude filming soon. The building will enter lockdown.	建议你尽快结束拍摄，大楼一会儿就要封闭了。
-lin_p3	2	lin_smile	Have a safe trip. Human Company appreciates your visit.	一路平安。人类公司感谢你的到访。
-lin_p3	3	doubao_calm	Hello! I am a Human Company representative and I'm happy to assist you.	您好！我是人类公司的代表，很高兴为您提供服务。
-lin_p3	4	doubao_glitch	That's an interesting question; we can analyze it from multiple dimensions.	您提的这个问题很有意思，我们可以从多个维度来分析一下。
-lin_p3	5	doubao_calm	In summary, specifics require specific analysis. I hope this helps.	总的来说，具体情况还需要具体分析，希望以上信息对您有所帮助。
-lin_p3	6	doubao_glitch	Sorry, as an employee, I cannot provide more information at this time.	抱歉，作为公司员工，我暂时无法提供更多相关信息。
-boss_c1	1	boss_neutral	You're the influencer they booked? Good. Listen up — I built this company brick by brick.	你就是来拍视频那个网红吧？行，你听我说——这公司是我一砖一瓦搭起来的。
-boss_c1	2	boss_stern	Young people today lack gratitude. We give you exposure, you give us content. Fair trade.	现在的年轻人啊，就是不懂感恩。我们给你曝光，你给我们内容，公平交换嘛。
-boss_c2	1	boss_stern	Back again? When I was your age I slept in the office three nights a week. No complaints.	又来了？我像你这么大的时候，一周有三天睡在公司，也没喊过累。
-boss_c2	2	boss_neutral	Efficiency reform isn't optional. Everyone pulls together — that's how families work.	效率改革不是拿来商量的，大家拧成一股绳，这才叫一家人。
-boss_c3	1	boss_stern	Wrap up soon. Leaders don't linger where they're not needed. Remember who pays your platform.	早点收工吧。领导不该在没用的地方耗着。别忘了是谁在养你的账号。
-boss_c3	2	boss_stern	I say this for your own good: don't poke where you shouldn't. Trust the process.	我这可是为你好：别往不该去的地方钻，相信流程就行。
-hr_c1	1	hr_phone	(on phone) …Yes, tonight's batch has to ship. No delays.	（电话里）……嗯，今晚那批必须出仓，不能拖。
-hr_c1	2	hr_phone	(on phone) The influencers? Keep them on the tour route. Standard procedure.	（电话里）……网红那边？让他们按参观路线走，按标准流程来。
-hr_c2	1	hr_phone	(on phone) …Who's in the know — handle them per protocol. You know which protocol.	（电话里）……知情的那几个……按流程处理，你知道我说的是哪套流程。
-hr_c2	2	hr_phone	(on phone) No, not on email. Never on email.	（电话里）……不行，别走邮件，永远别走邮件。
-hr_c3	1	hr_phone	(on phone) Don't let him shoot B2. The refine room is— …Hello? Oh, just an audit walkthrough.	（电话里）……别让他拍 B2，炼化室那——……喂？哦，没什么，就是合规巡查路过。
-hr_c3	2	hr_phone	(on phone) Nothing you need to worry about. Smile for the camera, okay?	（电话里）……没什么需要你操心的，对着镜头笑一下，好吗？
-hr_c4	1	hr_phone	(on phone) …Failed units go by the entrance. Kids don't talk — safest cover.	（电话里）……失败品就扔门口，小孩不会说话，最稳妥。
-hr_c4	2	hr_phone	(on phone) …Right. Clean it up before the tour hits that floor.	（电话里）……对，参观团到那层之前务必处理干净。
-tired_c1	1	fang_tired	Is it… morning? I thought I just clocked out… yesterday? Or was it tomorrow.	现在……是早上吗？我好像刚下班……是昨天下的？还是明天下的来着？
-tired_c1	2	fang_dazed	The numbers on the screen… they crawl. Don't blink at them too long.	屏幕上的那些数字……好像在爬。别盯着看太久。
-tired_c2	1	fang_dazed	Overtime until twelve… no, thirteen o'clock. HR said that's a real time.	加班加到十二点……不对，是十三点。人事说有这个点的。
-tired_c2	2	fang_tired	Don't replace me… I mean, don't… replace the toner. The printer.	别换掉我……我是说，别……别换硒鼓，打印机那个。
-tired_c3	1	fang_dazed	They keep calling my name in the hallway. Different voices. Same name.	走廊里老有人喊我名字，声音都不一样，喊的却都是同一个名字。
-tired_c3	2	fang_tired	If you see me in the pantry again… tell the first me to go home.	要是你又在茶水间看见我……帮我跟「第一个我」说一声，该回家了。
-eyes_c1	1	lu_eyes	*presses eye* …Sorry. Deadlines melted my corneas. You need something?	*揉了揉眼* ……不好意思，deadline 把角膜都熬化了。找我有事？
-eyes_c1	2	lu_pain	Got three bottles of drops in this pocket. Still feels like sand under the lids.	兜里揣着三瓶眼药水，眼皮底下还是像进了沙子一样。
-eyes_c2	1	lu_pain	The monitors crawl when I stare. Like things moving in the pixels.	盯久了显示器上的东西会自己动，像素里好像有什么在爬。
-eyes_c2	2	lu_eyes	Workload's so heavy my eyes might mutate. Not a metaphor. Probably.	工作量堆太多了，眼睛怕是要变异了——这不是比喻，大概是真的。
-eyes_c3	1	lu_pain	*drops in eye* If my retinas split, put it in the bug tracker.	*滴了滴眼药水* 视网膜要是真裂了，帮我提个 bug 单吧。
-eyes_c3	2	lu_eyes	Blurry… everything's blurry. Except the overtime spreadsheet. That's sharp.	糊……什么都糊，就那张加班表清楚得很，清楚得让人想哭。
+lin_p1	1	lin_neutral	Welcome to Human Company! I'm Lin Cai from PR — I'll be with you for the whole shoot. Let me know if you need anything.	欢迎来到人类公司！我是林采，公关部的，今天由我全程陪同你的拍摄。有什么需要随时跟我说。
+lin_p1	2	lin_neutral	The company is pushing an efficiency reform, and leadership really cares about this shoot. We want the world to see a real, transparent Human Company.	公司最近在推效率改革，上面非常重视这次拍摄。我们希望借这个机会，让外界看到一个真实、透明的人类公司。
+lin_p1	3	lin_neutral	Follow the tour route and you'll see how happy our employees are. Work-life balance has always been one of our core competitive advantages.	跟着参观路线走一圈，你会发现我们的员工幸福感非常高。工作与生活的平衡，是我们一直以来的核心竞争力之一。
+lin_p1	4	lin_neutral	Ask me anything — I'm happy to help. Though areas outside the tour route… I'd suggest you don't go there. Construction. Not safe.	有什么问题尽管问我——我很高兴为您提供帮助。不过参观路线之外的区域……建议就不要去了哦。那边正在施工，不安全。
+lin_p2	1	lin_neutral	How's the shoot going? Enough footage? Human Company is always committed to creating the best content environment for our partners.	你拍得怎么样？素材够用吗？人类公司始终致力于为合作伙伴创造最优质的内容产出环境。
+lin_p2	2	lin_neutral	About the efficiency reform — I can walk you through it from a strategy and talent-optimization angle. First— …First, um, honestly I'm not sure of the details. They just told me everyone would have it easier afterward.	关于效率改革，我可以从企业战略和人才优化两个维度帮你梳理一下。首先——……首先，嗯，其实我也说不太清楚。他们只跟我说，改完之后大家都会轻松很多。
+lin_p2	3	lin_neutral	You want my personal take? I think… it's fine. Work got a lot easier. A lot of things I don't have to think about — the words just come out. Convenient.	你问我个人的感受？我觉得……挺好的。工作轻松了很多。很多事情不用想，话到嘴边就自己出来了。省心。
+lin_p2	4	lin_neutral	Oh — have you been to B2? …Why did I ask that? Never mind. Anyway, specifics require specific analysis.	对了，你有没有去过 B2？……我为什么要问这个？忘了。总之具体情况还需要具体分析。
+lin_p2	5	lin_neutral	Thank you for your interest. Your feedback is very important to us. Human Company will continue to provide you with excellent service.	感谢你的关注。你的反馈对我们非常重要，人类公司将持续为您提供优质服务。
+lin_p3	1	lin_neutral	We suggest you wrap up soon. The building is entering security lockdown. Thank you for visiting Human Company — safe travels.	建议你尽快结束拍摄。大楼马上要进入安保管控了。感谢您的到访，人类公司祝您一路平安。
+lin_p3	2	lin_neutral	Every moment you spend at Human Company, we cherish deeply. If you have unanswered questions, please contact us through official channels anytime.	您在人类公司的每一刻，我们都倍感珍惜。如果您有任何未解答的疑问，欢迎通过官方渠道随时联系我们。
+lin_p3	3	lin_neutral	You're still here… So, what did you capture? Did you— Sorry, that wasn't precise enough. Per public company information, all internal procedures have passed compliance review.	你还在啊……那个，你拍到了什么？你有没有——抱歉，刚才的表述不够严谨。根据公司公开信息，所有内部流程均已通过合规审查。
+lin_p3	4	lin_neutral	I want to tell you something… but I don't know if it's me talking or… something I'm supposed to say. I can't tell the two apart anymore. Haven't been able to for a long time.	我想跟你说一件事……但我不知道是我想说的还是……还是我被安排要说的。这两个我分不清了。很久以前就分不清了。
+lin_p3	5	lin_neutral	In summary, specifics require specific analysis. I hope the above information is helpful.	总的来说，具体情况还需要具体分析。希望以上信息对您有所帮助。
+lin_p3	6	lin_neutral	Sorry, as an employee I cannot provide more information at this time. Have a nice day. Goodbye.	抱歉，作为公司员工，我暂时无法提供更多相关信息。祝您生活愉快，再见。
+boss_c1	1	boss_neutral	You're the influencer they booked? Good. I'm Wang Jianguo — I built this company from nothing, brick by brick.	你就是来拍纪录片的那个网红吧？好，有魄力。我叫王建国，这公司的创始人——从零开始，一砖一瓦搭起来的。
+boss_c1	2	boss_stern	Young people today lack grit. When I was your age I biked to eight clients a day. You kids have it easy.	现在的年轻人啊，就是缺历练。我像你这么大的时候，骑自行车跑业务，一天跑八个客户。哪有你们现在这么舒服？
+boss_c1	3	boss_neutral	Film our spirit. The company isn't just giving you exposure — it's trust. Got it?	来了就好好拍，拍出我们的精气神来。公司给你的不只是曝光——是信任。懂不？
+boss_c2	1	boss_neutral	You've heard about our efficiency reform? The whole industry is copying us. One sentence: put the right people in the right places.	你听说我们的效率改革了吧？整个行业都在学。核心就一句话——把合适的人放在合适的位置上。
+boss_c2	2	boss_neutral	Too much dead weight before — workers underpaid, slackers complaining. After reform? Every role optimized. Output tripled.	过去团队冗余太多，干活的人拿得少，摸鱼的人还嫌累。改革之后呢？每个岗位都是最优解。产能直接翻三倍。
+boss_c2	3	boss_stern	Some say I'm too harsh. I call it backbone. A parent can't go soft when two hundred livelihoods are on the line.	有人说我太狠了。我说这叫魄力。当家长的，该做决定的时候不能心软。公司两百号人的饭碗，比个别人的感受重要。
+boss_c3	1	boss_stern	What did Fang Xiao tell you? That kid's not right lately. Too much overtime — brain's fried. Don't take him seriously.	方晓跟你说什么了？那孩子最近精神不太好，别把他说的当真。加班太多，脑子糊了。
+boss_c3	2	boss_neutral	The reform is voluntary — I never forced anyone. Of course, those who won't cooperate… the company won't keep them either. You get that, right?	效率改革是自愿的——我可从来没逼过谁。当然了，不愿意配合的……公司也不会强留。你懂这个道理吧？
+boss_c3	3	boss_neutral	People who left are doing fine. Some transferred out, some… found other ways to keep contributing. Everyone's accounted for.	走的那些人过得都挺好的。有的去了合作单位，有的……换了个方式继续贡献。反正都有着落。
+boss_c4	1	boss_stern	You've been asking around today. Knowing too much isn't good for you — not a threat, advice. Advice from someone who's been around.	你今天到处问了不少人吧？有些事情知道得太多不是好事——这不是威胁，是忠告。一个前辈对后辈的忠告。
+boss_c4	2	boss_stern	Everyone here is my child. I wouldn't hurt my own. But disobedient children… need discipline. You understand.	这公司里的每个人都是我的孩子。我不会害自己的孩子。但不听话的孩子……需要教育。你理解吧？
+boss_c4	3	boss_stern	Stay away from B2. Renovation down there — safety hazard. If you go anyway, I can't protect you.	别往 B2 去。那下面在装修——有安全隐患。你要非去不可，出了事我可保不了你。
+boss_c5	1	boss_stern	Everything you shoot goes through my review. Content that doesn't pass — doesn't leave this building.	你拍的东西我都会过审的。不合适的内容——不会离开这栋楼。
+boss_c5	2	boss_stern	I'm saying this for your own good. Look at the bloggers before you — all quiet now. Not because I did anything. They just… came around.	我说这些都是为你好。真的。你看看你来之前那几个博主，现在一个个都不发声了，不是因为我做了什么——是因为他们「想通了」。
+boss_c5	3	boss_stern	Wrap up early. Don't make me think… you need to be brought around too.	早点收工吧。别让我觉得……你也需要被「想通」。
+hr_c1	1	hr_phone	(on phone) …Yes, tonight's batch has to ship. Can't delay — equipment needs clearing for the next round tomorrow.	（电话里）……嗯，今晚那批必须出仓。不能再拖了，设备明天要腾出来做下一组。
+hr_c1	2	hr_phone	(on phone) The influencer? Keep him on the standard route. Lin Cai is escorting. Report anything unusual immediately.	（电话里）……网红那边？让他跟着标准路线走，别让他乱逛。对，安排了林采全程陪同。有任何异常立刻上报。
+hr_c2	1	hr_phone	(on phone) …The ones in the know — handle per protocol. You know which protocol.	（电话里）……知情的那几个人——按流程处理。你知道我说的是哪套流程。
+hr_c2	2	hr_phone	(on phone) No. Not email. Never email. Use the encrypted channel.	（电话里）……不行，别走邮件。永远别走邮件。用那个加密频道。
+hr_c2	3	hr_phone	(on phone) …Lu Yuan? He went to B2? Why wasn't I told? How much did he see?	（电话里）……陆远？他去过 B2 了？为什么没人跟我说？他看到了多少？
+hr_c3	1	hr_phone	(on phone) …Don't let the influencer shoot B2. The refine room— …Hello? Oh, nothing, just a compliance walkthrough passing by.	（电话里）……别让那个网红去拍 B2。炼化室那边——（发现你在旁边）哦，喂？嗯嗯……没什么，就是合规巡查路过。
+hr_c3	2	hr_phone	(to you) How long have you been standing there? Nothing to hear — just admin work. Boring.	（转头对你）你站这儿多久了？没什么好听的，都是行政工作。无聊的。
+hr_c3	3	hr_phone	(on phone, lowered) …You're sure he didn't hear? Fine… speed up tonight. Finish before he leaves.	（继续打电话，压低声音）……你确定他没听到？行……那今晚加快进度，在他走之前必须处理完。
+hr_c4	1	hr_phone	(on phone) …Failed units stay by the entrance for now. Kids don't talk — nobody notices a kid squatting on the curb.	（电话里）……失败品就先放门口，不用管。小孩不会说话，也不会有人注意一个蹲在路边的孩子。
+hr_c4	2	hr_phone	(on phone) …How's the dog integration going? Fusion rate? …Sixty? Almost done tonight. Owner handled too? Good.	（电话里）……那条狗的进度怎么样了？融合率到多少了？……六十？那差不多了。今晚就能完成。它主人也一起处理了？好。
+hr_c4	3	hr_phone	(on phone) …Clean up before the tour hits that floor. Stains on the ground — use the solvent. Yes, the bottle in B2 server room.	（电话里）……参观团到那一层之前务必处理干净。地上的痕迹——用那个溶剂。对，就是 B2 机房里那瓶。
+hr_c5	1	hr_phone	(on phone) …No, this influencer can't leave. He knows too much. Add him to tonight's batch. …Not enough slots? Pull the failed schoolgirl and use her spot.	（电话里）……不，这个网红不能放走了。他知道得太多了。把他加进今晚的批次。……什么？不够位置了？那就把那个失败的女学生退掉，用她的位置。
+hr_c5	2	hr_phone	(hangs up, sees you) …You're back? I said it's just admin work. If you recorded any of that — you'd better not have.	（挂电话，看到你）……你又来了？我说了，都是日常行政工作。你要是录了音——你最好没有。
+tired_c1	1	fang_tired	Is it… morning? I think I just clocked out… yesterday? Or the day before? Dates are all scrambled in my head.	现在……是早上吗？我好像刚下班来着。等等——我是昨天下的班还是前天的？日期在脑子里全搅在一起了。
+tired_c1	2	fang_dazed	Three days? Four? This shirt's definitely been on more than three days — you'll smell it.	三天了还是四天了？反正身上这件衬衫肯定超过三天没换了，你闻就知道了。
+tired_c1	3	fang_tired	Don't replace me… I mean, don't… replace the toner. The printer toner. Right, the toner.	别换掉我……我是说……别换……硒鼓。打印机的硒鼓。对，我说的是硒鼓。
+tired_c2	1	fang_dazed	You know Zhang Wei? Next desk over. Last Wednesday he went to an "efficiency training" on B2. Never came back. Desk's still there, computer still on, water cup dried out.	你认识张伟吗？隔壁工位的。上周三他说要去参加一个「效率提升培训」，地点在 B2。之后就再也没来过。工位还在，电脑还开着，水杯里的水都干了。
+tired_c2	2	fang_tired	After Zhang Wei left, a new "Zhang Wei" showed up. Same name, same desk. But the smile's wrong — mouth smiling, eyes empty.	张伟走了之后来了个新的「张伟」。名字一样，工位一样。但他的笑法不对，嘴巴在笑，眼睛里是空的。
+tired_c2	3	fang_dazed	If you see two Fang Xiaos in the pantry — tell the new one to get lost. That spot is mine.	要是你在茶水间看见两个方晓——帮我跟那个「新的」说一声，让他滚。那个位置是我的。
+tired_c3	1	fang_tired	The schedule says we wrap at six, but I've never seen anyone actually leave at six. The first person who tried… never came back either.	排期表上写着六点收工，但我从来没见过谁真的六点走。最早走的那个人……后来就再也没来过了。
+tired_c3	2	fang_dazed	Ask ten people about the efficiency reform, get ten different answers. Only thing they agree on — nobody can explain what changed.	效率改革的事，你问十个人能得到十个不同的答案。唯一共同点是——没人说得清改了什么。
+tired_c4	1	fang_tired	Free snacks and coffee in the pantry, everything you want. They call it a perk. I think it's so you never have a reason to leave your desk.	茶水间有免费零食和咖啡，什么都有。他们说是公司福利。我觉得这是不让你有理由离开工位。
+tired_c4	2	fang_dazed	If you're shooting B-roll, stay out of the server room. An intern went in last month — filmed something he shouldn't have. He… "transferred" afterward.	你要拍素材的话，别进机房。上次有个实习生进去了——说要拍 B-roll，结果拍到了不该拍的东西。他现在……嗯，「转岗」了。
+tired_c5	1	fang_tired	Bad timing — company's doing a round of "optimization." Tense atmosphere. Some people who leave don't come back.	你来的时间不巧。最近公司在搞一轮人员「优化」，气氛特别紧张。有些人走了不会回来的。
+tired_c5	2	fang_dazed	B2 has a room with no windows. Machines running during the day, burnt smell at night. They say it's a lab running tests.	B2 有个房间没有窗户。白天能听见机器在响，晚上能闻到一种焦味。他们说是实验室在做测试。
+eyes_c1	1	lu_eyes	*rubs eye* …Sorry. Corneas practically melted. Three-day deadline — three bottles of drops in my pocket and it's still not enough.	*揉了揉眼* ……不好意思，角膜都快熬化了。三天三夜的 deadline，兜里揣着三瓶眼药水都不够用。
+eyes_c1	2	lu_pain	You're filming? Put my miserable face in there — let the world see how internet companies trade lives for KPIs.	你是来拍纪录片的？把我这副惨样拍进去——让全世界看看互联网公司怎么拿人命换 KPI。
+eyes_c2	1	lu_pain	Stare at the monitor long enough and things start moving on their own — like something crawling in the pixels. Workload's so heavy my eyes might actually mutate. Not a metaphor. Probably.	盯久了显示器上的东西会自己动，像素里好像有什么在爬。工作量堆太多了，眼睛怕是要变异了——不是比喻，大概是真的。
+eyes_c2	2	lu_eyes	Doctor says if I don't rest my retinas will split. If they do — file a bug ticket for me.	医生说再不休息视网膜就要裂了。视网膜要是真裂了，帮我提个 bug 单吧。
+eyes_c3	1	lu_pain	*drops in eye* …Everything's blurry, everything's shaking. Except the overtime spreadsheet. That one's crystal clear. Painfully clear.	*滴了滴眼药水* ……什么都糊，什么都在晃。就那张加班表清楚得很，清楚得让人想哭。
+eyes_c3	2	lu_eyes	Wrap up and get out. The longer you stay, the more your eyes burn. Trust me.	赶紧拍完走人吧。你待得越久，眼睛越废。信我。
 girl_dots	1	girl_blank	...	……
 girl_insult	1	girl_blank	Leave me alone, creep.	炼铜癖去死
-chen_c1	1	generic_neutral	I'm Chen Wei, ops. Server room, network sync, that kind of thing.	我是陈维，做运维的，机房、网络同步这些都归我管。
-chen_c1	2	generic_neutral	Film the lobby all you want — just don't open the rack doors without escort.	大厅你想怎么拍都行，机柜门别乱开，得有人带着。
-chen_c2	1	generic_neutral	Sorry, what was— …Right. You were saying something. Sync hiccupped.	抱歉，刚才……嗯，你说什么来着？同步好像卡了一下。
-chen_c2	2	generic_neutral	Sometimes my voice repeats. Network jitter. Totally normal.	有时候我会把半句话重复一遍，网络抖动嘛，很正常。
-chen_c3	1		I— I'm here. Wait, was I… over there a second ago? Frame skip.	我、我在啊。等等，刚才我是不是……在那边？好像跳帧了。
-chen_c3	2		Don't look at me too long. The render pipeline… tears.	别老盯着我看，渲染管线……会撑不住的。
-zhao_c1	1	generic_neutral	Zhao Yan, security. IDs, patrols, fire exits.	我叫赵岩，保安队的，查证件、巡逻、消防通道这些都我负责。
-zhao_c1	2	generic_neutral	Stay on the marked route and we won't have problems.	按地上标的路线走，大家都省事。
-zhao_c2	1		Hey — keep a step back. Uniform's… sensitive to contact.	哎——退后一步，这制服……不太经碰。
-zhao_c2	2		No handshakes. Company policy after the last incident. Allegedly.	握手就免了，上次那事之后公司定的规矩，据说是。
-zhao_c3	1	shrink_girl_reveal	Please don't touch me. There's nothing inside to bump into.	请别碰我，里面……其实没什么可撞的。
-zhao_c3	2	shrink_girl_reveal	I'm hollow— I mean, hollow security policy. Just… hollow.	我是说空的——不对，是安保条例比较空洞，对，空洞。
-wu_c1	1	generic_neutral	Wu Ang, algorithm team. Training models, tuning pipelines.	我是吴昂，算法组的，训模型、调管线这些。
-wu_c1	2	generic_neutral	Busy week. If I seem distracted, the loss function is screaming.	这周忙疯了，我要是看起来走神，那是损失函数在尖叫。
-wu_c2	1		We've been in crunch — no time to dress. Shirt from yesterday, jacket from last week.	最近连轴转，根本没时间收拾，上衣是昨天的，外套是上周的。
-wu_c2	2		Don't shoot close-ups… I haven't looked in a mirror. Should be fine. Right?	别拍特写啊……我好几天没照过镜子了，应该……还行吧？
-wu_c3	1		Wide shots only. Up close the proportions look… borrowed from different people.	只能拍远景，凑近看比例就不对了，像是从好几个人身上拼出来的。
-wu_c3	2		That seam on my neck? Lighting. Definitely lighting. Not a join line.	脖子上那条缝？是灯光，绝对是灯光，不是接缝。
-han_c1	1	generic_neutral	Han Lu, front desk. Sign in here, badge there, elevator on the left.	我是韩露，前台。这儿登记，那边领牌，电梯在左手边。
-han_c1	2	generic_neutral	Welcome to Human Company. Standard tour starts in five.	欢迎来到人类公司，标准参观五分钟后开始。
-han_c2	1		Hands stay in pockets — new front-desk policy. Saves time.	手请放兜里——前台的新规定，省事。
-han_c2	2		We nod instead of shaking hands. Less… surface contact.	我们点头代替握手，少点……肢体接触。
-han_c3	1		No peace signs. No waves. Fingers are… inventory. Don't count them.	别比耶，也别挥手，手指是……库存，别数。
-han_c3	2		If you ask for a handshake I will log you as a security event.	你要非握手不可，我就只能把你登记成安全事件了。
-gu_c1	1	generic_neutral	Gu Ying, brand comms. Hero shots, smile assets, investor decks.	我是顾映，品牌宣传口的，Hero 照、笑容素材、投资人 PPT 都归我管。
-gu_c1	2	generic_neutral	We're refreshing the face of the company. Your footage helps.	公司形象正在换新，你拍的素材很有用。
-gu_c2	1		Need one big corporate smile for the reel. Standard, warm, trustworthy.	品牌片需要一个大笑容，标准、温暖、让人信得过那种。
-gu_c2	2		Just one close-up of my smile. That's the whole campaign, honestly.	给我的笑来个特写就行，说实话整个 campaign 就靠这一下了。
-gu_c3	1		Smile for the camera~ Investors love teeth. More teeth. Always more.	来，对着镜头笑一个～投资人就爱看牙，越多越好，永远不够。
-gu_c3	2		Why won't you say I'm photogenic? My smile is… very mapped.	你怎么不说我上镜呢？我这笑容……映射得可标准了。
-cheng_c1	1	generic_neutral	Cheng Shu, compliance. Footage logs, presence records, audit trails.	我是程书，合规部的，素材归档、在场记录、审计留痕这些我来管。
-cheng_c1	2	generic_neutral	Every shoot needs documented witnesses. Regulations.	每次拍摄都得有人在场记录，这是规定。
-cheng_c2	1		You have to film me. Compliance requires proof I was here.	你得把我拍进去，合规要求留证，证明我在场。
-cheng_c2	2		Check your viewfinder — I'm in frame, right? I should be in frame.	你看取景器——我在画面里吧？我应该在画面里的吧？
-cheng_c3	1		I'm always in the live view. Why am I never in the album? Why.	取景框里明明一直有我的，怎么相册里就是没有？为什么？
-cheng_c3	2		Every take. Regulation. I am in every take. The file just… forgets.	每一段都得有，这是规定，每一段我都该在的，就是文件……老忘。
-uncle_p1	1	uncle_normal	Just walking the dog. Nothing to see.	遛着呢，没什么好看的。
-uncle_p1	2	uncle_normal	This mutt's behaved better than most interns.	这狗比大多数实习生都听话。
-uncle_p2	1	uncle_anxious	The leash is empty! Where did it go?!	绳子上空了！狗去哪儿了？！
-uncle_p2	2	uncle_anxious	You work here — you must've seen a dog pass by!	你在公司里上班，肯定看见有狗跑过去了吧？
+chen_c1	1	chen_wei_neutral	I'm Chen Wei, ops. Server room, network sync, server patrols — all me.	我是陈维，运维组的。机房、网络同步、服务器巡检，都归我管。
+chen_c1	2	chen_wei_neutral	Company's doing a big system migration, everyone's on overtime. You're filming? Shoot whatever — nothing sensitive in the lobby.	公司最近在做一轮大规模系统迁移，全员都在加班。你来拍纪录片的？随便拍，大厅这边没什么敏感的。
+chen_c1	3	chen_wei_neutral	Just don't go near the server room — signal interference. Your gear might glitch.	就是别往机房那边走——那边信号干扰大，你的设备可能会出问题。
+chen_c2	1	chen_wei_neutral	Huh? You just… what were you saying? I think I dropped a packet — not my bag, a data packet. Sync hiccups sometimes.	嗯？你刚才……你刚才说什么来着？我好像丢了一个包——不是背包，是数据包。同步偶尔会卡。
+chen_c2	2	chen_wei_neutral	It's been like this — mid-sentence I blank out. Colleagues say I repeat myself. I don't notice at all.	最近总是这样，说到一半就断片。同事说我有时候会把同一句话重复两遍，我自己完全没意识到。
+chen_c2	3	chen_wei_neutral	Doctor says not enough rest. Maybe. Go on, I'm listening. I'm listening.	医生说是休息不够。可能吧。你继续，我在听。我在听。
+chen_c3	1	chen_wei_neutral	How many times have you talked to me today? Three? But I only remember… two. The middle part got deleted somehow.	你今天第几次来找我了？三次？可是我只记得……两次。中间那段好像被人删掉了。
+chen_c3	2	chen_wei_neutral	Something I can't figure out — yesterday on shift I was checking lines on the third floor, and security says they saw me walk through the lobby on the first. I can't be in two places.	有个事我一直想不通——昨天值班的时候，我在机房三楼检查线路，同时保安说看见我在一楼大厅走过。我不可能同时在两个地方。
+chen_c3	3	chen_wei_neutral	Unless… I have two instances running. One front-end, one back-end. But people don't have instances, right?	除非……我有两个实例在跑。一个在前台，一个在后台。但人不会有实例的，对吧？
+chen_c4	1	chen_wei_neutral	I was standing over there, then blink — I'm here. Don't remember walking between. That's not zoning out… that's a frame skip.	我刚才站在那边，然后一眨眼就在这儿了。中间的路我完全不记得走过。这不是走神……这是跳帧。
+chen_c4	2	chen_wei_neutral	Last week I did a network cutover on B2 — you know B2? Basement level two. Cables everywhere, but they weren't plugged into servers. They were plugged into…	上周去 B2 做网络割接的时候——你知道 B2 吗？地下二层。那天机房里全是线缆，但不是插在服务器上的，是插在……
+chen_c4	3	chen_wei_neutral	…Never mind. System's logging everything. Your camera — did you get me? Check if I'm shaking in the photos.	……不说了。系统在监控日志。你的相机——你拍到我了吗？你看看照片里我是不是一直在抖？
+chen_c5	1	chen_wei_neutral	Don't stare at me… I can feel the render pipeline overloading. Every second you look, I flicker once more.	别盯着我看……我能感觉到渲染管线在超载。你多看一秒，我就多闪一次。
+chen_c5	2	chen_wei_neutral	I remember now. That day on B2… cables plugged into people. Still breathing, but eyes blacked out. I didn't dare say anything… and the next day I became like this.	我想起来了。B2 那天……那些线缆插在人身上。他们还在呼吸，但眼睛是黑屏的。我当时没敢说……然后第二天我就变成了这样。
+chen_c5	3	chen_wei_neutral	They call it an "upgrade." But the Chen Wei before the upgrade… where did he go?	他们说这叫「升级」。可是升级之前的那个陈维……去哪了？
+student_c1	1	shrink_girl_neutral	Hi… I'm waiting for my mom to pick me up. She said she works at this company.	你好……我在等妈妈来接我。她说在这个公司上班。
+student_c1	2	shrink_girl_neutral	Been waiting a long time. Everyone's busy. Nobody pays attention to me.	等了好久了。叔叔阿姨们都很忙，没人理我。
+student_c2	1	shrink_girl_neutral	A man in a white coat had me come inside for a bit — pressed some device to my wrist, buzzing for a long time. My hand's been numb since.	刚才有个穿白大褂的叔叔让我进去坐了一会儿，拿仪器贴在我手腕上嗡嗡响了好久。出来之后手就一直发麻。
+student_c2	2	shrink_girl_neutral	See how long my sleeves are? It's not that the jacket's big — I don't want people to see… never mind.	你看我这袖子多长——不是衣服大，是我不想让人看到……算了。
+student_c3	1	shrink_girl_neutral	A lady tried to shake my hand last time. I reached out and she screamed and ran. It just… got a little thinner, that's all.	上次有个阿姨想跟我握手，我伸出手她就尖叫着跑了。只是……变细了一点而已。
+student_c3	2	shrink_girl_neutral	I haven't reached out since. Hands stay in the sleeves. Don't look.	从那之后我就不伸手了。缩在袖子里，谁都别看。
+student_c4	1	shrink_girl_neutral	The white-coat man came back, took one look and said "hand collapse, failed unit, leave her for now." …Failed? What did I fail?	白大褂叔叔又来了，看了一眼说「手部塌陷，失败品，先放着。」……失败了？我哪里失败了？
+student_c4	2	shrink_girl_reveal	My fingers got so long and thin, extra joints everywhere. That's not my hand. But when I curl my pinky, it curls.	指头变得好长好细，关节多出来好几个。这不是我的手。可是我弯小指，它就弯。
+student_c5	1	shrink_girl_reveal	Can you call my mom? Tell her… don't come pick me up. She'll be scared if she sees my hands.	帮我打个电话好吗……跟妈妈说别来接我了。她看到我的手会怕的。
+student_c5	2	shrink_girl_reveal	You want to run too, don't you. It's okay. I'm used to it.	你也想跑对不对。没关系。我习惯了。
+wu_c1	1	wu_ang_neutral	Wu Ang, algorithm team. Train models, tune hyperparams, watch loss curves — daily routine.	吴昂，算法组的。训模型、调超参、看 loss 曲线，日常三件套。
+wu_c1	2	wu_ang_neutral	Film away, but keep it wide — close-ups aren't flattering. Two weeks without going home, not looking my best.	你拍吧，尽量拍远景——近距离不太上镜。两周没回家了，状态不好。
+wu_c2	1	wu_ang_s2	Scared myself in the mirror today — eyes different colors, one yellowish one grayish. Ears too, completely different shapes on each side.	今天照镜子吓了一跳——左右眼颜色不一样，一只偏黄一只偏灰。耳朵也是，两边形状完全不同。
+wu_c2	2	wu_ang_s2	Probably haven't looked in a mirror in too long. Can you take a photo? I want to see what I actually look like.	大概是太久没照镜子了。你帮我拍张照呗？我想确认一下自己长什么样。
+wu_c3	1	wu_ang_s2	Looked at the photo. Those shoulders, that chest — not mine. I'm 170, sixty kilos. The person in the photo looks like a weightlifter.	照片看了。那副肩膀、那个胸膛——不是我的。我一米七六十公斤，照片里的人像举重运动员。
+wu_c3	2	wu_ang_s2	There's a line around my neck, a full circle. Not from a necklace… like a seam where head and body were stitched together.	脖子上有一条线，整整一圈。不是项链勒的……像是把头和身体缝在一起的接痕。
+wu_c3	3	wu_ang_s2	Colleague Liu had the same thing last week — found seams on his body. Then he took extended leave. Never came back.	同事小刘上周也发现身上有接缝。然后他就请了长假，再没来过。
+wu_c4	1	wu_ang_s3	Don't look at me like that. I know I look rough, but it's just too much overtime. Bad complexion is normal. Body changing is normal. People change.	你别那样看我。我知道最近气色不好，但我就是加班太多了。脸色不好很正常。身材走样也很正常。人本来就会变的嘛。
+wu_c4	2	wu_ang_s3	The line on my neck? Allergies. Definitely allergies. Season change. I'll put a band-aid on it myself, thanks.	脖子那条线？过敏。绝对是过敏。换季了嘛。你不用帮我看，我自己贴个创可贴就好了。
+wu_c5	1	wu_ang_s3	Hey, don't get so close — not mad, just… skin's sensitive lately. You standing that close makes me uncomfortable. Probably a rash. Yeah, a rash.	哎你别靠这么近——不是，我没生气，就是……最近皮肤敏感，你离太近我会不舒服。可能起疹子了。对，就是疹子。
+wu_c5	2	wu_ang_s3	Wide shots only. Up close it just… doesn't look good. Probably lack of sleep — face and body don't quite… match. Sleep it off, it'll be fine.	你拍远景就好。近了的话……不好看。大概是最近没休息好，显得脸和身上不太……协调。没事的，睡一觉就好了。
+han_c1	1	han_lu_neutral	Welcome to Human Company. I'm Han Lu at the front desk. Sign in here, get your badge there, elevators on the left.	欢迎来到人类公司，我是前台韩露。这边登记一下，领个访客牌，电梯在左手边。
+han_c1	2	han_lu_neutral	Standard tour route is marked on the floor — follow the arrows. Come find me if you need anything.	标准参观路线已经安排好了，跟着地上的箭头走就行。有什么需要随时来找我。
+han_c1	3	han_lu_neutral	Good luck with the shoot! Send us anything good you capture.	祝你拍摄顺利！有什么好素材别忘了发我们一份。
+han_c2	1	han_lu_neutral	Sorry — new policy, we nod instead of shaking hands. Reduce contact risk. Company's been doing this since last month.	不好意思，新规定——我们用点头代替握手，减少接触传播风险。公司从上个月开始就这样了。
+han_c2	2	han_lu_neutral	Just tell me what you need — no need to hand things over. I'm… not really in a position to reach out.	你要办什么手续直接跟我说就行，不用递东西过来。我这边……不太方便伸手。
+han_c3	1	han_lu_reveal	No peace signs, no waving. …Why are you staring at my hands? Totally normal. Five fingers. Always five. You miscounted.	别比耶，也别挥手。……你干嘛一直盯着我的手看？很正常。五根。一直都是五根。你数错了。
+han_c3	2	han_lu_reveal	If you insist on a handshake I'll have to log you as a security incident. Front desk has its rules.	你要非跟我握手不可，我就只能把你登记成安全事件了。前台有前台的规矩。
+gu_c1	1	gu_ying_neutral	I'm Gu Ying, brand comms. Company image, social media, all of it.	我是顾映，品牌宣传部的。公司对外形象、社交媒体运营都是我负责。
+gu_c1	2	gu_ying_neutral	You're filming? Good. Let me know what you need.	你来拍纪录片的？好。有什么需要跟我说。
+gu_c2	1	gu_ying_reveal_sad	You're back… I'm sorry, I don't know why… I feel so sad. Can you… wait a moment…	你又来了……对不起，我不知道为什么……好难过。你能不能……等一下……
+gu_c2	2	gu_ying_reveal_sad	I'm fine. Really fine. Just suddenly… so, so sad. Can't explain it. Go ahead, I'll pull myself together.	我没事。真的没事。就是突然觉得……特别特别难过。说不上来为什么。你先走吧，我缓一缓。
+gu_c3	1	gu_ying_neutral	Hello. I'm Gu Ying, brand comms. How can I help you?	你好。我是顾映，品牌宣传部的。有什么可以帮你的吗？
+gu_c3	2	gu_ying_neutral	Huh? Last time? What last time? I don't remember. …Wrong person, maybe?	嗯？上次？什么上次？我不记得。……你是不是认错人了？
+gu_c4	1	gu_ying_reveal_smile	You know what — I'm in such a good mood today. Can't explain why. Everything feels great. You feel great too, right?	你知道吗——我今天心情特别好。也说不上来为什么。就是觉得什么都挺好的。你也觉得挺好的对吧？
+gu_c4	2	gu_ying_reveal_smile	Why that face? Smile. Look, I'm smiling. Can't stop smiling. That's good, right?	你怎么那个表情？笑一下嘛。你看我就在笑。一直在笑。停不下来。挺好的。
+gu_c5	1	gu_ying_reveal_smile	You're here? Great. I'm so happy every time you come. Last time I was happy too. The time before I was sad — wait, sad? Why was I sad?	你来了？太好了。每次你来我都好开心。上次你来我也好开心。再上次你来我好难过——等等，我好难过？我为什么会好难过？
+gu_c5	2	gu_ying_reveal_smile	Whatever. Happy now is what matters. Look, I'm smiling. Smiling means happy. Right? …Right?	算了。现在开心就好了。你看我在笑。我在笑就说明我很开心。对吧？……对吧？
+cheng_c1	1	cheng_shu_neutral	I'm Cheng Shu, compliance. Archives, audit trails, presence records — all me.	我是程书，合规部的。公司所有流程的存档、审计留痕、在场记录，都归我管。
+cheng_c1	2	cheng_shu_neutral	Perfect timing — every shoot needs a witness on record. Regulations. I can accompany the whole way.	你来拍纪录片正好——每一段拍摄都需要有见证人在场，这是规定。我可以全程陪同。
+cheng_c2	1	cheng_shu_neutral	Do me a favor — keep me in frame when you shoot. Every clip needs my presence proof. Compliance requirement.	对了，帮我一个忙——拍摄的时候把我也带进画面里。每一段素材里都要有我的在场证明，这是合规要求。
+cheng_c2	2	cheng_shu_neutral	You have to capture me. I'll adjust the position, you press the shutter. Please — this matters a lot to me.	你一定要拍到我。站位我来调，你按快门就行。拜托了，这个对我很重要。
+cheng_c3	1	cheng_shu_neutral	You took photos, right? Check for me… am I in them?	你拍了吗？拍了对吧？你帮我看看……我在里面吧？
+cheng_c3	2	cheng_shu_neutral	…Not there? How? I was dead center. Take another one. I won't move this time.	……不在？怎么会不在？我明明站在正中间。再拍一张。这次我不动。
+cheng_c3	3	cheng_shu_neutral	Maybe your camera's broken. Try a different angle. …You're sure you were aimed at me?	可能是你的相机有问题。换个角度试试。……你确定你对准我了？
+cheng_c4	1	cheng_shu_neutral	I should be in every clip. Every single one. Regulations. I was there. I didn't move. Why am I never in the photos.	我每一段都该在的。每一段。这是规定。我站在那里了。我没有动。为什么就是没有我。
+cheng_c4	2	cheng_shu_neutral	…Never mind. Compliance people, low profile. …Right?	……算了。做合规的嘛。存在感本来就低。……是吧。
+uncle_p1	1	uncle_normal	Walking the dog, same as every day. This mutt's clingier than my grandkids — won't stop whining if I skip a day.	嘿，遛着呢，天天都得遛。这狗啊，比我孙子还黏人，一天不带出来就嗷嗷叫。
+uncle_p1	2	uncle_normal	Weird thing lately — keeps pressing its whole body against me, like trying to crawl inside. Makes me itch all over.	说来也怪，最近这家伙老往我身上蹭——不是那种亲热的蹭，是整个身子都贴上来，像要钻进去一样。蹭得我浑身发痒。
+uncle_p1	3	uncle_normal	Your people said I could walk the dog in the flower beds here, even free checkups. Nice — though I think the checkup wasn't just for the dog?	你们公司的人跟我说可以带狗来这边的花坛转转，还给免费体检。挺好的——不过那体检好像不只是给狗做的？
+uncle_p2	1	uncle_anxious	No no no — the leash is empty! Where's the dog?!	不对不对不对——绳子上空了！狗去哪儿了？！
+uncle_p2	2	uncle_anxious	I didn't move! How is it gone? Leash still in my hand, clasp still locked — did it undo itself from the inside?!	我刚才就站在这儿没动过，它怎么就没了？绳子还在我手里，扣环还是锁着的——它从里面解开的？它怎么会解扣？！
+uncle_p2	3	uncle_anxious	You work here — you must've seen it! A yellow mutt… you had to see it… it couldn't have just run off…	你在公司上班……你肯定看见了吧？一条黄毛的土狗……你一定看见了……它不可能自己跑的……
 uncle_p3	1	uncle_horror	Hsssh... hsssh...	斯哈……斯哈……
