@@ -24,6 +24,9 @@ public static class GeneratedArt
     static Sprite[] _propSprites;
     static Sprite[] _forestSprites;
     static Sprite _playerSprite;
+    static Sprite _playerSideSprite;
+    static Sprite _playerFrontSprite;
+    static Sprite _deathMonsterSprite;
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
@@ -63,10 +66,11 @@ public static class GeneratedArt
     /// <summary>按角色美术文件夹加载默认立绘（artFolder 例如 Characters/npc_00）。</summary>
     public static Sprite GetCharacterSprite(string artFolder)
     {
-        if (string.IsNullOrEmpty(artFolder)) return null;
-        if (_characterCache.TryGetValue(artFolder, out var s)) return s;
-        s = LoadWholeSprite($"Art/{artFolder}/base");
-        _characterCache[artFolder] = s;
+        string key = string.IsNullOrEmpty(artFolder) ? "<none>" : artFolder;
+        if (_characterCache.TryGetValue(key, out var s)) return s;
+        s = TryLoadWholeSprite($"Art/{artFolder}/base");   // 缺图安静返回 null
+        if (s == null) s = MakeCharacterPlaceholder(key);  // 兜底：程序占位立绘（缺美术图也可见、不崩）
+        _characterCache[key] = s;
         return s;
     }
 
@@ -78,6 +82,28 @@ public static class GeneratedArt
         string key = artFolder + "/" + suffix;
         if (_posesCache.TryGetValue(key, out var s)) return s;
         s = TryLoadWholeSprite($"Art/{artFolder}/{suffix}");
+        _posesCache[key] = s;
+        return s;
+    }
+
+    /// <summary>该角色在某 stage 的正常立绘（T4：Art/&lt;folder&gt;/s{stage}.png）。缺失时回退到 base 立绘。</summary>
+    public static Sprite GetCharacterStageSprite(string artFolder, int stage)
+    {
+        if (stage <= 1 || string.IsNullOrEmpty(artFolder)) return GetCharacterSprite(artFolder);
+        string key = artFolder + "/s" + stage;
+        if (_posesCache.TryGetValue(key, out var s)) return s != null ? s : GetCharacterSprite(artFolder);
+        s = TryLoadWholeSprite($"Art/{artFolder}/s{stage}");
+        _posesCache[key] = s;
+        return s != null ? s : GetCharacterSprite(artFolder);
+    }
+
+    /// <summary>角色命名差分棋子（如顾映 look-away 的 reveal_smile/reveal_sad）。缺失返回 null，调用方自行回退。</summary>
+    public static Sprite GetCharacterVariantSprite(string artFolder, string variant)
+    {
+        if (string.IsNullOrEmpty(artFolder) || string.IsNullOrEmpty(variant)) return null;
+        string key = artFolder + "/" + variant;
+        if (_posesCache.TryGetValue(key, out var s)) return s;
+        s = TryLoadWholeSprite($"Art/{artFolder}/{variant}");
         _posesCache[key] = s;
         return s;
     }
@@ -98,6 +124,18 @@ public static class GeneratedArt
 
     public static Sprite PlayerSprite =>
         _playerSprite ??= LoadWholeSprite("Art/Characters/player");
+
+    /// <summary>主角侧面棋子（默认朝左；缺图返回 null，调用方回退到背面 PlayerSprite）。</summary>
+    public static Sprite PlayerSideSprite =>
+        _playerSideSprite ??= TryLoadWholeSprite("Art/Characters/player_side");
+
+    /// <summary>主角正面棋子（缺图返回 null，调用方回退到背面 PlayerSprite）。</summary>
+    public static Sprite PlayerFrontSprite =>
+        _playerFrontSprite ??= TryLoadWholeSprite("Art/Characters/player_front");
+
+    /// <summary>死亡演出追逐怪物的占位立绘（暗色发光眼；真怪物美术留待阶段七）。</summary>
+    public static Sprite DeathMonsterSprite =>
+        _deathMonsterSprite ??= (TryLoadWholeSprite("Art/Imposters/death_monster") ?? MakeMonsterPlaceholder());
 
     /// <summary>用于填满地图边缘的宽幅树林卡片。</summary>
     public static Sprite DenseForestEdgeSprite =>
@@ -197,6 +235,80 @@ public static class GeneratedArt
 
     /// <summary>REC 小红点（实心圆）。</summary>
     public static Sprite RecDotSprite => _recDot ??= MakeRadialSprite(32, new Color(1f, 0.25f, 0.25f, 1f), 6f);
+
+    /// <summary>缺角色美术图时的程序占位立绘：按名字上色的纸片小人（头+身），脚底为轴。</summary>
+    static Sprite MakeCharacterPlaceholder(string seed)
+    {
+        int w = 96, h = 192;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        int hash = seed != null ? seed.GetHashCode() : 0;
+        float hue = (Mathf.Abs(hash) % 360) / 360f;
+        Color body = Color.HSVToRGB(hue, 0.45f, 0.85f);
+        Color head = Color.HSVToRGB(hue, 0.30f, 0.95f);
+        var px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float cx = x / (float)(w - 1) - 0.5f;
+                float fy = y / (float)(h - 1);
+                bool inside; Color c;
+                if (fy > 0.70f)
+                {
+                    float hy = (fy - 0.85f) / 0.15f;             // 头部椭圆
+                    inside = (cx * cx) / (0.22f * 0.22f) + hy * hy < 1f;
+                    c = head;
+                }
+                else
+                {
+                    float bw = 0.34f - 0.10f * (fy / 0.70f);     // 身体：上宽下窄
+                    inside = Mathf.Abs(cx) < bw && fy > 0.02f;
+                    c = body;
+                }
+                px[y * w + x] = inside ? c : new Color(0, 0, 0, 0);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
+    }
+
+    /// <summary>死亡演出怪物占位：暗红近黑的诡异人形 + 两点发光眼，脚底为轴。</summary>
+    static Sprite MakeMonsterPlaceholder()
+    {
+        int w = 128, h = 208;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        Color bodyDark = new Color(0.06f, 0.02f, 0.03f, 1f);   // 近黑带暗红
+        Color eye = new Color(1f, 0.82f, 0.35f, 1f);           // 发光眼
+        float exOff = 0.085f, eyeY = 0.83f, eyeR = 0.032f;
+        var px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float cx = x / (float)(w - 1) - 0.5f;
+                float fy = y / (float)(h - 1);
+                bool inside;
+                if (fy > 0.66f)
+                {
+                    float hy = (fy - 0.86f) / 0.16f;                          // 头部椭圆
+                    inside = (cx * cx) / (0.19f * 0.19f) + hy * hy < 1f;
+                }
+                else
+                {
+                    // 身体：上宽下窄 + 轻微起伏轮廓（诡异感）
+                    float bw = (0.30f - 0.10f * (fy / 0.66f)) + 0.02f * Mathf.Sin(fy * 22f);
+                    inside = Mathf.Abs(cx) < bw && fy > 0.02f;
+                }
+                Color c = new Color(0, 0, 0, 0);
+                if (inside)
+                {
+                    c = bodyDark;
+                    float dy = fy - eyeY;
+                    float dxL = cx + exOff, dxR = cx - exOff;
+                    if (dxL * dxL + dy * dy < eyeR * eyeR || dxR * dxR + dy * dy < eyeR * eyeR) c = eye;
+                }
+                px[y * w + x] = c;
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
+    }
 
     static Sprite MakeRadialSprite(int size, Color color, float falloff)
     {

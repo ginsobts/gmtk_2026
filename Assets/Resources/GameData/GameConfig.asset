@@ -12,12 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0beb8123579f5904e973f940765c8699, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: 
+  cameraOrthographic: 1
+  cameraOrthographicSize: 8.5
   cameraFieldOfView: 55
-  cameraTilt: 52
+  cameraTilt: 35
   cameraOffset: {x: 0, y: 13, z: -10}
   cameraFollowLerp: 8
   playerStart: {x: 0, y: 0, z: -6}
-  playerScale: 0.47
+  playerScale: 1
   playerMoveSpeed: 5.5
   playerInteractRange: 2.6
   npcScale: 1
@@ -25,3 +27,9 @@ MonoBehaviour:
   npcYawRandom: 0
   spawnAreaX: {x: -14, y: 14}
   spawnAreaZ: {x: -13, y: 13}
+  dialogueTimePoints: 3
+  photoTimePoints: 1
+  deathThreshold: 90
+  stageThresholds:
+  - 30
+  - 60

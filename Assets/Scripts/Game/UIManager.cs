@@ -83,10 +83,20 @@ public class UIManager : MonoBehaviour
     readonly List<GameObject> _albumDynamic = new List<GameObject>();
     List<PhotoEntry> _albumEntries;
     int _selectedPhoto = -1;
+    // 相册指认（策划 1.4：勾选照片后点指认）
+    bool _albumAllowAccuse;
+    readonly HashSet<int> _photoSelected = new HashSet<int>();
+    readonly List<RawImage> _thumbImages = new List<RawImage>();
+    GameObject _albumAccuseBtn;
 
     // 结算
     GameObject _resultRoot;
     Text _resultTitle, _resultDetail;
+
+    // 指认旁白过场（策划 1.4：点指认后先弹旁白，点击继续）
+    GameObject _narrationRoot;
+    Text _narrationText;
+    System.Action _narrationContinue;
 
     // Toast
     Text _toastText;
@@ -126,6 +136,7 @@ public class UIManager : MonoBehaviour
         BuildAlbum();
         BuildMarkList();
         BuildResult();
+        BuildNarration();
         BuildToast();
         BuildMainMenu();
         BuildCredits();
@@ -252,13 +263,13 @@ public class UIManager : MonoBehaviour
         SetRect(vignette.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40));
         vignette.transform.SetAsFirstSibling();
 
+        BuildTimelineBar(hud);
+
         MakeIcon(hud, "FoundIcon", GeneratedArt.GetIconSprite(6),
             new Vector2(1, 1), new Vector2(-250, -28), new Vector2(44, 44));
         _foundText = MakeText(hud, "Found", "", 36, TextAnchor.UpperRight);
         SetRect(_foundText.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1),
             new Vector2(-30, -26), new Vector2(400, 60));
-
-        BuildTimelineBar(hud);
 
         _promptText = MakeLocText(hud, "Prompt", "hud.prompt", 26, TextAnchor.LowerCenter);
         SetRect(_promptText.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
@@ -330,6 +341,7 @@ public class UIManager : MonoBehaviour
         SetRect(_dialogueRoot.GetComponent<RectTransform>(), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
             new Vector2(0, 200), new Vector2(1200, 300));
 
+        // 对话立绘（左侧，来自 wxc 的 PortraitArt；缺图自动隐藏）
         _dialoguePortraitRoot = new GameObject("Portrait", typeof(RectTransform));
         _dialoguePortraitRoot.transform.SetParent(_dialogueRoot.transform, false);
         SetRect(_dialoguePortraitRoot.GetComponent<RectTransform>(),
@@ -529,8 +541,12 @@ public class UIManager : MonoBehaviour
         _albumHint = MakeText(_albumRoot.transform, "AHint", "", 30, TextAnchor.MiddleCenter);
         SetRect(_albumHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 80));
 
+        _albumAccuseBtn = MakeButton(_albumRoot.transform, "album.accuse", 30, () => AccuseSelected(),
+            new Vector2(0.5f, 0), new Vector2(-230, 40), new Vector2(340, 70)).gameObject;
+        SetButtonColor(_albumAccuseBtn.GetComponent<Button>(), new Color(0.75f, 0.3f, 0.3f));
+
         MakeButton(_albumRoot.transform, "album.close", 30, () => GameManager.Instance.CloseAlbum(),
-            new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(280, 70));
+            new Vector2(0.5f, 0), new Vector2(230, 40), new Vector2(280, 70));
 
         _albumRoot.SetActive(false);
     }
@@ -607,6 +623,44 @@ public class UIManager : MonoBehaviour
         _resultRoot.SetActive(false);
     }
 
+    // ---------------- 指认旁白过场 ----------------
+
+    void BuildNarration()
+    {
+        _narrationRoot = MakePanel(_canvas.transform, "Narration", new Color(0.02f, 0.02f, 0.05f, 0.94f));
+        SetRect(_narrationRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        var btn = _narrationRoot.AddComponent<Button>();
+        btn.transition = Selectable.Transition.None;
+        btn.onClick.AddListener(OnNarrationClick);
+
+        _narrationText = MakeText(_narrationRoot.transform, "NText", "", 52, TextAnchor.MiddleCenter);
+        SetRect(_narrationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(1500, 320));
+        _narrationText.color = new Color(1f, 0.95f, 0.85f);
+
+        var hint = MakeText(_narrationRoot.transform, "NHint", Loc.Pick("Click to continue ▼", "点击继续 ▼"), 28, TextAnchor.LowerCenter);
+        SetRect(hint.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 80), new Vector2(800, 44));
+        hint.color = new Color(1f, 1f, 1f, 0.5f);
+
+        _narrationRoot.SetActive(false);
+    }
+
+    /// <summary>显示一句旁白过场，点击任意处执行 onContinue。</summary>
+    public void ShowNarration(string text, System.Action onContinue)
+    {
+        _narrationContinue = onContinue;
+        if (_narrationText != null) _narrationText.text = text;
+        _narrationRoot.SetActive(true);
+        PlayShow(_narrationRoot);
+    }
+
+    void OnNarrationClick()
+    {
+        _narrationRoot.SetActive(false);
+        var cb = _narrationContinue;
+        _narrationContinue = null;
+        cb?.Invoke();
+    }
+
     void BuildToast()
     {
         _toastText = MakeText(_canvas.transform, "Toast", "", 34, TextAnchor.MiddleCenter);
@@ -621,7 +675,6 @@ public class UIManager : MonoBehaviour
     {
         _foundText.text = Loc.Format("hud.marked", marked, total);
         UpdateTimelineBar(phaseOrder, timeline);
-
         if (_lastMarked != int.MinValue && marked != _lastMarked) StartCoroutine(PunchText(_foundText.rectTransform));
         _lastMarked = marked;
     }
@@ -700,7 +753,6 @@ public class UIManager : MonoBehaviour
     void UpdateTimelineBar(int phaseOrder, int timeline)
     {
         if (_timelineFill == null || _timelineFillRt == null) return;
-
         int maxT = Mathf.Max(1, GameContent.GetTimelineMax());
         float progress = Mathf.Clamp01(timeline / (float)maxT);
         if (timeline > 0 && progress < 0.015f) progress = 0.015f;
@@ -715,9 +767,7 @@ public class UIManager : MonoBehaviour
             if (label == null) continue;
             label.text = p.DisplayName;
             bool active = p.order == phaseOrder;
-            label.color = active
-                ? TimelineFillColor(phaseOrder)
-                : new Color(0.55f, 0.6f, 0.68f, 0.85f);
+            label.color = active ? TimelineFillColor(phaseOrder) : new Color(0.55f, 0.6f, 0.68f, 0.85f);
             label.fontSize = active ? 24 : 22;
         }
     }
@@ -755,7 +805,6 @@ public class UIManager : MonoBehaviour
             _dialoguePortraitRoot.SetActive(show);
             if (show) _dialoguePortrait.sprite = portrait;
         }
-
         if (!wasActive) PlayShow(_dialogueRoot);
     }
 
@@ -854,15 +903,21 @@ public class UIManager : MonoBehaviour
     // ---------------- 相册 ----------------
 
     /// <summary>显示一组照片（title 用于区分“全部照片 / 某角色的照片”）。纯查看，不再在此指认。</summary>
-    public void ShowAlbum(List<PhotoEntry> entries, string title)
+    public void ShowAlbum(List<PhotoEntry> entries, string title, bool allowAccuse = false)
     {
         _albumEntries = entries;
+        _albumAllowAccuse = allowAccuse;
+        _photoSelected.Clear();
+        _thumbImages.Clear();
         _albumRoot.SetActive(true);
         PlayShow(_albumRoot);
         _albumTitle.text = title;
         ClearAlbumDynamic();
 
-        if (entries == null || entries.Count == 0)
+        bool hasPhotos = entries != null && entries.Count > 0;
+        if (_albumAccuseBtn != null) _albumAccuseBtn.SetActive(allowAccuse && hasPhotos);
+
+        if (!hasPhotos)
         {
             _selectedPhoto = -1;
             _albumBigImage.gameObject.SetActive(false);
@@ -871,7 +926,7 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        _albumHint.text = "";
+        _albumHint.text = allowAccuse ? Loc.Get("album.accuseHint") : "";
         _albumBigImage.gameObject.SetActive(true);
 
         for (int i = 0; i < entries.Count; i++)
@@ -882,11 +937,44 @@ public class UIManager : MonoBehaviour
             thumb.texture = entries[i].image;
             thumb.color = Color.white;
             var btn = thumb.gameObject.AddComponent<Button>();
-            btn.onClick.AddListener(() => SelectPhoto(index));
+            if (allowAccuse) btn.onClick.AddListener(() => ToggleSelect(index));
+            else btn.onClick.AddListener(() => SelectPhoto(index));
+            _thumbImages.Add(thumb);
             _albumDynamic.Add(thumb.gameObject);
         }
 
         SelectPhoto(entries.Count - 1);
+        RefreshThumbHighlight();
+    }
+
+    /// <summary>指认模式下勾选/取消勾选一张照片，并显示其大图。</summary>
+    void ToggleSelect(int index)
+    {
+        if (_photoSelected.Contains(index)) _photoSelected.Remove(index);
+        else _photoSelected.Add(index);
+        RefreshThumbHighlight();
+        SelectPhoto(index);
+    }
+
+    /// <summary>刷新缩略图勾选态：选中=绿，未选=白。</summary>
+    void RefreshThumbHighlight()
+    {
+        for (int i = 0; i < _thumbImages.Count; i++)
+        {
+            if (_thumbImages[i] == null) continue;
+            _thumbImages[i].color = (_albumAllowAccuse && _photoSelected.Contains(i))
+                ? new Color(0.5f, 1f, 0.55f) : Color.white;
+        }
+    }
+
+    /// <summary>点「指认」：收集勾选的照片交给 GameManager 判定。</summary>
+    void AccuseSelected()
+    {
+        var sel = new List<PhotoEntry>();
+        if (_albumEntries != null)
+            foreach (int i in _photoSelected)
+                if (i >= 0 && i < _albumEntries.Count) sel.Add(_albumEntries[i]);
+        GameManager.Instance.AccuseWithPhotos(sel);
     }
 
     void SelectPhoto(int index)
@@ -994,8 +1082,7 @@ public class UIManager : MonoBehaviour
 
         string imposterList = (imposters != null && imposters.Count > 0)
             ? string.Join("\n", imposters) : Loc.Get("result.none");
-        string story = Loc.Get(win ? "result.win.body" : "result.lose.body");
-        _resultDetail.text = Loc.Format("result.detail", correct, total, wrong, photos, imposterList, story);
+        _resultDetail.text = Loc.Format("result.detail", correct, total, wrong, photos, imposterList);
     }
 
     public void HideAllPanels()
@@ -1004,6 +1091,7 @@ public class UIManager : MonoBehaviour
         HideCamera();
         HideAlbum();
         HideMarkList();
+        if (_narrationRoot != null) _narrationRoot.SetActive(false);
         if (_resultRoot != null) _resultRoot.SetActive(false);
         if (_interactRoot != null) _interactRoot.SetActive(false);
         if (_menuRoot != null) _menuRoot.SetActive(false);
@@ -1244,16 +1332,7 @@ public class UIManager : MonoBehaviour
         foreach (var e in _locStatic)
             if (e.text != null) e.text.text = Loc.Get(e.key);
         if (_menuLangLabel != null) _menuLangLabel.text = Loc.Format("menu.language", Loc.LanguageName);
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.OnLanguageChanged();
-        }
-        else if (_timelineFill != null && _phaseLabels.Count > 0)
-        {
-            var phases = GameContent.Phases;
-            for (int i = 0; i < _phaseLabels.Count && i < phases.Count; i++)
-                if (_phaseLabels[i] != null) _phaseLabels[i].text = phases[i].DisplayName;
-        }
+        if (GameManager.Instance != null) GameManager.Instance.OnLanguageChanged();
     }
 
     void OnDestroy() { Loc.OnChanged -= Relocalize; }

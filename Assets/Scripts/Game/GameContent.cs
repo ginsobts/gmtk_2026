@@ -10,7 +10,8 @@ using UnityEngine;
 /// Stitched    —— 相册线：拍出的照片里身体是拼接的
 /// PhotoMissing—— 相册线：真人在取景框里，但照片里没有 TA
 /// Deflate     —— 世界线：玩家靠近接触时会“变瘪”
-/// DogSkin     —— 对话线：三阶段差分，最终恐怖立绘
+/// SkinDog     —— 对话线/时间轴：三阶段差分，最终扒皮恐怖立绘（魏大爷）
+/// LookAway    —— 取景线：镜头移开时表情在三态间循环切换（顾映，N3）
 /// </summary>
 public enum NpcKind
 {
@@ -22,7 +23,8 @@ public enum NpcKind
     Stitched,
     PhotoMissing,
     Deflate,
-    DogSkin
+    SkinDog,
+    LookAway
 }
 
 public enum NpcDialogueMode { Static, Phase, Count }
@@ -51,6 +53,7 @@ public class CharacterDef
     public string artFolder;
     public string dialogueId;
     public NpcKind kind = NpcKind.Normal;
+    public bool harmless;   // 无害正常人：错认也不算失败（策划 N2，如王建国）
     public string titleEn;
     public string titleZh;
 
@@ -181,8 +184,8 @@ public static class GameContent
 
         string dialogueId = ResolveDialogueId(npc, currentPhase);
         if (TryGetLines(dialogueId, out var lines))
-            return PickLines(lines);
-        return PickLines(FallbackGenericDialogue());
+            return PickLines(lines, npc.charId);
+        return PickLines(FallbackGenericDialogue(), npc.charId);
     }
 
     static string ResolveDialogueId(Npc npc, int currentPhase)
@@ -227,15 +230,19 @@ public static class GameContent
         return _dialogue.TryGetValue(dialogueId, out lines) && lines != null && lines.Count > 0;
     }
 
-    static DialogueLine[] PickLines(List<DialogueLineDef> lines)
+    static DialogueLine[] PickLines(List<DialogueLineDef> lines, string fallbackCharId)
     {
         var arr = new DialogueLine[lines.Count];
         for (int i = 0; i < lines.Count; i++)
         {
             var def = lines[i];
+            // 空 / generic_neutral 的 portraitId → 回退到「说话人自己的 neutral」(<charId>_neutral)
+            string pid = def.portraitId;
+            if ((string.IsNullOrEmpty(pid) || pid == "generic_neutral") && !string.IsNullOrEmpty(fallbackCharId))
+                pid = fallbackCharId + "_neutral";
             arr[i] = new DialogueLine
             {
-                portraitId = def.portraitId,
+                portraitId = pid,
                 text = Loc.Pick(def.en, def.zh)
             };
         }
@@ -253,7 +260,8 @@ public static class GameContent
             case NpcKind.Stitched: return Loc.Get("kind.stitched");
             case NpcKind.PhotoMissing: return Loc.Get("kind.photomissing");
             case NpcKind.Deflate: return Loc.Get("kind.deflate");
-            case NpcKind.DogSkin: return Loc.Get("kind.dogskin");
+            case NpcKind.SkinDog: return Loc.Get("kind.skindog");
+            case NpcKind.LookAway: return Loc.Get("kind.lookaway");
             default: return Loc.Get("kind.normal");
         }
     }
@@ -321,7 +329,8 @@ public static class GameContent
                 nameZh = r.Length > 4 ? r[4].Trim() : "",
                 kind = r.Length > 5 ? ParseKind(r[5]) : NpcKind.Normal,
                 titleEn = r.Length > 6 ? r[6].Trim() : "",
-                titleZh = r.Length > 7 ? r[7].Trim() : ""
+                titleZh = r.Length > 7 ? r[7].Trim() : "",
+                harmless = r.Length > 8 && r[8].Trim() == "1"
             });
         }
     }
@@ -465,24 +474,24 @@ public static class GameContent
     {
         var list = new List<CharacterDef>
         {
-            C("npc_00", "Lin Cai", "林采", NpcKind.DouBao, "PR", "公关"),
-            C("npc_01", "Wang Jianguo", "王建国", NpcKind.Normal, "CEO", "老板"),
-            C("npc_02", "Chen Wei", "陈维", NpcKind.FrameDrop, "Ops", "运维"),
-            C("npc_03", "Su Qing", "苏晴", NpcKind.Normal, "HR", "人事"),
-            C("npc_04", "Zhao Yan", "赵岩", NpcKind.Deflate, "Security", "保安"),
-            C("npc_05", "Fang Xiao", "方晓", NpcKind.Normal, "Staff", "职员"),
-            C("npc_06", "Wu Ang", "吴昂", NpcKind.Stitched, "Algorithm", "算法"),
-            C("npc_07", "Lu Yuan", "陆远", NpcKind.Normal, "Dev", "开发"),
-            C("npc_08", "Uncle Wei", "魏大爷", NpcKind.DogSkin),
-            C("npc_09", "An'an", "安安", NpcKind.Normal),
-            C("npc_10", "Han Lu", "韩露", NpcKind.SixFinger, "Reception", "前台"),
-            C("npc_11", "Gu Ying", "顾映", NpcKind.ScarySmile, "Brand", "品牌"),
-            C("npc_12", "Cheng Shu", "程书", NpcKind.PhotoMissing, "Compliance", "合规"),
+            C("lin_cai", "Lin Cai", "林采", NpcKind.DouBao, "PR", "公关"),
+            C("wang_jianguo", "Wang Jianguo", "王建国", NpcKind.Normal, "CEO", "老板", harmless: true),
+            C("chen_wei", "Chen Wei", "陈维", NpcKind.FrameDrop, "Ops", "运维"),
+            C("su_qing", "Su Qing", "苏晴", NpcKind.Normal, "HR", "人事"),
+            C("shrink_girl", "Schoolgirl", "女学生", NpcKind.Deflate),
+            C("fang_xiao", "Fang Xiao", "方晓", NpcKind.Normal, "Staff", "职员"),
+            C("wu_ang", "Wu Ang", "吴昂", NpcKind.Stitched, "Algorithm", "算法"),
+            C("lu_yuan", "Lu Yuan", "陆远", NpcKind.Normal, "Dev", "开发"),
+            C("wei_daye", "Uncle Wei", "魏大爷", NpcKind.SkinDog),
+            C("an_an", "An'an", "安安", NpcKind.Normal),
+            C("han_lu", "Han Lu", "韩露", NpcKind.SixFinger, "Reception", "前台"),
+            C("gu_ying", "Gu Ying", "顾映", NpcKind.LookAway, "Brand", "品牌"),
+            C("cheng_shu", "Cheng Shu", "程书", NpcKind.PhotoMissing, "Compliance", "合规"),
         };
         return list;
     }
 
-    static CharacterDef C(string id, string en, string zh, NpcKind kind, string titleEn = "", string titleZh = "") => new CharacterDef
+    static CharacterDef C(string id, string en, string zh, NpcKind kind, string titleEn = "", string titleZh = "", bool harmless = false) => new CharacterDef
     {
         charId = id,
         nameEn = en,
@@ -491,7 +500,8 @@ public static class GameContent
         dialogueId = "generic",
         kind = kind,
         titleEn = titleEn,
-        titleZh = titleZh
+        titleZh = titleZh,
+        harmless = harmless
     };
 
     static List<PhaseDef> DefaultPhases() => new List<PhaseDef>

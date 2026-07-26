@@ -11,14 +11,16 @@ using UnityEngine;
 public class GameConfig : ScriptableObject
 {
     [Header("相机")]
-    public float cameraFieldOfView = 55f;
-    public float cameraTilt = 52f;                        // 俯角（绕 X）
+    public bool cameraOrthographic = true;                // 正交投影（策划 1.1：2.5D 正交）
+    public float cameraOrthographicSize = 8.5f;           // 正交视野半高（策划：size 8.5）
+    public float cameraFieldOfView = 55f;                 // 透视时用（cameraOrthographic=false 时生效）
+    public float cameraTilt = 35f;                        // 俯角（绕 X，策划：x 旋转 35）
     public Vector3 cameraOffset = new Vector3(0f, 13f, -10f);
     public float cameraFollowLerp = 8f;
 
     [Header("玩家")]
     public Vector3 playerStart = new Vector3(0f, 0f, -6f);
-    public float playerScale = 0.47f;
+    public float playerScale = 1.0f;
     public float playerMoveSpeed = 5.5f;
     public float playerInteractRange = 2.6f;
 
@@ -32,6 +34,15 @@ public class GameConfig : ScriptableObject
     [Header("NPC 随机生成范围（没有出生点时使用）")]
     public Vector2 spawnAreaX = new Vector2(-14f, 14f);
     public Vector2 spawnAreaZ = new Vector2(-13f, 13f);
+
+    [Header("时间点（策划 1.2/1.3）")]
+    public int dialogueTimePoints = 3;   // 每完成一次对话 +N
+    public int photoTimePoints = 1;      // 每次拍照 +M
+    public int deathThreshold = 90;      // 时间点到 X 触发死亡演出（超过第 3 stage 之后，策划 5.1）
+
+    [Header("时间轴 stage（策划 1.3）")]
+    // 3 个调查 stage（遛狗/狗丢/真面目，对齐魏大爷 base/s2/s3），死亡在 deathThreshold：stage2=30 / stage3=60
+    public int[] stageThresholds = new int[] { 30, 60 };
 
     static GameConfig _instance;
 
