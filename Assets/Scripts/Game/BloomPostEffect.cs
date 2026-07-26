@@ -35,7 +35,9 @@ public class BloomPostEffect : MonoBehaviour
 
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
-        if (Material == null || intensity <= 0.001f)
+        var mat = Material;
+        if (!SystemInfo.supportsImageEffects || mat == null || mat.shader == null ||
+            !mat.shader.isSupported || intensity <= 0.001f)
         {
             Graphics.Blit(src, dest);
             return;
@@ -48,15 +50,15 @@ public class BloomPostEffect : MonoBehaviour
         var rtBlurA = RenderTexture.GetTemporary(w, h, 0, fmt);
         var rtBlurB = RenderTexture.GetTemporary(w, h, 0, fmt);
 
-        Material.SetFloat(ThresholdId, threshold);
-        Material.SetFloat(IntensityId, intensity);
+        mat.SetFloat(ThresholdId, threshold);
+        mat.SetFloat(IntensityId, intensity);
 
-        Graphics.Blit(src, rtBright, Material, 0);
-        Graphics.Blit(rtBright, rtBlurA, Material, 1);
-        Graphics.Blit(rtBlurA, rtBlurB, Material, 2);
+        Graphics.Blit(src, rtBright, mat, 0);
+        Graphics.Blit(rtBright, rtBlurA, mat, 1);
+        Graphics.Blit(rtBlurA, rtBlurB, mat, 2);
 
-        Material.SetTexture(BloomTexId, rtBlurB);
-        Graphics.Blit(src, dest, Material, 3);
+        mat.SetTexture(BloomTexId, rtBlurB);
+        Graphics.Blit(src, dest, mat, 3);
 
         RenderTexture.ReleaseTemporary(rtBright);
         RenderTexture.ReleaseTemporary(rtBlurA);

@@ -44,6 +44,7 @@ public class UIManager : MonoBehaviour
     bool _creditsGlitchActive;
     RectTransform _creditsOrbitRingRt;
     Image _creditsOrbitRingImage;
+    Image _creditsRingRedGhost, _creditsRingCyanGhost;
     Image _creditsGlitchBarRed, _creditsGlitchBarCyan;
 
     // HUD
@@ -156,11 +157,26 @@ public class UIManager : MonoBehaviour
 
     // ---------------- 构建 ----------------
 
+    /// <summary>
+    /// 取 UI 字体。必须优先用打进包里的 Resources/Fonts/GameFont，
+    /// 因为 WebGL 运行在浏览器沙箱内、拿不到任何系统字体，
+    /// 走 CreateDynamicFontFromOSFont 会导致中文全部显示为空白。
+    /// 系统字体只作为字体资源缺失时的退路。
+    /// </summary>
+    static Font LoadUiFont()
+    {
+        var packed = Resources.Load<Font>("Fonts/GameFont");
+        if (packed != null) return packed;
+
+        Debug.LogWarning("UIManager: 未找到 Resources/Fonts/GameFont，回退到系统字体（WebGL 下中文会缺字）。");
+        var os = Font.CreateDynamicFontFromOSFont(
+            new[] { "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "PingFang SC", "Noto Sans CJK SC", "Arial Unicode MS" }, 24);
+        return os != null ? os : Font.CreateDynamicFontFromOSFont("Arial", 24);
+    }
+
     public void Build()
     {
-        _font = Font.CreateDynamicFontFromOSFont(
-            new[] { "Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "PingFang SC", "Noto Sans CJK SC", "Arial Unicode MS" }, 24);
-        if (_font == null) _font = Font.CreateDynamicFontFromOSFont("Arial", 24);
+        _font = LoadUiFont();
 
         EnsureEventSystem();
 
@@ -277,8 +293,8 @@ public class UIManager : MonoBehaviour
         if (_menuCreditsButtonLabel != null)
             _menuCreditsButtonLabel.color = Color.white;
 
-        float ghostAlpha = !darkBackground ? 0f : (burst ? 0.78f : 0.24f);
-        float offset = burst ? 5.5f : 1.3f;
+        float ghostAlpha = !darkBackground ? 0f : (burst ? 0.92f : 0.16f);
+        float offset = burst ? 7.5f : 1f;
         if (_menuCreditsRedShadow != null)
         {
             _menuCreditsRedShadow.effectColor = new Color(1f, 0.04f, 0.12f, ghostAlpha);
@@ -311,6 +327,27 @@ public class UIManager : MonoBehaviour
             new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(660, 660));
         _creditsOrbitRingRt = ring.rectTransform;
         _creditsOrbitRingImage = ring;
+
+        // Glitch 脉冲时开启两份色相通道副本：红向左、青向右，主体圆环保持不动。
+        var ringRedGO = new GameObject("CreditsRingRedGhost", typeof(RectTransform));
+        ringRedGO.transform.SetParent(_creditsRoot.transform, false);
+        _creditsRingRedGhost = ringRedGO.AddComponent<Image>();
+        _creditsRingRedGhost.sprite = GeneratedArt.RingSprite;
+        _creditsRingRedGhost.color = new Color(1f, 0.02f, 0.10f, 0.32f);
+        _creditsRingRedGhost.raycastTarget = false;
+        SetRect(_creditsRingRedGhost.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), new Vector2(-7, 10), new Vector2(660, 660));
+        _creditsRingRedGhost.enabled = false;
+
+        var ringCyanGO = new GameObject("CreditsRingCyanGhost", typeof(RectTransform));
+        ringCyanGO.transform.SetParent(_creditsRoot.transform, false);
+        _creditsRingCyanGhost = ringCyanGO.AddComponent<Image>();
+        _creditsRingCyanGhost.sprite = GeneratedArt.RingSprite;
+        _creditsRingCyanGhost.color = new Color(0.01f, 0.92f, 1f, 0.30f);
+        _creditsRingCyanGhost.raycastTarget = false;
+        SetRect(_creditsRingCyanGhost.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), new Vector2(7, 10), new Vector2(660, 660));
+        _creditsRingCyanGhost.enabled = false;
 
         // AI 彩蛋名单的短促“横向撕裂”扫描线（普通名单时始终隐藏）。
         var barRedGO = new GameObject("CreditsGlitchBarRed", typeof(RectTransform));
@@ -398,8 +435,8 @@ public class UIManager : MonoBehaviour
             if (i < _creditOrbitLabels.Count)
                 _creditOrbitLabels[i].color = Color.white; // 主字始终清楚，只让色彩残影错位
 
-            float ghostAlpha = !_creditsGlitchActive ? 0f : (glitchBurst ? 0.72f : 0.14f);
-            float ghostOffset = glitchBurst ? 4.5f + (i % 2) * 1.5f : 0.9f;
+            float ghostAlpha = !_creditsGlitchActive ? 0f : (glitchBurst ? 0.88f : 0.10f);
+            float ghostOffset = glitchBurst ? 7f + (i % 2) * 2f : 0.7f;
             if (i < _creditRedShadows.Count)
             {
                 _creditRedShadows[i].effectColor = new Color(1f, 0.03f, 0.11f, ghostAlpha);
@@ -418,10 +455,18 @@ public class UIManager : MonoBehaviour
             _creditsOrbitRingRt.localScale = Vector3.one;
         }
         if (_creditsOrbitRingImage != null)
+            _creditsOrbitRingImage.color = new Color(0.46f, 0.62f, 0.95f, 0.18f);
+
+        float ringSplit = hardTear ? 11f : 7f;
+        if (_creditsRingRedGhost != null)
         {
-            _creditsOrbitRingImage.color = _creditsGlitchActive
-                ? (glitchBurst ? new Color(0.35f, 0.82f, 0.95f, 0.26f) : new Color(0.46f, 0.62f, 0.95f, 0.18f))
-                : new Color(0.46f, 0.62f, 0.95f, 0.18f);
+            _creditsRingRedGhost.enabled = glitchBurst;
+            _creditsRingRedGhost.rectTransform.anchoredPosition = center + new Vector2(-ringSplit, 0f);
+        }
+        if (_creditsRingCyanGhost != null)
+        {
+            _creditsRingCyanGhost.enabled = glitchBurst;
+            _creditsRingCyanGhost.rectTransform.anchoredPosition = center + new Vector2(ringSplit, 0f);
         }
 
         float scanY = Mathf.PingPong(Time.unscaledTime * 690f, 540f) - 270f + center.y;

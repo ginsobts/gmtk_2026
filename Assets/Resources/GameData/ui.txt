@@ -22,7 +22,7 @@ credits.ai.opus48	Opus4.8\n<size=21><color=#AAB2C4>AI Model</color></size>	Opus4
 credits.ai.composer	Composer2.5\n<size=21><color=#AAB2C4>AI Model</color></size>	Composer2.5\n<size=21><color=#AAB2C4>AI 模型</color></size>
 credits.ai.doubao	豆包\n<size=21><color=#AAB2C4>AI Model</color></size>	豆包\n<size=21><color=#AAB2C4>AI 模型</color></size>
 credits.ai.opus46	Opus4.6\n<size=21><color=#AAB2C4>AI Model</color></size>	Opus4.6\n<size=21><color=#AAB2C4>AI 模型</color></size>
-credits.audio	Music: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org   ·   UI Audio: Kenney / Kenney.nl	音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org   ·   界面音效：Kenney / Kenney.nl
+credits.audio	Music: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org   ·   UI Audio: Kenney / Kenney.nl   ·   Font: Noto Sans SC (SIL OFL 1.1)	音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org   ·   界面音效：Kenney / Kenney.nl   ·   字体：Noto Sans SC（SIL OFL 1.1）
 briefing.title	Your Objective	你的目标
 briefing.body	Something is wrong at the company.\n\nHidden among your coworkers are <b>Refined Ones</b> — imposters wearing human skins. Each one has a subtle tell.Find them all — and don't get too close to the wrong one.	公司里有些不对劲。\n\n同事之中混进了<b>炼化人</b>——披着人皮的伪装者，每一个都有细微的破绽。找出全部炼化人——也别太靠近不该靠近的人。
 briefing.confirm	Got it — Start [Enter]	明白了，开始 [回车]

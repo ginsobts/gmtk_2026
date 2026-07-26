@@ -132,7 +132,7 @@ public static class Loc
         ["credits.ai.composer"] = new[] { "Composer2.5\n<size=21><color=#AAB2C4>AI Model</color></size>", "Composer2.5\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
         ["credits.ai.doubao"] = new[] { "豆包\n<size=21><color=#AAB2C4>AI Model</color></size>", "豆包\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
         ["credits.ai.opus46"] = new[] { "Opus4.6\n<size=21><color=#AAB2C4>AI Model</color></size>", "Opus4.6\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
-        ["credits.audio"] = new[] { "Music: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org   ·   UI Audio: Kenney / Kenney.nl", "音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org   ·   界面音效：Kenney / Kenney.nl" },
+        ["credits.audio"] = new[] { "Music: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org   ·   UI Audio: Kenney / Kenney.nl   ·   Font: Noto Sans SC (SIL OFL 1.1)", "音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org   ·   界面音效：Kenney / Kenney.nl   ·   字体：Noto Sans SC（SIL OFL 1.1）" },
 
         // 开场目标说明
         ["briefing.title"] = new[] { "Your Objective", "你的目标" },

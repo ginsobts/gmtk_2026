@@ -45,6 +45,12 @@ crashlytics-build.properties
 .DS_Store
 Thumbs.db
 
+# 场景/资产修复脚本产生的本地备份
+/Backups/
+
+# 字体子集化用的原始字体（17MB，脚本会按需重新下载）
+/tools/fonts_src/
+
 # MCP for Unity 截图（本地开发用，不入库）
 /[Aa]ssets/[Ss]creenshots/
 /[Aa]ssets/[Ss]creenshots.meta

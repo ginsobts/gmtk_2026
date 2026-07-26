@@ -55,7 +55,24 @@ public static class BuildTool
             ? Path.Combine(subDir, product + ".exe")
             : subDir; // WebGL / 其它平台输出到文件夹
 
-        Directory.CreateDirectory(subDir);
+        // 必须清理旧输出。直接覆盖旧包可能残留/混用 level0、Data、wasm 等文件，
+        // 最终表现为 Windows 启动即崩溃或 WebGL Splash 后黑屏。
+        try
+        {
+            string rootFull = Path.GetFullPath(OutputRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string subFull = Path.GetFullPath(subDir);
+            if (!subFull.StartsWith(rootFull, System.StringComparison.OrdinalIgnoreCase))
+                throw new IOException("拒绝清理 Build 目录之外的路径：" + subFull);
+            if (Directory.Exists(subFull)) Directory.Delete(subFull, true);
+            Directory.CreateDirectory(subFull);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+            EditorUtility.DisplayDialog("打包失败",
+                "无法清理旧输出目录。请先关闭正在运行的游戏或占用 Build 文件的程序，然后重试。\n\n" + e.Message, "好");
+            return;
+        }
 
         var options = new BuildPlayerOptions
         {
@@ -63,7 +80,7 @@ public static class BuildTool
             locationPathName = location,
             target = target,
             targetGroup = BuildPipeline.GetBuildTargetGroup(target),
-            options = BuildOptions.None
+            options = BuildOptions.CleanBuildCache
         };
 
         BuildReport report = BuildPipeline.BuildPlayer(options);

@@ -269,10 +269,20 @@ public class GameManager : MonoBehaviour
         var shader = Shader.Find("GMTK/HDRAdditiveParticle")
                      ?? Shader.Find("Mobile/Particles/Additive")
                      ?? Shader.Find("Legacy Shaders/Particles/Additive");
-        _dustMaterial = new Material(shader);
-        _dustMaterial.mainTexture = GeneratedArt.SoftDotSprite.texture;
-        _dustMaterial.SetFloat("_HdrIntensity", DustHdrIntensityMorning);
-        renderer.material = _dustMaterial;
+        if (shader != null && shader.isSupported)
+        {
+            _dustMaterial = new Material(shader);
+            _dustMaterial.mainTexture = GeneratedArt.SoftDotSprite.texture;
+            if (_dustMaterial.HasProperty("_HdrIntensity"))
+                _dustMaterial.SetFloat("_HdrIntensity", DustHdrIntensityMorning);
+            renderer.material = _dustMaterial;
+        }
+        else
+        {
+            // 构建时 Shader 被剥离/设备不支持时，宁可隐藏灰尘，也不能让启动流程在 UI 创建前中断。
+            Debug.LogWarning("Ambient Dust: 没有可用的粒子 Shader，已安全关闭粒子渲染。");
+            renderer.enabled = false;
+        }
         renderer.sortingOrder = 6;
         _ambientDust.Play();
     }
@@ -777,7 +787,7 @@ public class GameManager : MonoBehaviour
         if (_ambientDust == null) return;
         var main = _ambientDust.main;
         main.startColor = Color.Lerp(DustColorMorning, DustColorEvening, t);
-        if (_dustMaterial != null)
+        if (_dustMaterial != null && _dustMaterial.HasProperty("_HdrIntensity"))
             _dustMaterial.SetFloat("_HdrIntensity", Mathf.Lerp(DustHdrIntensityMorning, DustHdrIntensityEvening, t));
     }
 
@@ -786,7 +796,7 @@ public class GameManager : MonoBehaviour
         if (_ambientDust == null) return;
         var main = _ambientDust.main;
         main.startColor = DustColorDeath;
-        if (_dustMaterial != null)
+        if (_dustMaterial != null && _dustMaterial.HasProperty("_HdrIntensity"))
             _dustMaterial.SetFloat("_HdrIntensity", DustHdrIntensityDeath);
     }
 
