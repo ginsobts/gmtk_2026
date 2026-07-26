@@ -1265,7 +1265,7 @@ public class GameManager : MonoBehaviour
         if (_monster != null || _player == null) return;
         var cfg = GameConfig.Instance;
         var walkFrames = GeneratedArt.DeathMonsterWalkFrames;
-        var go = BuildPerson("DeathMonster", walkFrames[0], cfg.npcScale * 1.25f, out var body);
+        var go = BuildPerson("DeathMonster", walkFrames[0], cfg.npcScale, out var body);
         // 在玩家对角远处出生，留出追逐距离
         Vector3 pp = _player.position;
         float sx = pp.x >= 0 ? -1f : 1f, sz = pp.z >= 0 ? -1f : 1f;
