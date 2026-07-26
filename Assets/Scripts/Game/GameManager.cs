@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public enum GameState { MainMenu, Briefing, Tutorial, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
+public enum GameState { MainMenu, Briefing, Tutorial, Playing, Dialogue, RobotReward, Camera, Album, MarkList, Result, Death }
 
 /// <summary>相册里的一张照片：截图 + 拍摄时处于取景框内的 NPC 名单。</summary>
 public class PhotoEntry
@@ -65,6 +65,11 @@ public class GameManager : MonoBehaviour
     bool _dialogueCompleted;
     string _dialogueId;        // 当前这组台词的 id（用于查分支 choices）
     bool _awaitingChoice;      // 台词播完、正在等玩家选分支
+
+    // 豆包人分支奖励：“小我”机器人（仅本局，纯跟随、无交互）
+    bool _robotRewardPending;
+    bool _hasRobot;
+    GameObject _robotCompanion;
 
     // 取景态
     readonly List<Npc> _framed = new List<Npc>();
@@ -548,6 +553,9 @@ public class GameManager : MonoBehaviour
         foreach (var entry in Album)
             if (entry.image != null) Destroy(entry.image);
         Album.Clear();
+        if (_robotCompanion != null) { Destroy(_robotCompanion); _robotCompanion = null; }
+        _robotRewardPending = false;
+        _hasRobot = false;
 
         // 本局炼化人数量 = characters 表里 kind != Normal 的角色数（wxc 固定剧本，身份写死在表）
         imposterCount = 0;
@@ -870,6 +878,9 @@ public class GameManager : MonoBehaviour
                 if (Input.GetKeyDown(KeyCode.Escape)) EndDialogue();
                 break;
 
+            case GameState.RobotReward:
+                break;   // 奖励弹窗必须点击确认，避免误按热键跳过
+
             case GameState.Death:
                 break;   // 死亡演出：无热键，玩家只能逃（移动在 PlayerController）
         }
@@ -889,6 +900,8 @@ public class GameManager : MonoBehaviour
         _dialogueNpc = npc;
         // 对话组随 phase/count 由 ResolveDialogueId 解析（安安第5次真心话即走 count 表；带每句立绘）
         _dialogueId = GameContent.ResolveDialogueId(npc, CurrentPhase);
+        // 已经获得机器人后再次在第一阶段找林采，不再重复发放，只回应机器人近况。
+        if (_hasRobot && _dialogueId == "lin_p1") _dialogueId = "lin_robot_repeat";
         _dialogueLines = GameContent.GetLinesById(_dialogueId, npc.charId);
         _dialogueIndex = 0;
         _dialogueCompleted = false;
@@ -942,6 +955,7 @@ public class GameManager : MonoBehaviour
         _awaitingChoice = false;
 
         if (ch.effect == "special_death") { TriggerSpecialDeath(); return; }
+        if (ch.effect == "grant_robot" && !_hasRobot) _robotRewardPending = true;
 
         if (!string.IsNullOrEmpty(ch.gotoId))
         {
@@ -964,12 +978,14 @@ public class GameManager : MonoBehaviour
         var npc = _dialogueNpc;
         bool completed = _dialogueCompleted;
         bool wasInDialogue = State == GameState.Dialogue;
+        bool showRobotReward = wasInDialogue && _robotRewardPending && !_hasRobot;
         _dialogueNpc = null;
         _dialogueCompleted = false;
         _awaitingChoice = false;
-        if (State == GameState.Dialogue) State = GameState.Playing;
+        if (State == GameState.Dialogue)
+            State = showRobotReward ? GameState.RobotReward : GameState.Playing;
         UI.HideDialogue();
-        UI.SetHudVisible(true);
+        UI.SetHudVisible(!showRobotReward);
         // 完整读完一段对话才计：count 模式递增到访次数（安安等靠它推进）+ 时间轴 +N
         if (wasInDialogue && completed)
         {
@@ -977,6 +993,41 @@ public class GameManager : MonoBehaviour
                 npc.dialogueVisitCount++;
             AdvanceTimeline(GameConfig.Instance.dialogueTimePoints);
         }
+        if (showRobotReward) UI.ShowRobotReward();
+    }
+
+    public void ConfirmRobotReward()
+    {
+        if (State != GameState.RobotReward) return;
+        _robotRewardPending = false;
+        _hasRobot = true;
+        UI.HideRobotReward();
+        SpawnRobotCompanion();
+        State = GameState.Playing;
+        UI.SetHudVisible(true);
+        RefreshHud();
+        TryEnterDeathByTime();
+    }
+
+    void SpawnRobotCompanion()
+    {
+        if (_robotCompanion != null || _player == null) return;
+        var frames = GeneratedArt.RobotFrames;
+        if (frames == null || frames.Length == 0) return;
+        Sprite start = frames.Length > 1 && frames[1] != null ? frames[1] : frames[0];
+        if (start == null) return;
+
+        var cfg = GameConfig.Instance;
+        var go = BuildPerson("LittleMeRobot", start, cfg.playerScale * 0.75f, out var body);
+        Vector3 spawn = _player.position + new Vector3(-1.25f, 0f, 0.25f);
+        spawn = MapObstacles.Resolve(spawn, 0.28f);
+        spawn.x = Mathf.Clamp(spawn.x, -cfg.mapHalfX, cfg.mapHalfX);
+        spawn.z = Mathf.Clamp(spawn.z, -cfg.mapHalfZ, cfg.mapHalfZ);
+        go.transform.position = spawn;
+
+        var follower = go.AddComponent<RobotFollower>();
+        follower.Setup(_player, body, frames);
+        _robotCompanion = go;
     }
 
     // ---------------- 相机 / 取景 / 拍照 ----------------

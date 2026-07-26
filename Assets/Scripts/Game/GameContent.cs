@@ -96,7 +96,7 @@ public class ChoiceDef
     public string labelEn;
     public string labelZh;
     public string gotoId;   // 选中后继续进入的 dialogueId（空 = 不续接）
-    public string effect;   // 特殊效果：special_death / end / 空
+    public string effect;   // 特殊效果：special_death / grant_robot / end / 空
 
     public string Label => Loc.Pick(labelEn, labelZh);
 }

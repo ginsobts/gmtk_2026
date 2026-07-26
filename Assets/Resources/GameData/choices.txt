@@ -1,7 +1,7 @@
 # 对话分支表（Tab 分隔）。某 dialogueId 的台词全部播完后，弹出这些选项按钮。
 # order：按钮顺序（小在上）。label_en/label_zh：按钮文案（双语）。
 # goto：选中后续接进入的 dialogueId（留空=不续接）；该续接对话播完后还会再查它自己的分支，可链式。
-# effect：特殊效果——special_death（触发特殊死亡）/ end（直接结束）/ 空（等同 end，除非填了 goto）。
+# effect：特殊效果——special_death（触发特殊死亡）/ grant_robot（对话结束后获得机器人）/ end（直接结束）/ 空（等同 end，除非填了 goto）。
 dialogueId	order	label_en	label_zh	goto	effect
-lin_p1	1	Ask what "efficiency reform" actually means	追问「效率改革」到底改什么	lin_branch_probe	
-lin_p1	2	Thank her and move on	道谢，先走开		end
+lin_p1	1	Yes, I'd like the little robot	好呀，我想带上小机器人	lin_robot_yes	grant_robot
+lin_p1	2	No, thank you	不用了，谢谢	lin_robot_no	end

@@ -24,6 +24,27 @@ public class UIManager : MonoBehaviour
     GameObject _creditsRoot;
     GameObject _briefingRoot;
     Text _menuLangLabel;
+    Image _menuBackground;
+    Sprite[] _menuBackgrounds;
+    int _menuBackgroundIndex;
+    RectTransform _menuCreditsButtonRt;
+    Image _menuCreditsButtonImage;
+    Text _menuCreditsButtonLabel;
+    Shadow _menuCreditsRedShadow, _menuCreditsCyanShadow;
+    readonly Vector2 _menuCreditsButtonBasePos = new Vector2(212f, 155f);
+    readonly Color _menuCreditsButtonBaseColor = new Color(0.17f, 0.20f, 0.25f, 0.84f);
+    readonly List<RectTransform> _creditOrbitItems = new List<RectTransform>();
+    readonly List<Text> _creditOrbitLabels = new List<Text>();
+    readonly List<Shadow> _creditRedShadows = new List<Shadow>();
+    readonly List<Shadow> _creditCyanShadows = new List<Shadow>();
+    int[] _creditOrbitSlots;
+    float _creditOrbitAngle;
+    int _lastCreditTop = -1;
+    int _creditsVisitCount;
+    bool _creditsGlitchActive;
+    RectTransform _creditsOrbitRingRt;
+    Image _creditsOrbitRingImage;
+    Image _creditsGlitchBarRed, _creditsGlitchBarCyan;
 
     // HUD
     GameObject _hudRoot;
@@ -104,6 +125,9 @@ public class UIManager : MonoBehaviour
     Text _resultDetail;
     Image _resultImage;
 
+    // 获得“小我”机器人奖励弹窗
+    GameObject _robotRewardRoot;
+
     // 新手引导（进入场景后分步高亮 + 压暗其它区域）
     GameObject _tutorialRoot;
     Image _tutDimLeft, _tutDimRight, _tutDimTop, _tutDimBottom;
@@ -156,6 +180,7 @@ public class UIManager : MonoBehaviour
         BuildAlbum();
         BuildMarkList();
         BuildResult();
+        BuildRobotReward();
         BuildNarration();
         BuildToast();
         BuildMainMenu();
@@ -174,30 +199,96 @@ public class UIManager : MonoBehaviour
         _menuRoot = MakePanel(_canvas.transform, "MainMenu", new Color(0.05f, 0.06f, 0.1f, 0.96f));
         SetRect(_menuRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-        var title = MakeLocText(_menuRoot.transform, "Title", "menu.title", 96, TextAnchor.MiddleCenter);
-        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -180), new Vector2(1600, 130));
-        title.color = new Color(1f, 0.9f, 0.55f);
+        // 16:9 主菜单背景：启动时随机明/暗图；图片本身已包含标题和底部半透明白框。
+        var bgGO = new GameObject("MainMenuBackground", typeof(RectTransform));
+        bgGO.transform.SetParent(_menuRoot.transform, false);
+        _menuBackground = bgGO.AddComponent<Image>();
+        _menuBackground.preserveAspect = true;
+        _menuBackground.raycastTarget = false;
+        SetRect(_menuBackground.rectTransform, Vector2.zero, Vector2.one,
+            new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        var bgAspect = bgGO.AddComponent<AspectRatioFitter>();
+        bgAspect.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        bgAspect.aspectRatio = 16f / 9f;
+        _menuBackgrounds = GeneratedArt.MenuBackgrounds;
+        _menuBackgroundIndex = _menuBackgrounds != null && _menuBackgrounds.Length > 1 ? 1 : 0; // 首次固定白色背景
+        ApplyMenuBackground();
 
-        var sub = MakeLocText(_menuRoot.transform, "Subtitle", "menu.subtitle", 34, TextAnchor.MiddleCenter);
-        SetRect(sub.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -300), new Vector2(1400, 50));
-        sub.color = new Color(0.8f, 0.85f, 0.95f);
+        // 四个按钮排成 2×2，全部落在原图底部半透明白框内。
+        var startBtn = MakeButton(_menuRoot.transform, "menu.start", 27, () => GameManager.Instance.StartGame(),
+            new Vector2(0.5f, 0), new Vector2(-198, 155), new Vector2(360, 66));
+        SetButtonColor(startBtn, new Color(0.28f, 0.10f, 0.12f, 0.86f));
 
-        MakeButton(_menuRoot.transform, "menu.start", 36, () => GameManager.Instance.StartGame(),
-            new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(420, 96));
-        MakeButton(_menuRoot.transform, "menu.credits", 32, () => GameManager.Instance.OpenCredits(),
-            new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(420, 84));
+        var creditsBtn = MakeButton(_menuRoot.transform, "menu.credits", 27, () => GameManager.Instance.OpenCredits(),
+            new Vector2(0.5f, 0), _menuCreditsButtonBasePos, new Vector2(360, 66));
+        SetButtonColor(creditsBtn, _menuCreditsButtonBaseColor);
+        _menuCreditsButtonRt = creditsBtn.GetComponent<RectTransform>();
+        _menuCreditsButtonImage = creditsBtn.GetComponent<Image>();
+        _menuCreditsButtonLabel = creditsBtn.GetComponentInChildren<Text>();
+        _menuCreditsRedShadow = _menuCreditsButtonLabel.gameObject.AddComponent<Shadow>();
+        _menuCreditsRedShadow.effectColor = new Color(1f, 0.08f, 0.16f, 0f);
+        _menuCreditsRedShadow.effectDistance = Vector2.zero;
+        _menuCreditsCyanShadow = _menuCreditsButtonLabel.gameObject.AddComponent<Shadow>();
+        _menuCreditsCyanShadow.effectColor = new Color(0.05f, 0.9f, 1f, 0f);
+        _menuCreditsCyanShadow.effectDistance = Vector2.zero;
 
-        var langBtn = MakeButton(_menuRoot.transform, Loc.Format("menu.language", Loc.LanguageName), 32,
+        var langBtn = MakeButton(_menuRoot.transform, MenuLanguageToggleLabel(), 27,
             () => GameManager.Instance.ToggleLanguage(),
-            new Vector2(0.5f, 0.5f), new Vector2(0, -170), new Vector2(420, 84), register: false);
-        SetButtonColor(langBtn, new Color(0.3f, 0.42f, 0.5f));
+            new Vector2(0.5f, 0), new Vector2(-198, 75), new Vector2(360, 66), register: false);
+        SetButtonColor(langBtn, new Color(0.17f, 0.20f, 0.25f, 0.84f));
         _menuLangLabel = langBtn.GetComponentInChildren<Text>();
 
-        var quitBtn = MakeButton(_menuRoot.transform, "menu.quit", 32, () => GameManager.Instance.QuitGame(),
-            new Vector2(0.5f, 0.5f), new Vector2(0, -280), new Vector2(420, 84));
-        SetButtonColor(quitBtn, new Color(0.5f, 0.3f, 0.3f));
+        var quitBtn = MakeButton(_menuRoot.transform, "menu.quit", 27, () => GameManager.Instance.QuitGame(),
+            new Vector2(0.5f, 0), new Vector2(212, 75), new Vector2(360, 66));
+        SetButtonColor(quitBtn, new Color(0.35f, 0.12f, 0.14f, 0.84f));
 
         _menuRoot.SetActive(false);
+    }
+
+    void ApplyMenuBackground()
+    {
+        if (_menuBackground == null || _menuBackgrounds == null || _menuBackgrounds.Length == 0) return;
+        _menuBackgroundIndex = Mathf.Clamp(_menuBackgroundIndex, 0, _menuBackgrounds.Length - 1);
+        _menuBackground.sprite = _menuBackgrounds[_menuBackgroundIndex];
+        _menuBackground.enabled = _menuBackground.sprite != null;
+    }
+
+    // 按钮显示“点击后将切换到的语言”，而不是当前语言。
+    string MenuLanguageToggleLabel() => Loc.Current == Lang.ZH ? "Language" : "语言";
+
+    void SwitchMenuBackground()
+    {
+        if (_menuBackgrounds == null || _menuBackgrounds.Length < 2) return;
+        _menuBackgroundIndex = (_menuBackgroundIndex + 1) % _menuBackgrounds.Length;
+        ApplyMenuBackground();
+    }
+
+    void UpdateMenuCreditsButtonGlitch()
+    {
+        if (_menuCreditsButtonRt == null) return;
+        bool darkBackground = _menuBackgroundIndex == 0;
+        float phase = Mathf.Repeat(Time.unscaledTime * 0.72f, 1f);
+        bool burst = darkBackground && phase < 0.065f;
+        _menuCreditsButtonRt.anchoredPosition = _menuCreditsButtonBasePos; // 不再位置颤抖
+        if (_menuCreditsButtonImage != null)
+            _menuCreditsButtonImage.color = darkBackground
+                ? (burst ? new Color(0.12f, 0.15f, 0.20f, 0.92f) : _menuCreditsButtonBaseColor)
+                : _menuCreditsButtonBaseColor;
+        if (_menuCreditsButtonLabel != null)
+            _menuCreditsButtonLabel.color = Color.white;
+
+        float ghostAlpha = !darkBackground ? 0f : (burst ? 0.78f : 0.24f);
+        float offset = burst ? 5.5f : 1.3f;
+        if (_menuCreditsRedShadow != null)
+        {
+            _menuCreditsRedShadow.effectColor = new Color(1f, 0.04f, 0.12f, ghostAlpha);
+            _menuCreditsRedShadow.effectDistance = new Vector2(-offset, 0f);
+        }
+        if (_menuCreditsCyanShadow != null)
+        {
+            _menuCreditsCyanShadow.effectColor = new Color(0.02f, 0.9f, 1f, ghostAlpha);
+            _menuCreditsCyanShadow.effectDistance = new Vector2(offset, 0f);
+        }
     }
 
     void BuildCredits()
@@ -206,22 +297,172 @@ public class UIManager : MonoBehaviour
         SetRect(_creditsRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
         var title = MakeLocText(_creditsRoot.transform, "CTitle", "credits.title", 60, TextAnchor.UpperCenter);
-        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -80), new Vector2(1400, 90));
+        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -34), new Vector2(1400, 80));
         title.color = new Color(1f, 0.9f, 0.55f);
 
-        var body = MakeLocText(_creditsRoot.transform, "CBody", "credits.body", 34, TextAnchor.UpperCenter);
-        SetRect(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 20), new Vector2(1200, 500));
-        body.color = new Color(0.88f, 0.92f, 1f);
+        // 圆轨道：只作为视觉参考；成员文字保持正向，在圆周上持续环绕。
+        var ringGO = new GameObject("CreditsOrbitRing", typeof(RectTransform));
+        ringGO.transform.SetParent(_creditsRoot.transform, false);
+        var ring = ringGO.AddComponent<Image>();
+        ring.sprite = GeneratedArt.RingSprite;
+        ring.color = new Color(0.46f, 0.62f, 0.95f, 0.18f);
+        ring.raycastTarget = false;
+        SetRect(ring.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(660, 660));
+        _creditsOrbitRingRt = ring.rectTransform;
+        _creditsOrbitRingImage = ring;
+
+        // AI 彩蛋名单的短促“横向撕裂”扫描线（普通名单时始终隐藏）。
+        var barRedGO = new GameObject("CreditsGlitchBarRed", typeof(RectTransform));
+        barRedGO.transform.SetParent(_creditsRoot.transform, false);
+        _creditsGlitchBarRed = barRedGO.AddComponent<Image>();
+        _creditsGlitchBarRed.color = new Color(1f, 0.06f, 0.12f, 0.34f);
+        _creditsGlitchBarRed.raycastTarget = false;
+        SetRect(_creditsGlitchBarRed.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760, 3));
+        _creditsGlitchBarRed.enabled = false;
+
+        var barCyanGO = new GameObject("CreditsGlitchBarCyan", typeof(RectTransform));
+        barCyanGO.transform.SetParent(_creditsRoot.transform, false);
+        _creditsGlitchBarCyan = barCyanGO.AddComponent<Image>();
+        _creditsGlitchBarCyan.color = new Color(0.02f, 0.9f, 1f, 0.30f);
+        _creditsGlitchBarCyan.raycastTarget = false;
+        SetRect(_creditsGlitchBarCyan.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(720, 2));
+        _creditsGlitchBarCyan.enabled = false;
+
+        var center = MakeLocText(_creditsRoot.transform, "CreditsCenter", "credits.center", 28, TextAnchor.MiddleCenter);
+        SetRect(center.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(470, 150));
+        center.color = new Color(0.84f, 0.88f, 0.96f);
+
+        _creditOrbitItems.Clear();
+        _creditOrbitLabels.Clear();
+        _creditRedShadows.Clear();
+        _creditCyanShadows.Clear();
+        for (int i = 0; i < 5; i++)
+        {
+            // 奇偶次进入会在“真实成员 / AI 彩蛋名单”之间切换，因此不登记为静态本地化文本。
+            var member = MakeText(_creditsRoot.transform, "CreditMember" + i, "", 34, TextAnchor.MiddleCenter);
+            member.color = Color.white;
+            SetRect(member.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 90));
+            _creditOrbitItems.Add(member.rectTransform);
+            _creditOrbitLabels.Add(member);
+            var red = member.gameObject.AddComponent<Shadow>();
+            red.effectColor = new Color(1f, 0.05f, 0.13f, 0f);
+            red.effectDistance = Vector2.zero;
+            _creditRedShadows.Add(red);
+            var cyan = member.gameObject.AddComponent<Shadow>();
+            cyan.effectColor = new Color(0.03f, 0.9f, 1f, 0f);
+            cyan.effectDistance = Vector2.zero;
+            _creditCyanShadows.Add(cyan);
+        }
+        _creditOrbitSlots = new int[_creditOrbitItems.Count];
+        for (int i = 0; i < _creditOrbitSlots.Length; i++) _creditOrbitSlots[i] = i;
+        RefreshCreditMemberTexts();
+        UpdateCreditsOrbit(0f);
 
         MakeButton(_creditsRoot.transform, "credits.back", 32, () => GameManager.Instance.CloseCredits(),
-            new Vector2(0.5f, 0), new Vector2(0, 70), new Vector2(320, 84));
+            new Vector2(0, 1), new Vector2(40, -40), new Vector2(260, 70));
+
+        // 音乐/音效署名固定在界面最底部，不参与旋转。
+        var audio = MakeLocText(_creditsRoot.transform, "CreditsAudio", "credits.audio", 20, TextAnchor.LowerCenter);
+        SetRect(audio.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0),
+            new Vector2(0.5f, 0), new Vector2(0, 16), new Vector2(1500, 70));
+        audio.color = new Color(0.62f, 0.67f, 0.76f);
 
         _creditsRoot.SetActive(false);
     }
 
+    void UpdateCreditsOrbit(float deltaTime)
+    {
+        int count = _creditOrbitItems.Count;
+        if (count == 0) return;
+        float glitchPhase = Mathf.Repeat(Time.unscaledTime * 0.62f, 1f);
+        bool glitchBurst = _creditsGlitchActive && glitchPhase < 0.075f;
+        bool hardTear = _creditsGlitchActive && glitchPhase < 0.028f;
+        _creditOrbitAngle = Mathf.Repeat(_creditOrbitAngle + deltaTime * 12f, 360f);
+        const float radius = 330f;
+        Vector2 center = new Vector2(0f, 10f);
+        float tearSign = Mathf.Sign(Mathf.Sin(Time.unscaledTime * 137f));
+        for (int i = 0; i < count; i++)
+        {
+            int slot = _creditOrbitSlots != null && i < _creditOrbitSlots.Length ? _creditOrbitSlots[i] : i;
+            float degrees = _creditOrbitAngle + slot * (360f / count) + 90f;
+            float rad = degrees * Mathf.Deg2Rad;
+            Vector2 pos = center + new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * radius;
+            _creditOrbitItems[i].anchoredPosition = pos;
+            _creditOrbitItems[i].localRotation = Quaternion.identity; // 姓名始终正向，便于阅读
+            _creditOrbitItems[i].localScale = Vector3.one; // 不再缩放/颤抖，只做颜色通道异常
+            if (i < _creditOrbitLabels.Count)
+                _creditOrbitLabels[i].color = Color.white; // 主字始终清楚，只让色彩残影错位
+
+            float ghostAlpha = !_creditsGlitchActive ? 0f : (glitchBurst ? 0.72f : 0.14f);
+            float ghostOffset = glitchBurst ? 4.5f + (i % 2) * 1.5f : 0.9f;
+            if (i < _creditRedShadows.Count)
+            {
+                _creditRedShadows[i].effectColor = new Color(1f, 0.03f, 0.11f, ghostAlpha);
+                _creditRedShadows[i].effectDistance = new Vector2(-ghostOffset, hardTear ? -1f : 0f);
+            }
+            if (i < _creditCyanShadows.Count)
+            {
+                _creditCyanShadows[i].effectColor = new Color(0.02f, 0.9f, 1f, ghostAlpha);
+                _creditCyanShadows[i].effectDistance = new Vector2(ghostOffset, hardTear ? 1f : 0f);
+            }
+        }
+
+        if (_creditsOrbitRingRt != null)
+        {
+            _creditsOrbitRingRt.anchoredPosition = center;
+            _creditsOrbitRingRt.localScale = Vector3.one;
+        }
+        if (_creditsOrbitRingImage != null)
+        {
+            _creditsOrbitRingImage.color = _creditsGlitchActive
+                ? (glitchBurst ? new Color(0.35f, 0.82f, 0.95f, 0.26f) : new Color(0.46f, 0.62f, 0.95f, 0.18f))
+                : new Color(0.46f, 0.62f, 0.95f, 0.18f);
+        }
+
+        float scanY = Mathf.PingPong(Time.unscaledTime * 690f, 540f) - 270f + center.y;
+        if (_creditsGlitchBarRed != null)
+        {
+            _creditsGlitchBarRed.enabled = glitchBurst;
+            _creditsGlitchBarRed.rectTransform.anchoredPosition = new Vector2(tearSign * 8f, scanY - 2f);
+        }
+        if (_creditsGlitchBarCyan != null)
+        {
+            _creditsGlitchBarCyan.enabled = glitchBurst;
+            _creditsGlitchBarCyan.rectTransform.anchoredPosition = new Vector2(-tearSign * 6f, scanY + 2f);
+        }
+    }
+
+    void RefreshCreditMemberTexts()
+    {
+        string[] keys = _creditsGlitchActive
+            ? new[]
+            {
+                "credits.ai.gpt",
+                "credits.ai.opus48",
+                "credits.ai.composer",
+                "credits.ai.doubao",
+                "credits.ai.opus46"
+            }
+            : new[]
+            {
+                "credits.member.silver",
+                "credits.member.zhanzhan",
+                "credits.member.zaptaind",
+                "credits.member.yigubigu",
+                "credits.member.viktor"
+            };
+        for (int i = 0; i < _creditOrbitLabels.Count && i < keys.Length; i++)
+            _creditOrbitLabels[i].text = Loc.Get(keys[i]);
+    }
+
     public void ShowMainMenu()
     {
-        if (_menuLangLabel != null) _menuLangLabel.text = Loc.Format("menu.language", Loc.LanguageName);
+        if (_menuLangLabel != null) _menuLangLabel.text = MenuLanguageToggleLabel();
         _creditsRoot.SetActive(false);
         _menuRoot.SetActive(true);
         PlayShow(_menuRoot);
@@ -235,13 +476,46 @@ public class UIManager : MonoBehaviour
 
     public void ShowCredits()
     {
+        _creditsVisitCount++;
+        _creditsGlitchActive = _creditsVisitCount % 2 == 0;
+        RefreshCreditMemberTexts();
+
+        // 每次进入先随机洗牌所有成员在圆周上的相对位置，再随机一个槽位转到最上方。
+        // 同时保证连续两次位于最上方的不是同一个人。
+        int count = _creditOrbitItems.Count;
+        if (count > 0)
+        {
+            if (_creditOrbitSlots == null || _creditOrbitSlots.Length != count)
+                _creditOrbitSlots = new int[count];
+            for (int i = 0; i < count; i++) _creditOrbitSlots[i] = i;
+            for (int i = count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (_creditOrbitSlots[i], _creditOrbitSlots[j]) = (_creditOrbitSlots[j], _creditOrbitSlots[i]);
+            }
+
+            int topSlot = Random.Range(0, count);
+            int topMember = System.Array.IndexOf(_creditOrbitSlots, topSlot);
+            if (count > 1 && topMember == _lastCreditTop)
+            {
+                topSlot = (topSlot + Random.Range(1, count)) % count;
+                topMember = System.Array.IndexOf(_creditOrbitSlots, topSlot);
+            }
+            _lastCreditTop = topMember;
+            _creditOrbitAngle = Mathf.Repeat(360f - topSlot * (360f / count), 360f);
+            UpdateCreditsOrbit(0f);
+        }
         _creditsRoot.SetActive(true);
         PlayShow(_creditsRoot);
     }
 
     public void HideCredits()
     {
-        if (_creditsRoot != null) _creditsRoot.SetActive(false);
+        if (_creditsRoot != null && _creditsRoot.activeSelf)
+        {
+            _creditsRoot.SetActive(false);
+            SwitchMenuBackground(); // 每次看完制作者名单，回主界面时切换到另一张图
+        }
     }
 
     // ---------------- 开场目标说明 ----------------
@@ -740,6 +1014,58 @@ public class UIManager : MonoBehaviour
         _resultRoot.SetActive(false);
     }
 
+    void BuildRobotReward()
+    {
+        _robotRewardRoot = MakePanel(_canvas.transform, "RobotReward", new Color(0.01f, 0.02f, 0.04f, 0.82f));
+        SetRect(_robotRewardRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one,
+            new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+        var box = new GameObject("RobotRewardBox", typeof(RectTransform));
+        box.transform.SetParent(_robotRewardRoot.transform, false);
+        var boxImage = box.AddComponent<Image>();
+        boxImage.color = new Color(0.10f, 0.12f, 0.18f, 0.99f);
+        SetRect(box.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 430));
+
+        var title = MakeLocText(box.transform, "RobotRewardTitle", "robot.reward.title", 48, TextAnchor.UpperCenter);
+        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1),
+            new Vector2(0, -34), new Vector2(820, 70));
+        title.color = new Color(1f, 0.82f, 0.38f);
+
+        var frames = GeneratedArt.RobotFrames;
+        var robotGO = new GameObject("RobotPreview", typeof(RectTransform));
+        robotGO.transform.SetParent(box.transform, false);
+        var robot = robotGO.AddComponent<Image>();
+        robot.sprite = frames != null && frames.Length > 0 ? frames[0] : null;
+        robot.preserveAspect = true;
+        robot.raycastTarget = false;
+        SetRect(robot.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(120, -10), new Vector2(230, 230));
+
+        var body = MakeLocText(box.transform, "RobotRewardBody", "robot.reward.body", 32, TextAnchor.MiddleLeft);
+        SetRect(body.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(300, -5), new Vector2(500, 180));
+
+        var confirm = MakeButton(box.transform, "robot.reward.confirm", 32,
+            () => GameManager.Instance.ConfirmRobotReward(),
+            new Vector2(0.5f, 0), new Vector2(0, 45), new Vector2(320, 78));
+        SetButtonColor(confirm, new Color(0.72f, 0.48f, 0.18f));
+
+        _robotRewardRoot.SetActive(false);
+    }
+
+    public void ShowRobotReward()
+    {
+        _robotRewardRoot.SetActive(true);
+        _robotRewardRoot.transform.SetAsLastSibling();
+        PlayShow(_robotRewardRoot);
+    }
+
+    public void HideRobotReward()
+    {
+        if (_robotRewardRoot != null) _robotRewardRoot.SetActive(false);
+    }
+
     // ---------------- 新手引导（分步高亮 spotlight） ----------------
 
     void BuildTutorial()
@@ -1211,6 +1537,11 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
+        if (_menuRoot != null && _menuRoot.activeSelf)
+            UpdateMenuCreditsButtonGlitch();
+        if (_creditsRoot != null && _creditsRoot.activeSelf)
+            UpdateCreditsOrbit(Time.unscaledDeltaTime);
+
         // 暗角只在"探索 / 对话"两种状态显示，让对话画面与探索完全一致（不再随 HUD 隐藏而突然变亮）。
         // 其余状态（相机/相册/指认/结算/菜单/教程等）隐藏；相机模式下隐藏，拍照时也天然不进照片。
         if (_vignetteRoot != null && GameManager.Instance != null)
@@ -1412,6 +1743,7 @@ public class UIManager : MonoBehaviour
         if (_menuRoot != null) _menuRoot.SetActive(false);
         if (_creditsRoot != null) _creditsRoot.SetActive(false);
         if (_briefingRoot != null) _briefingRoot.SetActive(false);
+        HideRobotReward();
     }
 
     public void ShowToast(string msg, bool positive)
@@ -1647,7 +1979,8 @@ public class UIManager : MonoBehaviour
     {
         foreach (var e in _locStatic)
             if (e.text != null) e.text.text = Loc.Get(e.key);
-        if (_menuLangLabel != null) _menuLangLabel.text = Loc.Format("menu.language", Loc.LanguageName);
+        if (_menuLangLabel != null) _menuLangLabel.text = MenuLanguageToggleLabel();
+        RefreshCreditMemberTexts();
         if (GameManager.Instance != null) GameManager.Instance.OnLanguageChanged();
     }
 

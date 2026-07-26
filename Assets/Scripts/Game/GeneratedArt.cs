@@ -28,6 +28,8 @@ public static class GeneratedArt
     static Sprite _playerFrontSprite;
     static Sprite _deathMonsterSprite;
     static Sprite[] _deathMonsterWalkFrames;
+    static Sprite[] _robotFrames;
+    static Sprite[] _menuBackgrounds;
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
@@ -139,6 +141,30 @@ public static class GeneratedArt
     /// <summary>主角正面棋子（缺图返回 null，调用方回退到背面 PlayerSprite）。</summary>
     public static Sprite PlayerFrontSprite =>
         _playerFrontSprite ??= TryLoadWholeSprite("Art/Characters/player_front");
+
+    /// <summary>“小我”机器人方向帧：[正面, 背面, 侧面(默认朝左)]。</summary>
+    public static Sprite[] RobotFrames
+    {
+        get
+        {
+            if (_robotFrames != null) return _robotFrames;
+            _robotFrames = new[]
+            {
+                TryLoadWholeSprite("Art/Robot/xdb1"),
+                TryLoadWholeSprite("Art/Robot/xdb2"),
+                TryLoadWholeSprite("Art/Robot/xdb3")
+            };
+            return _robotFrames;
+        }
+    }
+
+    /// <summary>主菜单明/暗两张 16:9 背景图。</summary>
+    public static Sprite[] MenuBackgrounds =>
+        _menuBackgrounds ??= new[]
+        {
+            TryLoadWholeSprite("Art/Menu/menu_dark"),
+            TryLoadWholeSprite("Art/Menu/menu_light")
+        };
 
     /// <summary>死亡演出追逐怪物行走帧：Resources/Art/Anim/gui1..gui7。缺帧时回退到单张立绘。</summary>
     public static Sprite[] DeathMonsterWalkFrames
