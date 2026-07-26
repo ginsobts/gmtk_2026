@@ -97,16 +97,19 @@ public class UIManager : MonoBehaviour
     Vector2 _shutterHandRestPosition;
     Coroutine _shutterHandCo;
 
+    // 所有 UI 文本的统一行距。默认 1 在多行英文下上下几乎贴死，故整体放宽。
+    const float UiLineSpacing = 1.28f;
+
     // 相机外壳按其原始比例(1.5)铺满 BodyW×BodyH。
     const float BodyW = 913f;               // 外壳宽（画布参考单位）
     const float BodyH = 609f;               // 外壳高
 
     // 取景开口尺寸/偏移（画布单位）。运行时从外壳贴图的透明窟窿自动量取，
     // 使“截图矩形”与玩家透过的开口严格重合（所见即所拍）。
-    // 量取失败时回退到实测值：开口≈64.0%宽 × 63.8%高，中心上移约 8。
-    float _vfW = 0.640f * BodyW;
-    float _vfH = 0.638f * BodyH;
-    Vector2 _vfOffset = new Vector2(0f, 8f);
+    // 量取失败时回退到实测值：开口≈64.6%宽 × 64.5%高，中心上移约 7.6。
+    float _vfW = 0.6465f * BodyW;
+    float _vfH = 0.6452f * BodyH;
+    Vector2 _vfOffset = new Vector2(0f, 7.6f);
 
     // 照片查看器（全部 / 单角色）
     GameObject _albumRoot;
@@ -577,7 +580,6 @@ public class UIManager : MonoBehaviour
         var body = MakeLocText(_briefingRoot.transform, "BBody", "briefing.body", 30, TextAnchor.UpperLeft);
         SetRect(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(1120, 620));
         body.color = new Color(0.9f, 0.93f, 1f);
-        body.lineSpacing = 1.15f;
 
         MakeButton(_briefingRoot.transform, "briefing.confirm", 32, () => GameManager.Instance.ConfirmBriefing(),
             new Vector2(0.5f, 0), new Vector2(0, 80), new Vector2(460, 92));
@@ -822,9 +824,10 @@ public class UIManager : MonoBehaviour
         MakeCrosshair(_viewfinder, new Color(1f, 0.95f, 0.4f, 0.9f));
 
         // 手放在相机顶部快门上，点击/按空格时向下压。随相机整体移动。
-        // 快门按钮在外壳约 (230, 258)（相对外壳中心），手指尖落在按钮上方。
+        // 外壳贴图里的红色快门键中心相对外壳中心约 (201, 273) 画布单位；
+        // 手的按压指尖位于其贴图左下角，故整只手需向右上偏移，使指尖正好落在按钮上。
         var hand = MakeIcon(_cameraUnit, "ShutterHand", GeneratedArt.CameraShutterHandSprite,
-            new Vector2(0.5f, 0.5f), new Vector2(210f, 140f), new Vector2(300f, 300f));
+            new Vector2(0.5f, 0.5f), new Vector2(277f, 387f), new Vector2(230f, 230f));
         hand.raycastTarget = false;
         _shutterHand = hand.rectTransform;
         _shutterHandRestPosition = _shutterHand.anchoredPosition;
@@ -1547,7 +1550,7 @@ public class UIManager : MonoBehaviour
 
     IEnumerator ShutterHandPress()
     {
-        _shutterHand.anchoredPosition = _shutterHandRestPosition + new Vector2(0f, -28f);
+        _shutterHand.anchoredPosition = _shutterHandRestPosition + new Vector2(0f, -20f);
         yield return new WaitForSecondsRealtime(0.1f);
         _shutterHand.anchoredPosition = _shutterHandRestPosition;
         _shutterHandCo = null;
@@ -1938,6 +1941,7 @@ public class UIManager : MonoBehaviour
         t.text = content;
         t.fontSize = size;
         t.alignment = anchor;
+        t.lineSpacing = UiLineSpacing;
         t.color = Color.white;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
         t.verticalOverflow = VerticalWrapMode.Overflow;
