@@ -27,6 +27,7 @@ public static class GeneratedArt
     static Sprite _playerSideSprite;
     static Sprite _playerFrontSprite;
     static Sprite _deathMonsterSprite;
+    static Sprite[] _deathMonsterWalkFrames;
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
@@ -139,9 +140,33 @@ public static class GeneratedArt
     public static Sprite PlayerFrontSprite =>
         _playerFrontSprite ??= TryLoadWholeSprite("Art/Characters/player_front");
 
-    /// <summary>死亡演出追逐怪物的占位立绘（暗色发光眼；真怪物美术留待阶段七）。</summary>
+    /// <summary>死亡演出追逐怪物行走帧：Resources/Art/Anim/gui1..gui7。缺帧时回退到单张立绘。</summary>
+    public static Sprite[] DeathMonsterWalkFrames
+    {
+        get
+        {
+            if (_deathMonsterWalkFrames != null) return _deathMonsterWalkFrames;
+
+            var list = new List<Sprite>();
+            for (int i = 1; i <= 7; i++)
+            {
+                var frame = TryLoadWholeSprite($"Art/Anim/gui{i}");
+                if (frame != null) list.Add(frame);
+            }
+
+            _deathMonsterWalkFrames = list.Count > 0
+                ? list.ToArray()
+                : new[] { DeathMonsterSpriteFallback() };
+            return _deathMonsterWalkFrames;
+        }
+    }
+
+    /// <summary>死亡演出追逐怪物默认立绘（行走帧首帧，或旧占位图）。</summary>
     public static Sprite DeathMonsterSprite =>
-        _deathMonsterSprite ??= (TryLoadWholeSprite("Art/Imposters/death_monster") ?? MakeMonsterPlaceholder());
+        _deathMonsterSprite ??= DeathMonsterWalkFrames[0];
+
+    static Sprite DeathMonsterSpriteFallback() =>
+        TryLoadWholeSprite("Art/Imposters/death_monster") ?? MakeMonsterPlaceholder();
 
     /// <summary>用于填满地图边缘的宽幅树林卡片。</summary>
     public static Sprite DenseForestEdgeSprite =>

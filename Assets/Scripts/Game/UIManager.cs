@@ -31,6 +31,7 @@ public class UIManager : MonoBehaviour
     Text _labelToggleLabel;   // 右上角「显示/隐藏名字」按钮文案（随开关状态切换）
     Image _timelineFill;
     RectTransform _timelineFillRt;
+    Button _skipPhaseBtn;
     readonly List<Text> _phaseLabels = new List<Text>();
 
     // 靠近角色的交互面板
@@ -963,6 +964,13 @@ public class UIManager : MonoBehaviour
             label.color = new Color(0.55f, 0.6f, 0.68f, 0.85f);
             _phaseLabels.Add(label);
         }
+
+        const float barHalfW = barW * 0.5f;
+        const float btnW = 100f;
+        const float gap = 12f;
+        _skipPhaseBtn = MakeButton(hud, "hud.skip_phase", 22, () => GameManager.Instance.SkipToNextPhase(),
+            new Vector2(0.5f, 1f), new Vector2(barHalfW + gap + btnW * 0.5f, -76f), new Vector2(btnW, 32));
+        SetButtonColor(_skipPhaseBtn, new Color(0.35f, 0.48f, 0.62f));
     }
 
     static void AddTimelineDivider(Transform track, float normalizedX)
@@ -1010,6 +1018,9 @@ public class UIManager : MonoBehaviour
             label.color = active ? TimelineFillColor(phaseOrder) : new Color(0.55f, 0.6f, 0.68f, 0.85f);
             label.fontSize = active ? 24 : 22;
         }
+
+        if (_skipPhaseBtn != null)
+            _skipPhaseBtn.gameObject.SetActive(!GameContent.IsLastPhase(phaseOrder));
     }
 
     IEnumerator PunchText(RectTransform rt)

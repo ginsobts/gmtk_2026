@@ -136,6 +136,7 @@ public static class Loc
         ["hud.marked"] = new[] { "Marked {0} (imposters: {1})", "已标记 {0}（炼化人共 {1}）" },
         ["phase.enter"] = new[] { "Phase shift: {0}", "阶段切换：{0}" },
         ["hud.prompt"] = new[] { "Move [WASD]   Photo [Space]   Album [Tab]   Accuse List [M]", "移动 [WASD]　拍照 [空格]　相册 [Tab]　指认列表 [M]" },
+        ["hud.skip_phase"] = new[] { "Skip ▶", "快进 ▶" },
         ["btn.camera"] = new[] { "Camera (Space)", "相机 (空格)" },
         ["btn.album"] = new[] { "Album (Tab)", "相册 (Tab)" },
         ["btn.marklist"] = new[] { "Accuse List (M)", "指认列表 (M)" },
