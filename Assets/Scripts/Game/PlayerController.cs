@@ -9,7 +9,9 @@ public class PlayerController : MonoBehaviour
 {
     public float moveSpeed = 5.5f;
     public float interactRange = 2.6f;
-    const float MapHalf = 17.5f;
+    // 空气墙半宽（由 GameManager 从 GameConfig 注入；可在 Inspector / F1 面板调）
+    public float mapHalfX = 17.5f;
+    public float mapHalfZ = 17.5f;
 
     // 方向棋子：由 GameManager 生成主角时注入（缺某张图则回退到背面 back）。
     [Header("Directional pieces (2.5D facing)")]
@@ -45,8 +47,8 @@ public class PlayerController : MonoBehaviour
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
         Vector3 pos = transform.position + dir * moveSpeed * Time.deltaTime;
-        pos.x = Mathf.Clamp(pos.x, -MapHalf, MapHalf);
-        pos.z = Mathf.Clamp(pos.z, -MapHalf, MapHalf);
+        pos.x = Mathf.Clamp(pos.x, -mapHalfX, mapHalfX);
+        pos.z = Mathf.Clamp(pos.z, -mapHalfZ, mapHalfZ);
         transform.position = pos;
     }
 

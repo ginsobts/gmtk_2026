@@ -24,6 +24,10 @@ public class GameConfig : ScriptableObject
     public float playerMoveSpeed = 5.5f;
     public float playerInteractRange = 2.6f;
 
+    [Header("空气墙（玩家可走范围，半宽；以世界原点为中心的方框）")]
+    public float mapHalfX = 17.5f;   // 左右边界：x ∈ [-mapHalfX, mapHalfX]
+    public float mapHalfZ = 17.5f;   // 前后边界：z ∈ [-mapHalfZ, mapHalfZ]
+
     [Header("NPC")]
     public float npcScale = 1f;
     [Tooltip("所有 NPC 绕世界 Y 轴的默认朝向偏移；0 = 正对相机。出生点可单独覆盖。")]

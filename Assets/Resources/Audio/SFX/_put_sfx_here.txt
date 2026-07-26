@@ -1,0 +1,1 @@
+把一次性音效放在这个文件夹，文件名用 key（dialogue_open / shutter / mark / unmark / phase_enter / monster / death / special_death / victory / ui_click）。见上级 README.txt。

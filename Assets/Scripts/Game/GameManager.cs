@@ -51,6 +51,8 @@ public class GameManager : MonoBehaviour
     DialogueLine[] _dialogueLines;
     int _dialogueIndex;
     bool _dialogueCompleted;
+    string _dialogueId;        // 当前这组台词的 id（用于查分支 choices）
+    bool _awaitingChoice;      // 台词播完、正在等玩家选分支
 
     // 取景态
     readonly List<Npc> _framed = new List<Npc>();
@@ -62,6 +64,8 @@ public class GameManager : MonoBehaviour
         CleanupExistingScene();
         BuildEnvironment();
         BuildPlayerAndCamera();
+
+        gameObject.AddComponent<AudioManager>();
 
         UI = gameObject.AddComponent<UIManager>();
         UI.Build();
@@ -78,6 +82,7 @@ public class GameManager : MonoBehaviour
         UI.HideAllPanels();
         UI.SetHudVisible(false);
         UI.ShowMainMenu();
+        AudioManager.Instance?.PlayBgm("menu");
     }
 
     /// <summary>点“开始游戏”：先展示目标说明，玩家确认后才进入场景。</summary>
@@ -216,14 +221,31 @@ public class GameManager : MonoBehaviour
     void BuildTownProps()
     {
         var propsRoot = new GameObject("Town Props").transform;
+
+        // 新场景素材（Art/Props/*），缺图时回退到旧图集，保证任何情况下都不空
+        Sprite tree = GeneratedArt.PropFileSprite("tree") ?? GeneratedArt.GetTownPropSprite(1);
+        Sprite chair = GeneratedArt.PropFileSprite("chair") ?? GeneratedArt.GetTownPropSprite(3);
+        Sprite trash = GeneratedArt.PropFileSprite("trashcan");
+        Sprite gym = GeneratedArt.PropFileSprite("gym");
+
         BuildCard(propsRoot, "Corner Shop", GeneratedArt.GetTownPropSprite(0), new Vector3(-14f, 0f, 12f), 1.15f, 2);
-        BuildCard(propsRoot, "Tree North", GeneratedArt.GetTownPropSprite(1), new Vector3(11f, 0f, 13f), 1.15f, 2);
-        BuildCard(propsRoot, "Tree West", GeneratedArt.GetTownPropSprite(1), new Vector3(-15f, 0f, -8f), 0.95f, 2);
-        BuildCard(propsRoot, "Tree East", GeneratedArt.GetTownPropSprite(1), new Vector3(15f, 0f, -8f), 0.95f, 2);
-        BuildCard(propsRoot, "Street Lamp A", GeneratedArt.GetTownPropSprite(2), new Vector3(-8f, 0f, 4f), 0.8f, 2);
-        BuildCard(propsRoot, "Street Lamp B", GeneratedArt.GetTownPropSprite(2), new Vector3(8f, 0f, -3f), 0.8f, 2);
-        BuildCard(propsRoot, "Park Bench", GeneratedArt.GetTownPropSprite(3), new Vector3(11f, 0f, 5f), 0.85f, 2);
-        BuildCard(propsRoot, "Bench West", GeneratedArt.GetTownPropSprite(3), new Vector3(-10f, 0f, -12f), 0.75f, 2);
+        BuildCard(propsRoot, "Tree North", tree, new Vector3(11f, 0f, 13f), 1.15f, 2, true);
+        BuildCard(propsRoot, "Tree West", tree, new Vector3(-15f, 0f, -8f), 0.95f, 2, true);
+        BuildCard(propsRoot, "Tree East", tree, new Vector3(15f, 0f, -8f), 0.95f, 2, true);
+        BuildCard(propsRoot, "Park Bench", chair, new Vector3(11f, 0f, 5f), 0.9f, 2);
+        BuildCard(propsRoot, "Bench West", chair, new Vector3(-10f, 0f, -12f), 0.8f, 2);
+
+        // 新增装饰：垃圾桶 / 健身器材（有新素材才摆，缺则跳过）
+        if (trash != null)
+        {
+            BuildCard(propsRoot, "Trash Can A", trash, new Vector3(-7.5f, 0f, 4f), 0.7f, 2);
+            BuildCard(propsRoot, "Trash Can B", trash, new Vector3(8.5f, 0f, -3f), 0.7f, 2);
+        }
+        if (gym != null)
+        {
+            BuildCard(propsRoot, "Gym Gear A", gym, new Vector3(-4f, 0f, 9f), 0.95f, 2);
+            BuildCard(propsRoot, "Gym Gear B", gym, new Vector3(3.5f, 0f, -10f), 0.95f, 2);
+        }
     }
 
     void BuildForestBoundary()
@@ -248,25 +270,28 @@ public class GameManager : MonoBehaviour
         }
 
         // 内层：低矮灌木和松树形成高—中—低三层，边缘不会显得像一堵平墙。
+        // 灌木/松树优先用新场景素材，缺图回退旧图集。
+        Sprite shrub = GeneratedArt.PropFileSprite("bush") ?? GeneratedArt.GetForestSprite(1);
+        Sprite pine = GeneratedArt.PropFileSprite("tree") ?? GeneratedArt.GetForestSprite(3);
         for (int i = -15; i <= 15; i += 5)
         {
-            BuildCard(forestRoot, "North Shrub " + i, GeneratedArt.GetForestSprite(1),
+            BuildCard(forestRoot, "North Shrub " + i, shrub,
                 new Vector3(i, 0f, 15.6f), 0.75f, 2, true);
-            BuildCard(forestRoot, "South Shrub " + i, GeneratedArt.GetForestSprite(1),
+            BuildCard(forestRoot, "South Shrub " + i, shrub,
                 new Vector3(i, 0f, -15.6f), 0.75f, 2, true);
         }
         for (int i = -10; i <= 10; i += 5)
         {
-            BuildCard(forestRoot, "East Shrub " + i, GeneratedArt.GetForestSprite(1),
+            BuildCard(forestRoot, "East Shrub " + i, shrub,
                 new Vector3(15.6f, 0f, i), 0.7f, 2, true);
-            BuildCard(forestRoot, "West Shrub " + i, GeneratedArt.GetForestSprite(1),
+            BuildCard(forestRoot, "West Shrub " + i, shrub,
                 new Vector3(-15.6f, 0f, i), 0.7f, 2, true);
         }
 
-        BuildCard(forestRoot, "Pine NW", GeneratedArt.GetForestSprite(3), new Vector3(-16f, 0f, 14f), 1.05f, 3, true);
-        BuildCard(forestRoot, "Pine NE", GeneratedArt.GetForestSprite(3), new Vector3(16f, 0f, 14f), 1.05f, 3, true);
-        BuildCard(forestRoot, "Pine SW", GeneratedArt.GetForestSprite(3), new Vector3(-16f, 0f, -14f), 1.05f, 3, true);
-        BuildCard(forestRoot, "Pine SE", GeneratedArt.GetForestSprite(3), new Vector3(16f, 0f, -14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine NW", pine, new Vector3(-16f, 0f, 14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine NE", pine, new Vector3(16f, 0f, 14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine SW", pine, new Vector3(-16f, 0f, -14f), 1.05f, 3, true);
+        BuildCard(forestRoot, "Pine SE", pine, new Vector3(16f, 0f, -14f), 1.05f, 3, true);
     }
 
     void BuildCloudLayer()
@@ -323,6 +348,8 @@ public class GameManager : MonoBehaviour
         var pc = playerGO.AddComponent<PlayerController>();
         pc.moveSpeed = cfg.playerMoveSpeed;
         pc.interactRange = cfg.playerInteractRange;
+        pc.mapHalfX = cfg.mapHalfX;
+        pc.mapHalfZ = cfg.mapHalfZ;
         // 2.5D 方向棋子：默认背面(=PlayerSprite)，正/侧缺图时回退到背面
         pc.body = playerBody;
         pc.backSprite = GeneratedArt.PlayerSprite;
@@ -511,32 +538,42 @@ public class GameManager : MonoBehaviour
             EnterDeathPerformance();
     }
 
-    /// <summary>进入新 phase：NPC 立绘随阶段(T4) + 位置微移(T3) + 光暗地色(T6/T9) + 阶段旁白。对话组随 phase 由 ResolveDialogue 自动处理(T5)。</summary>
+    /// <summary>进入新 phase：NPC 立绘随阶段(T4) + 光暗地色(T6/T9) + 阶段旁白。对话组随 phase 由 ResolveDialogue 自动处理(T5)。位置保持不变（不再随阶段移位）。</summary>
     void OnStageChanged()
     {
-        var cfg = GameConfig.Instance;
         foreach (var n in Npcs)
         {
             if (n == null) continue;
             n.ApplyStage(CurrentPhase);   // T4/N4：立绘随阶段（魏大爷扒皮）
-            Vector3 p = n.transform.position + new Vector3(Random.Range(-2.5f, 2.5f), 0f, Random.Range(-2.5f, 2.5f));
-            p.x = Mathf.Clamp(p.x, cfg.spawnAreaX.x, cfg.spawnAreaX.y);
-            p.z = Mathf.Clamp(p.z, cfg.spawnAreaZ.x, cfg.spawnAreaZ.y);
-            n.transform.position = p;
+            // T3：每阶段可指定坐标（phase_spawns.txt）；没配则位置不变（默认全阶段一致）
+            var ps = GameContent.GetPhaseSpawn(n.charId, CurrentPhase);
+            if (ps != null)
+            {
+                n.transform.position = new Vector3(ps.x, 0f, ps.z);
+                n.SetFacing(ps.yaw, ps.faceCamera);
+            }
         }
         ApplyStageVisuals();
         var phaseDef = GameContent.GetPhaseDef(CurrentPhase);
         if (phaseDef != null) UI.ShowToast(Loc.Format("phase.enter", phaseDef.DisplayName), true);
+        AudioManager.Instance?.PlaySfx("phase_enter");   // 首次进入新阶段音效（T5）
     }
 
-    /// <summary>按当前 phase 应用场景表现：光线渐暗(T6) + 地面色调(T9)。</summary>
+    /// <summary>按当前 phase 应用场景表现：光线渐暗(T6) + 地面色调/贴图(T9) + 阶段 BGM(T6)。</summary>
     void ApplyStageVisuals()
     {
         int phaseCount = GameContent.Phases != null ? GameContent.Phases.Count : 3;
         float t = phaseCount > 1 ? Mathf.Clamp01((CurrentPhase - 1) / (float)(phaseCount - 1)) : 0f;
         if (_sun != null) { _sun.color = Color.white; _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t); } // 色还原，死亡演出才染红
         RenderSettings.ambientLight = Color.Lerp(new Color(0.55f, 0.55f, 0.6f), new Color(0.2f, 0.2f, 0.28f), t);
-        if (_groundMat != null) _groundMat.color = Color.Lerp(Color.white, new Color(0.62f, 0.58f, 0.66f), t);
+        if (_groundMat != null)
+        {
+            _groundMat.color = Color.Lerp(Color.white, new Color(0.62f, 0.58f, 0.66f), t);
+            // 阶段专属地面贴图：Resources/Art/ground_phase{order}，缺失回退到基础地面（T9）
+            var tex = GeneratedArt.GroundTextureNamed("phase" + CurrentPhase) ?? GeneratedArt.GroundTexture;
+            _groundMat.mainTexture = tex;
+        }
+        AudioManager.Instance?.PlayBgm("phase" + CurrentPhase);   // 不同阶段不同 BGM（T6）
     }
 
     /// <summary>当前被玩家标记为嫌疑人的数量。</summary>
@@ -629,30 +666,76 @@ public class GameManager : MonoBehaviour
             return;
         }
         _dialogueNpc = npc;
-        // 对话组随 phase/count 由 ResolveDialogue 解析（安安第5次真心话即走 count 表；带每句立绘）
-        _dialogueLines = GameContent.ResolveDialogue(npc, CurrentPhase);
+        // 对话组随 phase/count 由 ResolveDialogueId 解析（安安第5次真心话即走 count 表；带每句立绘）
+        _dialogueId = GameContent.ResolveDialogueId(npc, CurrentPhase);
+        _dialogueLines = GameContent.GetLinesById(_dialogueId, npc.charId);
         _dialogueIndex = 0;
         _dialogueCompleted = false;
+        _awaitingChoice = false;
         State = GameState.Dialogue;
         UI.SetInteractPrompt(null);
         UI.SetHudVisible(false);
+        AudioManager.Instance?.PlaySfx("dialogue_open");
         if (_dialogueLines.Length > 0)
             UI.ShowDialogue(npc.npcName, _dialogueLines[0]);
         else
-            EndDialogue();
+            TryShowChoicesOrEnd();
     }
 
     public void DialogueNext()
     {
-        if (State != GameState.Dialogue) return;
+        if (State != GameState.Dialogue || _awaitingChoice) return;
         _dialogueIndex++;
         if (_dialogueIndex >= _dialogueLines.Length)
         {
-            _dialogueCompleted = true;
-            EndDialogue();
+            TryShowChoicesOrEnd();
             return;
         }
         UI.ShowDialogue(_dialogueNpc.npcName, _dialogueLines[_dialogueIndex]);
+    }
+
+    /// <summary>台词播完：若当前 dialogueId 配了分支就弹选项，否则正常结束。</summary>
+    void TryShowChoicesOrEnd()
+    {
+        var choices = GameContent.GetChoices(_dialogueId);
+        if (choices != null)
+        {
+            _awaitingChoice = true;
+            var labels = new List<string>();
+            foreach (var c in choices) labels.Add(c.Label);
+            UI.ShowDialogueChoices(labels);
+            return;
+        }
+        _dialogueCompleted = true;
+        EndDialogue();
+    }
+
+    /// <summary>玩家点了某个分支选项。</summary>
+    public void DialogueChoose(int index)
+    {
+        if (State != GameState.Dialogue || !_awaitingChoice) return;
+        var choices = GameContent.GetChoices(_dialogueId);
+        if (choices == null || index < 0 || index >= choices.Count) return;
+        var ch = choices[index];
+        AudioManager.Instance?.PlaySfx("ui_click");
+        _awaitingChoice = false;
+
+        if (ch.effect == "special_death") { TriggerSpecialDeath(); return; }
+
+        if (!string.IsNullOrEmpty(ch.gotoId))
+        {
+            // 续接到另一段对话（其台词播完后也会再查它自己的 choices，可链式分支）
+            _dialogueId = ch.gotoId;
+            _dialogueLines = GameContent.GetLinesById(_dialogueId, _dialogueNpc != null ? _dialogueNpc.charId : null);
+            _dialogueIndex = 0;
+            if (_dialogueLines.Length > 0) UI.ShowDialogue(_dialogueNpc != null ? _dialogueNpc.npcName : "", _dialogueLines[0]);
+            else TryShowChoicesOrEnd();
+            return;
+        }
+
+        // effect == end 或空：完整读完，正常结束
+        _dialogueCompleted = true;
+        EndDialogue();
     }
 
     public void EndDialogue()
@@ -662,6 +745,7 @@ public class GameManager : MonoBehaviour
         bool wasInDialogue = State == GameState.Dialogue;
         _dialogueNpc = null;
         _dialogueCompleted = false;
+        _awaitingChoice = false;
         if (State == GameState.Dialogue) State = GameState.Playing;
         UI.HideDialogue();
         UI.SetHudVisible(true);
@@ -732,6 +816,7 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Camera || _capturing) return;
         UI.PlayShutterPress();
+        AudioManager.Instance?.PlaySfx("shutter");
         StartCoroutine(CapturePhoto());
     }
 
@@ -924,6 +1009,7 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Playing || npc == null) return;
         npc.SetMarked(!npc.marked);
+        AudioManager.Instance?.PlaySfx(npc.marked ? "mark" : "unmark");
         UI.ShowToast(Loc.Format(npc.marked ? "toast.marked" : "toast.unmarked", npc.npcName), npc.marked);
         RefreshHud();
         UI.ShowInteract(npc); // 刷新按钮文案（标记 / 取消标记）
@@ -992,16 +1078,12 @@ public class GameManager : MonoBehaviour
     void EndRound(bool win, int correct, int wrong)
     {
         State = GameState.Result;
+        if (win) { AudioManager.Instance?.StopBgm(); AudioManager.Instance?.PlaySfx("victory"); }
 
-        // 结算时揭示全部真正的伪人
-        var imposters = new List<string>();
-        foreach (var n in Npcs)
-            if (n != null && n.IsImposter)
-                imposters.Add($"{n.npcName}  ({KindLabel(n.kind)})");
-
+        // 只显示胜/负 + 猜对个数，不揭示哪些角色是伪人（策划新需求）
         UI.HideAllPanels();
         UI.SetHudVisible(false);
-        UI.ShowResult(win, correct, wrong, imposterCount, imposters, Album.Count);
+        UI.ShowResult(win, correct, imposterCount);
     }
 
     // ---------------- 死亡演出（策划 5） ----------------
@@ -1017,12 +1099,19 @@ public class GameManager : MonoBehaviour
         UI.SetHudVisible(false);
         UI.SetInteractPrompt(null);
 
-        // 场景变红 + 地面贴图变色（策划 5.2.1/5.2.2；结局图/音效在阶段六七）
+        // 场景变红 + 地面贴图变色/换图（策划 5.2.1/5.2.2）
         if (_sun != null) { _sun.color = new Color(1f, 0.16f, 0.12f); _sun.intensity = 1.35f; }
         RenderSettings.ambientLight = new Color(0.34f, 0.03f, 0.05f);
-        if (_groundMat != null) _groundMat.color = new Color(0.5f, 0.08f, 0.08f);
+        if (_groundMat != null)
+        {
+            _groundMat.color = new Color(0.5f, 0.08f, 0.08f);
+            var tex = GeneratedArt.GroundTextureNamed("death");
+            if (tex != null) _groundMat.mainTexture = tex;   // 有专属死亡地面就换，否则保留当前贴图+染红
+        }
 
+        AudioManager.Instance?.PlayBgm("death");
         SpawnDeathMonster();
+        AudioManager.Instance?.PlaySfx("monster");
         UI.ShowToast(Loc.Get("death.flee"), false);
     }
 
@@ -1063,7 +1152,8 @@ public class GameManager : MonoBehaviour
         State = GameState.Result;
         UI.HideAllPanels();
         UI.SetHudVisible(false);
-        // 死亡结局图 + 死亡音效留待阶段七/六；这里用全屏旁白占位，点击后进结果面板
+        AudioManager.Instance?.PlaySfx(special ? "special_death" : "death");
+        // 死亡结局图留待美术；这里用全屏旁白占位，点击后进结果面板
         string key = special ? "death.special" : "death.normal";
         UI.ShowNarration(Loc.Get(key), () => EndRound(false, 0, 0));
     }

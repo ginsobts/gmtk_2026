@@ -51,6 +51,12 @@ public class UIManager : MonoBehaviour
     Text _dialogueName, _dialogueLine;
     Image _dialoguePortrait;
     GameObject _dialoguePortraitRoot;
+    Button _dialogueNextBtn;            // “继续”按钮（选分支时隐藏）
+    GameObject _choiceRoot;             // 分支选项容器
+    Button[] _choiceBtns;
+    Text[] _choiceLabels;
+    const int MaxChoices = 4;
+    const float ChoiceStep = 64f;   // 分支按钮的竖直间距
 
     // 相机
     GameObject _cameraRoot;
@@ -89,6 +95,7 @@ public class UIManager : MonoBehaviour
     // 结算
     GameObject _resultRoot;
     Text _resultTitle, _resultDetail;
+    Image _resultImage;
 
     // 指认旁白过场（策划 1.4：点指认后先弹旁白，点击继续）
     GameObject _narrationRoot;
@@ -380,7 +387,7 @@ public class UIManager : MonoBehaviour
         _dialoguePortraitRoot.transform.SetParent(_canvas.transform, false);
         SetRect(_dialoguePortraitRoot.GetComponent<RectTransform>(),
             new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0),
-            new Vector2(96, 0), new Vector2(460, 660));
+            new Vector2(40, 0), new Vector2(611, 860));
         _dialoguePortrait = _dialoguePortraitRoot.AddComponent<Image>();
         _dialoguePortrait.preserveAspect = true;
         _dialoguePortrait.raycastTarget = false;
@@ -390,17 +397,39 @@ public class UIManager : MonoBehaviour
         _dialoguePortraitRoot.transform.SetSiblingIndex(_dialogueRoot.transform.GetSiblingIndex() + 1);
 
         _dialogueName = MakeText(_dialogueRoot.transform, "DName", "", 36, TextAnchor.UpperLeft);
-        SetRect(_dialogueName.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(240, -20), new Vector2(720, 46));
+        SetRect(_dialogueName.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(330, -20), new Vector2(760, 46));
         _dialogueName.color = new Color(1f, 0.85f, 0.5f);
 
         // 台词框：从立绘右侧起，固定宽度并自动换行，右侧留边，避免超框。
         _dialogueLine = MakeText(_dialogueRoot.transform, "DLine", "", 32, TextAnchor.UpperLeft);
-        SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(240, -80), new Vector2(900, 170));
+        SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(330, -80), new Vector2(820, 170));
 
-        MakeButton(_dialogueRoot.transform, "dlg.next", 30, () => GameManager.Instance.DialogueNext(),
+        _dialogueNextBtn = MakeButton(_dialogueRoot.transform, "dlg.next", 30, () => GameManager.Instance.DialogueNext(),
             new Vector2(1, 0), new Vector2(-150, 50), new Vector2(220, 66));
+        // 「结束对话」移到台词列，避开左侧立绘（立绘不挡按钮）
         MakeButton(_dialogueRoot.transform, "dlg.end", 28, () => GameManager.Instance.EndDialogue(),
-            new Vector2(0, 0), new Vector2(200, 50), new Vector2(240, 66));
+            new Vector2(0, 0), new Vector2(450, 50), new Vector2(240, 66));
+
+        // 分支选项容器（默认隐藏）：挂在对话框「正上方」，向上竖排，不遮挡对话框。
+        // 容器锚定对话框顶边中点、pivot 在底部，向上生长；按钮位置在 ShowDialogueChoices 里按数量摆好（选项 0 在最上）。
+        _choiceRoot = new GameObject("Choices", typeof(RectTransform));
+        _choiceRoot.transform.SetParent(_dialogueRoot.transform, false);
+        SetRect(_choiceRoot.GetComponent<RectTransform>(), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0),
+            new Vector2(0, 16), new Vector2(760, MaxChoices * ChoiceStep));
+        _choiceBtns = new Button[MaxChoices];
+        _choiceLabels = new Text[MaxChoices];
+        for (int i = 0; i < MaxChoices; i++)
+        {
+            int idx = i;
+            var b = MakeButton(_choiceRoot.transform, "", 28, () => GameManager.Instance.DialogueChoose(idx),
+                new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(700, 56), register: false);
+            // 底部中心对齐，向上叠放；具体 y 由 ShowDialogueChoices 按数量设置
+            var rt = b.GetComponent<RectTransform>();
+            SetRect(rt, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(700, 56));
+            _choiceBtns[i] = b;
+            _choiceLabels[i] = b.GetComponentInChildren<Text>();
+        }
+        _choiceRoot.SetActive(false);
 
         _dialogueRoot.SetActive(false);
     }
@@ -645,11 +674,19 @@ public class UIManager : MonoBehaviour
         _resultRoot = MakePanel(_canvas.transform, "Result", new Color(0.04f, 0.05f, 0.08f, 0.97f));
         SetRect(_resultRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-        _resultTitle = MakeText(_resultRoot.transform, "RTitle", "", 70, TextAnchor.UpperCenter);
-        SetRect(_resultTitle.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -80), new Vector2(1200, 110));
+        _resultTitle = MakeText(_resultRoot.transform, "RTitle", "", 84, TextAnchor.UpperCenter);
+        SetRect(_resultTitle.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(1400, 130));
 
-        _resultDetail = MakeText(_resultRoot.transform, "RDetail", "", 34, TextAnchor.UpperCenter);
-        SetRect(_resultDetail.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -220), new Vector2(1300, 480));
+        // 结算大图（胜/负），居中显示，缺图时隐藏
+        var imgGO = new GameObject("REndingImage", typeof(RectTransform));
+        imgGO.transform.SetParent(_resultRoot.transform, false);
+        _resultImage = imgGO.AddComponent<Image>();
+        _resultImage.preserveAspect = true;
+        _resultImage.raycastTarget = false;
+        SetRect(_resultImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(940, 528));
+
+        _resultDetail = MakeText(_resultRoot.transform, "RDetail", "", 40, TextAnchor.LowerCenter);
+        SetRect(_resultDetail.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 180), new Vector2(1300, 120));
 
         MakeButton(_resultRoot.transform, "result.replay", 34, () => GameManager.Instance.StartRound(),
             new Vector2(0.5f, 0), new Vector2(-180, 70), new Vector2(320, 80));
@@ -831,6 +868,9 @@ public class UIManager : MonoBehaviour
     {
         bool wasActive = _dialogueRoot.activeSelf;
         _dialogueRoot.SetActive(true);
+        // 普通台词：显示“继续”，隐藏分支选项
+        if (_choiceRoot != null) _choiceRoot.SetActive(false);
+        if (_dialogueNextBtn != null) _dialogueNextBtn.gameObject.SetActive(true);
         _dialogueName.text = name;
         _dialogueLine.text = line != null && !string.IsNullOrEmpty(line.text) ? line.text : "";
 
@@ -843,7 +883,7 @@ public class UIManager : MonoBehaviour
             {
                 _dialoguePortrait.sprite = portrait;
                 // 统一贴底高度，宽度按长宽比推导；pivot 在左下角 → 脚踩屏幕底边
-                const float targetH = 660f;
+                const float targetH = 860f;
                 float ratio = portrait.rect.height > 0.01f ? portrait.rect.width / portrait.rect.height : 0.6f;
                 _dialoguePortrait.rectTransform.sizeDelta = new Vector2(targetH * ratio, targetH);
                 // 始终紧跟在对话框之后 → 立绘稳定盖在对话框前面（不再随「继续」翻转层级）
@@ -853,10 +893,31 @@ public class UIManager : MonoBehaviour
         if (!wasActive) PlayShow(_dialogueRoot);
     }
 
+    /// <summary>台词播完后展示分支选项（替换“继续”按钮）。</summary>
+    public void ShowDialogueChoices(System.Collections.Generic.List<string> labels)
+    {
+        if (_choiceRoot == null) return;
+        if (_dialogueNextBtn != null) _dialogueNextBtn.gameObject.SetActive(false);
+        _choiceRoot.SetActive(true);
+        int n = labels != null ? Mathf.Min(labels.Count, MaxChoices) : 0;
+        for (int i = 0; i < MaxChoices; i++)
+        {
+            bool on = i < n;
+            _choiceBtns[i].gameObject.SetActive(on);
+            if (on)
+            {
+                if (_choiceLabels[i] != null) _choiceLabels[i].text = labels[i];
+                // 选项 0 在最上：从对话框顶边向上依次排（容器 pivot 在底部）
+                _choiceBtns[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(0, (n - 1 - i) * ChoiceStep);
+            }
+        }
+    }
+
     public void HideDialogue()
     {
         if (_dialogueRoot != null) _dialogueRoot.SetActive(false);
         if (_dialoguePortraitRoot != null) _dialoguePortraitRoot.SetActive(false);
+        if (_choiceRoot != null) _choiceRoot.SetActive(false);
     }
 
     // ---------------- 相机 ----------------
@@ -1086,16 +1147,23 @@ public class UIManager : MonoBehaviour
 
     // ---------------- 结算 / Toast / 统一隐藏 ----------------
 
-    public void ShowResult(bool win, int correct, int wrong, int total, List<string> imposters, int photos)
+    public void ShowResult(bool win, int correct, int total)
     {
         _resultRoot.SetActive(true);
         PlayShow(_resultRoot);
         _resultTitle.text = Loc.Get(win ? "result.win" : "result.lose");
-        _resultTitle.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.75f, 0.55f);
+        _resultTitle.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.55f, 0.5f);
 
-        string imposterList = (imposters != null && imposters.Count > 0)
-            ? string.Join("\n", imposters) : Loc.Get("result.none");
-        _resultDetail.text = Loc.Format("result.detail", correct, total, wrong, photos, imposterList);
+        // 结算大图：优先 Art/Endings/win|lose，缺图则隐藏
+        var sprite = GeneratedArt.EndingSprite(win);
+        if (_resultImage != null)
+        {
+            _resultImage.enabled = sprite != null;
+            if (sprite != null) _resultImage.sprite = sprite;
+        }
+
+        // 只告诉玩家「猜对了几个」，不揭示具体身份
+        _resultDetail.text = Loc.Format("result.detail", correct, total);
     }
 
     public void HideAllPanels()

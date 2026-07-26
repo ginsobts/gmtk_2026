@@ -51,7 +51,7 @@
 2. **找破绽**：不同伪人破绽不同（见下表），有的靠对话、有的靠摆姿势、有的只有拍出来的照片里才露馅。
 3. **标记嫌疑人**：确定可疑对象后靠近按 `F` 标记（此时**不会告诉你对错**，被标记的人在场景里会泛橙黄色）。
 4. **提交指认**：按 `M` 打开「指认列表」，检查名单 → 点「提交指认」→ 弹窗确认。**提交后本局立即结束。**
-5. **看结算**：公布你指认的正误，以及本局真正的伪人是谁。全部指对且无误指才算完美通关。
+5. **看结算**：只显示**胜利 / 失败**与一张对应大图，并告诉你**猜对了几个**（不再公布具体哪些角色是伪人）。全部指对且无误指才算完美通关。
 
 ### 七种伪人 & 破绽
 
@@ -82,9 +82,12 @@ Assets/
         npc_00/ base.png  smile.png  yeah.png
         ...
         player.png
+      Portraits/         # 对话立绘：每角色一个文件夹（neutral / 变体 / 阶段）
       Imposters/         # 通用露馅立绘（六指手、拼接、变瘪等）
       Camera/            # 相机外壳、快门手
-      （其余为地面/树林/道具/UI 图集）
+      Props/             # 场景道具：tree/bush/chair/trashcan/gym（缺图回退旧图集）
+      Endings/           # 结算大图：win.png / lose.png（缺图则结算只显示文字）
+      （其余为地面/树林/UI 图集）
   Scripts/
     Game/                # 运行时逻辑
     Editor/              # 打包工具、美术导入后处理（不进最终包）
@@ -123,6 +126,13 @@ tools/
 - 同一个 `dialogueId` 写多行，按 `order` 从小到大逐句显示。
 - `en` / `zh` 为双语台词；要换行就写 `\n`。
 - 伪人各自的对话 id 是固定的：`doubao / sixfinger / scarysmile / framedrop / stitched / photomissing / deflate`；普通闲聊用 `generic` 或角色自定义 id。
+
+### choices.txt — 对话分支表
+`dialogueId  order  label_en  label_zh  goto  effect`
+- 某段对话（`dialogueId`）的台词**全部播完后**，会弹出这里配的选项按钮（按 `order` 排序）。没配就正常结束。
+- `goto`：选中后**续接进入**的另一段 `dialogueId`（其台词播完还会再查它自己的分支，可链式）；留空=不续接。
+- `effect`：`special_death`（触发特殊死亡）/ `end`（直接结束）/ 空（等同 end，除非填了 `goto`）。
+- 现有一个占位示例挂在 `lin_p1`（豆包人林采·第一阶段）：选「追问效率改革」→ 进 `lin_branch_probe` 占位台词；选「道谢先走」→ 结束。
 
 ### ui.txt — 界面文案表
 `key  en  zh`
@@ -191,8 +201,9 @@ python tools/process_art.py   # 去背景 / 裁剪到透明边界 / 按目标身
 
 ### 2) NPC 固定位置（每局一致）+ 运行时摆位
 - 每个角色的出生坐标写在 **`Assets/Resources/GameData/spawns.txt`**（列：`charId  x  z  yaw  faceCamera`，`x/z` 为世界坐标，`faceCamera=1` 时始终正对相机）。开局按表摆放，**不再随机**；表里没配到的角色回退到一份确定性网格布局（仍每局一致）。
-- **手动挪棋子（推荐）**：Play 时按 **`F2`** 进入「摆位模式」——场景会冻结，用**鼠标左键**在某个棋子附近按住并拖动即可把它挪到落点；调好后点面板上的 **「保存位置到 spawns.txt」**，会把当前所有棋子位置写回该表（仅编辑器/开发包可写盘）。下次运行即生效。
-- 也可直接用文本 / Excel 编辑 `spawns.txt`（Excel 工作流见第三节，导出脚本已含 `spawns` 页）。
+- **手动挪棋子（推荐）**：Play 时按 **`F2`** 进入「摆位模式」——场景会冻结，用**鼠标左键**在某个棋子附近按住并拖动即可把它挪到落点。面板上可选**目标**：`基准`（写 `spawns.txt`）或 `阶段N`（写 `phase_spawns.txt`）；点「载入该目标已存位置」可先把已存坐标摆上来对着调，点「保存」写回（仅编辑器/开发包可写盘）。下次运行即生效。
+- **每阶段坐标（可选）**：`phase_spawns.txt`（`charId  phase  x  z  yaw  faceCamera`）只写「和基准不同」的角色/阶段行。**默认这张表是空的 → 所有阶段位置一样**；进入某阶段时，配了的角色会挪到该阶段坐标，没配的保持不变。
+- 也可直接用文本 / Excel 编辑 `spawns.txt` / `phase_spawns.txt`（Excel 工作流见第三节，导出脚本已含这两页）。
 
 ### 3) 场景预览 —— 不按 Play 也能看到画面
 编辑模式下 Scene 里什么都看不到时，用它生成一份可视化预览。
@@ -212,7 +223,23 @@ Play 时按 **`F1`** 呼出（仅编辑器 / 开发包）：
 
 ---
 
-## 六、如何打包（一键出包）
+## 六、音频（BGM + 音效）
+
+音频系统已接好，**只需把音频文件丢到约定路径**即可生效；**缺文件时静默、不报错**。文件名用下表的 key，**不带扩展名**（`.wav/.mp3/.ogg` 都行）。
+
+- 循环 BGM 放 **`Assets/Resources/Audio/BGM/<key>`**
+- 一次性音效放 **`Assets/Resources/Audio/SFX/<key>`**
+- 音量：运行时 GameManager 物体上的 `AudioManager` 组件有 `bgmVolume` / `sfxVolume`。
+
+**需要的 BGM**：`menu`（主菜单）、`phase1` / `phase2` / `phase3`（各阶段，跟随 `phases.txt`，有几阶段配几个）、`death`（死亡演出）。
+
+**需要的音效（SFX）**：`dialogue_open`（开对话）、`shutter`（快门）、`mark` / `unmark`（标记/取消嫌疑人）、`phase_enter`（进入新阶段）、`monster`（怪物出现）、`death`（普通死亡）、`special_death`（特殊死亡）、`victory`（胜利）、`ui_click`（对话分支按钮）。
+
+> 场景贴图随阶段更换也做好了：把 **`Assets/Resources/Art/ground_phase1.png`**（及 `_phase2` / `_phase3`、可选 `ground_death.png`）放进去即可按阶段换地面贴图；缺图时回退到基础地面 + 变暗/染色。
+
+---
+
+## 七、如何打包（一键出包）
 
 Unity 顶部菜单栏 **GMTK**：
 - **一键打包（当前平台）**（快捷键 `Ctrl+Shift+B`）：按当前激活的平台出包。
@@ -229,7 +256,7 @@ Unity -quit -batchmode -projectPath . -executeMethod BuildTool.BuildWebGL
 
 ---
 
-## 七、开发环境
+## 八、开发环境
 
 1. 用 Unity **2023.1.22f1** 打开本工程。
 2. 打开任意场景（`Assets/Scenes/SampleScene.unity`）直接 Play 即可运行——场景内容运行时自动生成。

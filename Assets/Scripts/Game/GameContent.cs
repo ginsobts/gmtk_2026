@@ -86,6 +86,18 @@ public class SpawnDef
     public bool faceCamera = true;
 }
 
+/// <summary>对话分支选项（来自 choices.txt）：某段对话播完后弹出的一个按钮。</summary>
+public class ChoiceDef
+{
+    public int order;
+    public string labelEn;
+    public string labelZh;
+    public string gotoId;   // 选中后继续进入的 dialogueId（空 = 不续接）
+    public string effect;   // 特殊效果：special_death / end / 空
+
+    public string Label => Loc.Pick(labelEn, labelZh);
+}
+
 /// <summary>时间阶段（来自 phases.txt）。</summary>
 public class PhaseDef
 {
@@ -118,6 +130,8 @@ public static class GameContent
     static Dictionary<string, List<NpcDialogueEntry>> _npcDialogues;
     static Dictionary<string, string> _portraits;
     static Dictionary<string, SpawnDef> _spawns;
+    static Dictionary<string, Dictionary<int, SpawnDef>> _phaseSpawns;   // charId -> (phase -> 坐标)
+    static Dictionary<string, List<ChoiceDef>> _choices;                // dialogueId -> 分支选项
 
     public static IReadOnlyList<CharacterDef> Characters { get { EnsureLoaded(); return _characters; } }
     public static IReadOnlyList<PhaseDef> Phases { get { EnsureLoaded(); return _phases; } }
@@ -128,6 +142,35 @@ public static class GameContent
         EnsureLoaded();
         if (_spawns != null && !string.IsNullOrEmpty(charId) && _spawns.TryGetValue(charId, out var s)) return s;
         return null;
+    }
+
+    /// <summary>某角色在某阶段的坐标覆盖（phase_spawns.txt）；没配则返回 null（表示该阶段位置不变）。</summary>
+    public static SpawnDef GetPhaseSpawn(string charId, int phase)
+    {
+        EnsureLoaded();
+        if (_phaseSpawns != null && !string.IsNullOrEmpty(charId) &&
+            _phaseSpawns.TryGetValue(charId, out var byPhase) &&
+            byPhase.TryGetValue(phase, out var s)) return s;
+        return null;
+    }
+
+    /// <summary>某段对话的分支选项（choices.txt），按 order 排好；没配返回 null。</summary>
+    public static List<ChoiceDef> GetChoices(string dialogueId)
+    {
+        EnsureLoaded();
+        if (_choices != null && !string.IsNullOrEmpty(dialogueId) &&
+            _choices.TryGetValue(dialogueId, out var list) && list != null && list.Count > 0)
+            return list;
+        return null;
+    }
+
+    /// <summary>直接按 dialogueId 取一组台词（分支续接用）；缺失回退到通用闲聊。</summary>
+    public static DialogueLine[] GetLinesById(string dialogueId, string fallbackCharId)
+    {
+        EnsureLoaded();
+        if (TryGetLines(dialogueId, out var lines))
+            return PickLines(lines, fallbackCharId);
+        return PickLines(FallbackGenericDialogue(), fallbackCharId);
     }
 
     public static RoundDef GetDefaultRound()
@@ -206,7 +249,7 @@ public static class GameContent
         return PickLines(FallbackGenericDialogue(), npc);
     }
 
-    static string ResolveDialogueId(Npc npc, int currentPhase)
+    public static string ResolveDialogueId(Npc npc, int currentPhase)
     {
         if (!string.IsNullOrEmpty(npc.charId) &&
             _npcDialogues != null &&
@@ -249,9 +292,11 @@ public static class GameContent
     }
 
     static DialogueLine[] PickLines(List<DialogueLineDef> lines, Npc npc)
+        => PickLines(lines, npc != null ? npc.charId : null, npc != null ? npc.PortraitExpression() : null);
+
+    /// <summary>只按 charId（可选表情态）取台词；分支续接(GetLinesById)用，此时不一定拿得到 Npc 实例。</summary>
+    static DialogueLine[] PickLines(List<DialogueLineDef> lines, string fallbackCharId, string expr = null)
     {
-        string fallbackCharId = npc != null ? npc.charId : null;
-        string expr = npc != null ? npc.PortraitExpression() : null;   // 当前露馅表情态（顾映 look-away 三表情），null=neutral
         var arr = new DialogueLine[lines.Count];
         for (int i = 0; i < lines.Count; i++)
         {
@@ -321,6 +366,8 @@ public static class GameContent
             LoadNpcDialogues();
             LoadPortraits();
             LoadSpawns();
+            LoadPhaseSpawns();
+            LoadChoices();
         }
         catch (System.Exception e)
         {
@@ -333,6 +380,8 @@ public static class GameContent
         if (_npcDialogues == null) _npcDialogues = new Dictionary<string, List<NpcDialogueEntry>>();
         if (_portraits == null) _portraits = new Dictionary<string, string>();
         if (_spawns == null) _spawns = new Dictionary<string, SpawnDef>();
+        if (_phaseSpawns == null) _phaseSpawns = new Dictionary<string, Dictionary<int, SpawnDef>>();
+        if (_choices == null) _choices = new Dictionary<string, List<ChoiceDef>>();
     }
 
     static void LoadCharacters()
@@ -481,6 +530,56 @@ public static class GameContent
                 faceCamera = r.Length <= 4 || r[4].Trim() != "0"
             };
         }
+    }
+
+    static void LoadPhaseSpawns()
+    {
+        var rows = ReadTable("GameData/phase_spawns");
+        if (rows == null) return;
+        _phaseSpawns = new Dictionary<string, Dictionary<int, SpawnDef>>();
+        foreach (var r in rows)
+        {
+            if (r.Length < 4 || string.IsNullOrEmpty(r[0])) continue;
+            string charId = r[0].Trim();
+            int phase = ParseInt(r[1], 1);
+            var s = new SpawnDef
+            {
+                x = ParseFloat(r[2], 0f),
+                z = ParseFloat(r[3], 0f),
+                yaw = r.Length > 4 ? ParseFloat(r[4], 0f) : 0f,
+                faceCamera = r.Length <= 5 || r[5].Trim() != "0"
+            };
+            if (!_phaseSpawns.TryGetValue(charId, out var byPhase))
+            {
+                byPhase = new Dictionary<int, SpawnDef>();
+                _phaseSpawns[charId] = byPhase;
+            }
+            byPhase[phase] = s;
+        }
+    }
+
+    static void LoadChoices()
+    {
+        var rows = ReadTable("GameData/choices");
+        if (rows == null) return;
+        _choices = new Dictionary<string, List<ChoiceDef>>();
+        foreach (var r in rows)
+        {
+            if (r.Length < 4 || string.IsNullOrEmpty(r[0])) continue;
+            string id = r[0].Trim();
+            var c = new ChoiceDef
+            {
+                order = ParseInt(r[1], 0),
+                labelEn = Unescape(r[2]),
+                labelZh = Unescape(r[3]),
+                gotoId = r.Length > 4 ? r[4].Trim() : "",
+                effect = r.Length > 5 ? r[5].Trim() : ""
+            };
+            if (!_choices.TryGetValue(id, out var list)) { list = new List<ChoiceDef>(); _choices[id] = list; }
+            list.Add(c);
+        }
+        foreach (var kv in _choices)
+            kv.Value.Sort((a, b) => a.order.CompareTo(b.order));
     }
 
     static List<string[]> ReadTable(string resourcePath)
