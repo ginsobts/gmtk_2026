@@ -18,7 +18,7 @@ MonoBehaviour:
   cameraTilt: 35
   cameraOffset: {x: 0, y: 13, z: -10}
   cameraFollowLerp: 8
-  playerStart: {x: 4.143133, y: 0, z: -8.075355}
+  playerStart: {x: 5.229993, y: 0, z: -8.244658}
   playerScale: 1
   playerMoveSpeed: 5.5
   playerInteractRange: 2.6
