@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public enum GameState { MainMenu, Briefing, Tutorial, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
 
@@ -22,6 +23,10 @@ public class GameManager : MonoBehaviour
     public int imposterCount = 0;   // 本局炼化人数量：StartRound 按 characters 表 kind!=Normal 统计
 
     public GameState State { get; private set; } = GameState.MainMenu;
+    /// <summary>Boss 死亡演出进行中（场景染暗/染红）。</summary>
+    public bool IsDeathPerforming => _deathPerforming;
+    /// <summary>Boss 阶段 NPC/植物统一色调。</summary>
+    public static Color BossPhaseTint => FoliageTintDeath;
     public bool ShowNpcLabels { get; private set; }   // 是否在 NPC 头顶显示名字/职位（右上角按钮切换，默认关）
     bool _creditsOpen;
     bool _tutorialSeen;    // 世界观介绍后只演示一次新手引导
@@ -35,6 +40,10 @@ public class GameManager : MonoBehaviour
     public int CurrentPhase { get; private set; } = 1;
     Light _sun;
     Material _groundMat;
+    readonly List<SpriteRenderer> _foliageRenderers = new List<SpriteRenderer>();
+    ParticleSystem _ambientDust;
+    Material _dustMaterial;
+    BloomPostEffect _bloom;
     GameObject _monster;       // 死亡演出追逐怪物
     bool _deathPerforming;     // 死亡演出幂等标记（避免重复进入）
     bool _submitPending;   // 指认列表里“提交”确认弹窗是否打开
@@ -178,19 +187,31 @@ public class GameManager : MonoBehaviour
         ground.name = "Ground";
         ground.transform.rotation = Quaternion.Euler(0f, 45f, 0f);   // 策划 S2：地面绕 Y 轴转 45°
         ground.transform.localScale = new Vector3(4f, 1f, 4f);
-        var groundMaterial = ground.GetComponent<Renderer>().material;
+        var groundRenderer = ground.GetComponent<MeshRenderer>();
+        var groundMaterial = new Material(Shader.Find("Standard"));
         groundMaterial.mainTexture = GeneratedArt.GroundTexture;
         groundMaterial.mainTextureScale = new Vector2(2f, 2f);
         groundMaterial.color = Color.white;
+        groundMaterial.SetFloat("_Glossiness", 0.12f);
+        groundMaterial.SetFloat("_Metallic", 0f);
+        groundRenderer.material = groundMaterial;
+        groundRenderer.receiveShadows = true;
+        groundRenderer.shadowCastingMode = ShadowCastingMode.Off;
         _groundMat = groundMaterial;
 
         var lightGO = new GameObject("Sun");
         var light = lightGO.AddComponent<Light>();
         light.type = LightType.Directional;
         light.intensity = 1.1f;
-        lightGO.transform.rotation = Quaternion.Euler(50f, -40f, 0f);
-        RenderSettings.ambientLight = new Color(0.55f, 0.55f, 0.6f);
+        light.shadows = LightShadows.Soft;
+        light.shadowStrength = 0.72f;
+        light.shadowBias = 0.05f;
+        light.shadowNormalBias = 0.4f;
+        lightGO.transform.rotation = Quaternion.Euler(SunEulerMorning);
+        RenderSettings.ambientLight = new Color(0.42f, 0.42f, 0.46f);
         _sun = light;
+        QualitySettings.shadows = ShadowQuality.All;
+        QualitySettings.shadowDistance = 80f;
 
         _npcRoot = new GameObject("NPCs").transform;
         MapObstacles.Clear();   // 重建场景：清空上一局的空气墙，随后由森林/道具/树丛重新登记
@@ -198,7 +219,6 @@ public class GameManager : MonoBehaviour
         // 若之后想加回，取消下一行注释即可（会连同空气墙一起登记）。
         // BuildTownProps();
         BuildForestBoundary();
-        BuildCloudLayer();
         BuildAmbientParticles();
     }
 
@@ -206,33 +226,33 @@ public class GameManager : MonoBehaviour
     {
         var go = new GameObject("Ambient Dust");
         go.transform.position = new Vector3(0f, 3f, 0f);
-        var ps = go.AddComponent<ParticleSystem>();
+        _ambientDust = go.AddComponent<ParticleSystem>();
 
-        var main = ps.main;
+        var main = _ambientDust.main;
         main.loop = true;
         main.startLifetime = 9f;
         main.startSpeed = 0.15f;
-        main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.16f);
-        main.startColor = new Color(1f, 1f, 0.95f, 0.25f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.10f, 0.24f);
+        main.startColor = new Color(0.92f, 0.90f, 0.86f, 0.42f);
         main.maxParticles = 120;
         main.gravityModifier = -0.01f;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
 
-        var emission = ps.emission;
+        var emission = _ambientDust.emission;
         emission.rateOverTime = 14f;
 
-        var shape = ps.shape;
+        var shape = _ambientDust.shape;
         shape.shapeType = ParticleSystemShapeType.Box;
         shape.scale = new Vector3(34f, 6f, 34f);
 
-        var vel = ps.velocityOverLifetime;
+        var vel = _ambientDust.velocityOverLifetime;
         vel.enabled = true;
         vel.space = ParticleSystemSimulationSpace.World;
         vel.x = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
         vel.y = new ParticleSystem.MinMaxCurve(-0.05f, 0.08f);
         vel.z = new ParticleSystem.MinMaxCurve(-0.12f, 0.12f);
 
-        var col = ps.colorOverLifetime;
+        var col = _ambientDust.colorOverLifetime;
         col.enabled = true;
         var grad = new Gradient();
         grad.SetKeys(
@@ -241,13 +261,15 @@ public class GameManager : MonoBehaviour
         col.color = grad;
 
         var renderer = go.GetComponent<ParticleSystemRenderer>();
-        // 用 Sprites/Default（已在 Always Included），避免打包时粒子材质被剥离变粉。
-        var mat = new Material(Shader.Find("Sprites/Default"));
-        var dotTex = GeneratedArt.SoftDotSprite.texture;
-        mat.mainTexture = dotTex;
-        renderer.material = mat;
+        var shader = Shader.Find("GMTK/HDRAdditiveParticle")
+                     ?? Shader.Find("Mobile/Particles/Additive")
+                     ?? Shader.Find("Legacy Shaders/Particles/Additive");
+        _dustMaterial = new Material(shader);
+        _dustMaterial.mainTexture = GeneratedArt.SoftDotSprite.texture;
+        _dustMaterial.SetFloat("_HdrIntensity", DustHdrIntensityMorning);
+        renderer.material = _dustMaterial;
         renderer.sortingOrder = 6;
-        ps.Play();
+        _ambientDust.Play();
     }
 
     void BuildTownProps()
@@ -324,7 +346,7 @@ public class GameManager : MonoBehaviour
     /// <summary>按一个 TreeDef 生成一张树/灌木卡片，并按需登记空气墙。</summary>
     void BuildOneTree(Transform root, string name, TreeDef d, Sprite tree, Sprite bush)
     {
-        BuildCard(root, name, d.isBush ? bush : tree, d.pos, d.scale, d.sorting, true);
+        BuildCard(root, name, d.isBush ? bush : tree, d.pos, d.scale, d.sorting, sway: true, foliageTint: true);
         if (d.obstacle && d.radius > 0f) MapObstacles.Add(d.pos, d.radius);
     }
 
@@ -395,15 +417,7 @@ public class GameManager : MonoBehaviour
         return list;
     }
 
-    void BuildCloudLayer()
-    {
-        var cloudRoot = new GameObject("Cloud Layer").transform;
-        BuildCloud(cloudRoot, "Cloud A", GeneratedArt.GetForestSprite(4), new Vector3(-9f, 7f, 10f), 1.2f, 0.22f);
-        BuildCloud(cloudRoot, "Cloud B", GeneratedArt.GetForestSprite(5), new Vector3(6f, 8f, 4f), 1.25f, 0.16f);
-        BuildCloud(cloudRoot, "Cloud C", GeneratedArt.GetForestSprite(4), new Vector3(12f, 7.5f, -12f), 1f, 0.26f);
-    }
-
-    void BuildCard(Transform parent, string name, Sprite sprite, Vector3 position, float scale, int sortingOrder, bool sway = false)
+    void BuildCard(Transform parent, string name, Sprite sprite, Vector3 position, float scale, int sortingOrder, bool sway = false, bool foliageTint = false)
     {
         var root = new GameObject(name);
         root.transform.SetParent(parent, false);
@@ -417,32 +431,15 @@ public class GameManager : MonoBehaviour
         renderer.sortingOrder = sortingOrder;
         card.AddComponent<CameraFacingSprite>();
         if (sway) card.AddComponent<Sway>();
-    }
-
-    void BuildCloud(Transform parent, string name, Sprite sprite, Vector3 position, float scale, float speed)
-    {
-        var root = new GameObject(name);
-        root.transform.SetParent(parent, false);
-        root.transform.position = position;
-        var drift = root.AddComponent<CloudDrift>();
-        drift.speed = speed;
-        drift.direction = new Vector3(1f, 0f, 0.15f);
-
-        var card = new GameObject("Card");
-        card.transform.SetParent(root.transform, false);
-        card.transform.localScale = Vector3.one * scale;
-        var renderer = card.AddComponent<SpriteRenderer>();
-        renderer.sprite = sprite;
-        renderer.color = new Color(1f, 1f, 1f, 0.72f);
-        renderer.sortingOrder = 3;
-        card.AddComponent<CameraFacingSprite>();
+        AttachGroundShadow(root.transform, renderer);
+        if (foliageTint) _foliageRenderers.Add(renderer);
     }
 
     void BuildPlayerAndCamera()
     {
         var cfg = GameConfig.Instance;
 
-        var playerGO = BuildPerson("Player", GeneratedArt.PlayerSprite, cfg.playerScale, out var playerBody);
+        var playerGO = BuildPerson("Player", GeneratedArt.PlayerSprite, cfg.playerScale, out var playerBody, castGroundShadow: true);
         // 场景里若手摆了玩家出生点则用它，否则用配置里的起点
         var playerSpawn = Object.FindFirstObjectByType<PlayerSpawnPoint>();
         playerGO.transform.position = playerSpawn != null ? playerSpawn.transform.position : cfg.playerStart;
@@ -472,6 +469,8 @@ public class GameManager : MonoBehaviour
         {
             _mainCamera.fieldOfView = cfg.cameraFieldOfView;
         }
+        _mainCamera.allowHDR = true;
+        _bloom = camGO.AddComponent<BloomPostEffect>();
         camGO.AddComponent<AudioListener>();
         camGO.transform.rotation = Quaternion.Euler(cfg.cameraTilt, 0f, 0f);
         var rig = camGO.AddComponent<CameraRig>();
@@ -505,7 +504,7 @@ public class GameManager : MonoBehaviour
 #endif
     }
 
-    GameObject BuildPerson(string name, Sprite portrait, float scale, out SpriteRenderer body)
+    GameObject BuildPerson(string name, Sprite portrait, float scale, out SpriteRenderer body, bool castGroundShadow = false)
     {
         var root = new GameObject(name);
 
@@ -532,7 +531,14 @@ public class GameManager : MonoBehaviour
         body.color = Color.white;
         body.sortingOrder = 10;
         portraitGO.AddComponent<CameraFacingSprite>();
+        if (castGroundShadow) AttachGroundShadow(root.transform, body);
         return root;
+    }
+
+    static void AttachGroundShadow(Transform root, SpriteRenderer renderer)
+    {
+        var caster = root.gameObject.AddComponent<SpriteShadowCaster>();
+        caster.Init(renderer);
     }
 
     // ---------------- 回合流程 ----------------
@@ -548,14 +554,18 @@ public class GameManager : MonoBehaviour
         foreach (var c in GameContent.Characters)
             if (c.kind != NpcKind.Normal) imposterCount++;
 
-        SpawnNpcs();
-        TimelineValue = 0;
-        CurrentPhase = GameContent.GetPhaseForTimeline(0);
         _submitPending = false;
-        // 清理上一局死亡演出：怪物 + 幂等标记（红光/红地面由 ApplyStageVisuals 还原）
         if (_monster != null) { Destroy(_monster); _monster = null; }
         _deathPerforming = false;
-        ApplyStageVisuals();   // 重置场景表现到 stage1（含太阳色/地面色还原）
+        TimelineValue = 0;
+        CurrentPhase = GameContent.GetPhaseForTimeline(0);
+        if (_ambientDust != null) _ambientDust.Clear();
+        ApplyPhaseGroundTexture();
+        ApplyTimelineVisuals();
+        if (_ambientDust != null) _ambientDust.Play();
+
+        SpawnNpcs();
+        AudioManager.Instance?.PlayBgm("phase" + CurrentPhase);
         State = GameState.Playing;
 
         UI.HideAllPanels();
@@ -580,7 +590,7 @@ public class GameManager : MonoBehaviour
             var def = chosen[i];
 
             Sprite portrait = GeneratedArt.GetCharacterSprite(def.artFolder);
-            var go = BuildPerson("NPC_" + def.charId, portrait, cfg.npcScale, out var bodyR);
+            var go = BuildPerson("NPC_" + def.charId, portrait, cfg.npcScale, out var bodyR, castGroundShadow: true);
             go.transform.SetParent(_npcRoot, false);
 
             var npc = go.AddComponent<Npc>();
@@ -646,7 +656,8 @@ public class GameManager : MonoBehaviour
         TimelineValue = Mathf.Min(TimelineValue + delta, maxT);
         CurrentPhase = GameContent.GetPhaseForTimeline(TimelineValue);
         RefreshHud();
-        if (CurrentPhase != oldPhase) OnStageChanged();   // 立绘/移位/光暗 + 阶段旁白
+        ApplyTimelineVisuals();
+        if (CurrentPhase != oldPhase) OnStageChanged();   // 立绘/移位/地面贴图切换 + 阶段旁白
         // 对话在 Playing 态即时结算死亡；拍照在 Camera 态，延到关相机回 Playing（见 CloseCamera）
         if (State == GameState.Playing) TryEnterDeathByTime();
     }
@@ -685,27 +696,97 @@ public class GameManager : MonoBehaviour
                 n.SetFacing(ps.yaw, ps.faceCamera);
             }
         }
-        ApplyStageVisuals();
+        ApplyPhaseGroundTexture();
         var phaseDef = GameContent.GetPhaseDef(CurrentPhase);
         if (phaseDef != null) UI.ShowToast(Loc.Format("phase.enter", phaseDef.DisplayName), true);
         AudioManager.Instance?.PlaySfx("phase_enter");   // 首次进入新阶段音效（T5）
+        AudioManager.Instance?.PlayBgm("phase" + CurrentPhase);
     }
 
-    /// <summary>按当前 phase 应用场景表现：光线渐暗(T6) + 地面色调/贴图(T9) + 阶段 BGM(T6)。</summary>
-    void ApplyStageVisuals()
+    static readonly Color AmbientMorning = new Color(0.42f, 0.42f, 0.46f);
+    static readonly Color AmbientEvening = new Color(0.2f, 0.2f, 0.28f);
+    static readonly Color GroundTintEvening = new Color(0.62f, 0.58f, 0.66f);
+    static readonly Color FoliageTintEvening = new Color(0.26f, 0.30f, 0.52f);
+    static readonly Color FoliageTintDeath = new Color(0.18f, 0.14f, 0.20f);
+    static readonly Color DustColorMorning = new Color(0.92f, 0.90f, 0.86f, 0.42f);
+    static readonly Color DustColorEvening = new Color(0.94f, 0.95f, 0.98f, 0.72f);   // 中性偏冷白，不靠发黄
+    static readonly Color DustColorDeath = new Color(1f, 0.28f, 0.20f, 0.78f);
+    const float DustHdrIntensityMorning = 1.4f;
+    const float DustHdrIntensityEvening = 3.2f;
+    const float DustHdrIntensityDeath = 3.5f;
+    static readonly Vector3 SunEulerMorning = new Vector3(50f, -40f, 0f);
+    static readonly Vector3 SunEulerEvening = new Vector3(16f, 95f, 0f);
+
+    float TimelineNormalized()
     {
-        int phaseCount = GameContent.Phases != null ? GameContent.Phases.Count : 3;
-        float t = phaseCount > 1 ? Mathf.Clamp01((CurrentPhase - 1) / (float)(phaseCount - 1)) : 0f;
-        if (_sun != null) { _sun.color = Color.white; _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t); } // 色还原，死亡演出才染红
-        RenderSettings.ambientLight = Color.Lerp(new Color(0.55f, 0.55f, 0.6f), new Color(0.2f, 0.2f, 0.28f), t);
-        if (_groundMat != null)
+        int maxT = GameContent.GetTimelineMax();
+        return maxT > 0 ? Mathf.Clamp01(TimelineValue / (float)maxT) : 0f;
+    }
+
+    /// <summary>按时间轴线性插值：阳光强度、环境光、地面色调、植物颜色。</summary>
+    void ApplyTimelineVisuals()
+    {
+        if (_deathPerforming) return;
+        float t = TimelineNormalized();
+        if (_sun != null)
         {
-            _groundMat.color = Color.Lerp(Color.white, new Color(0.62f, 0.58f, 0.66f), t);
-            // 阶段专属地面贴图：Resources/Art/ground_phase{order}，缺失回退到基础地面（T9）
-            var tex = GeneratedArt.GroundTextureNamed("phase" + CurrentPhase) ?? GeneratedArt.GroundTexture;
-            _groundMat.mainTexture = tex;
+            _sun.color = Color.white;
+            _sun.intensity = Mathf.Lerp(1.1f, 0.35f, t);
+            _sun.transform.rotation = Quaternion.Slerp(
+                Quaternion.Euler(SunEulerMorning),
+                Quaternion.Euler(SunEulerEvening),
+                t);
         }
-        AudioManager.Instance?.PlayBgm("phase" + CurrentPhase);   // 不同阶段不同 BGM（T6）
+        RenderSettings.ambientLight = Color.Lerp(AmbientMorning, AmbientEvening, t);
+        if (_groundMat != null)
+            _groundMat.color = Color.Lerp(Color.white, GroundTintEvening, t);
+        ApplyFoliageTint(t);
+        ApplyDustVisuals(t);
+        ApplyBloomVisuals(t);
+    }
+
+    void ApplyPhaseGroundTexture()
+    {
+        if (_groundMat == null) return;
+        var tex = GeneratedArt.GroundTextureNamed("phase" + CurrentPhase) ?? GeneratedArt.GroundTexture;
+        _groundMat.mainTexture = tex;
+    }
+
+    void ApplyFoliageTint(float t)
+    {
+        var color = Color.Lerp(Color.white, FoliageTintEvening, t);
+        SetFoliageColor(color);
+    }
+
+    void SetFoliageColor(Color color)
+    {
+        for (int i = 0; i < _foliageRenderers.Count; i++)
+            if (_foliageRenderers[i] != null) _foliageRenderers[i].color = color;
+    }
+
+    void ApplyDustVisuals(float t)
+    {
+        if (_ambientDust == null) return;
+        var main = _ambientDust.main;
+        main.startColor = Color.Lerp(DustColorMorning, DustColorEvening, t);
+        if (_dustMaterial != null)
+            _dustMaterial.SetFloat("_HdrIntensity", Mathf.Lerp(DustHdrIntensityMorning, DustHdrIntensityEvening, t));
+    }
+
+    void ApplyDeathDustVisuals()
+    {
+        if (_ambientDust == null) return;
+        var main = _ambientDust.main;
+        main.startColor = DustColorDeath;
+        if (_dustMaterial != null)
+            _dustMaterial.SetFloat("_HdrIntensity", DustHdrIntensityDeath);
+    }
+
+    void ApplyBloomVisuals(float t)
+    {
+        if (_bloom == null) return;
+        // 阈值 > 1：普通 Sprite 白部(max=1)不进 Bloom，只有灰尘 HDR 乘数(≈3.2)会发光
+        _bloom.SetBloom(Mathf.Lerp(0f, 1.35f, t), Mathf.Lerp(1.5f, 1.12f, t));
     }
 
     /// <summary>当前被玩家标记为嫌疑人的数量。</summary>
@@ -759,6 +840,9 @@ public class GameManager : MonoBehaviour
                 else if (Input.GetKeyDown(KeyCode.E)) TalkNearest();
                 else if (Input.GetKeyDown(KeyCode.Q)) ViewNearestPhotos();
                 else if (Input.GetKeyDown(KeyCode.F)) ToggleMarkNearest();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                else if (Input.GetKeyDown(KeyCode.T)) AdvanceTimeline(1);   // 测试：时间轴 +1
+#endif
                 break;
 
             case GameState.Camera:
@@ -1134,6 +1218,7 @@ public class GameManager : MonoBehaviour
             UI.ShowNarration(Loc.Get("narrate.lose"), () =>
             {
                 TimelineValue = GameContent.GetTimelineMax();
+                ApplyTimelineVisuals();   // 时间拉满后再进死亡，避免光色/植物与进度不同步
                 EnterDeathPerformance();
             });
         }
@@ -1244,7 +1329,12 @@ public class GameManager : MonoBehaviour
         UI.SetInteractPrompt(null);
 
         // 场景变红 + 地面贴图变色/换图（策划 5.2.1/5.2.2）
-        if (_sun != null) { _sun.color = new Color(1f, 0.16f, 0.12f); _sun.intensity = 1.35f; }
+        if (_sun != null)
+        {
+            _sun.transform.rotation = Quaternion.Euler(SunEulerEvening);   // 保持傍晚角度，不再「变亮」
+            _sun.color = new Color(1f, 0.16f, 0.12f);
+            _sun.intensity = 0.55f;   // 比之前 1.35 低，避免整体反差让植物显得突然变亮
+        }
         RenderSettings.ambientLight = new Color(0.34f, 0.03f, 0.05f);
         if (_groundMat != null)
         {
@@ -1252,6 +1342,11 @@ public class GameManager : MonoBehaviour
             var tex = GeneratedArt.GroundTextureNamed("death");
             if (tex != null) _groundMat.mainTexture = tex;   // 有专属死亡地面就换，否则保留当前贴图+染红
         }
+        SetFoliageColor(FoliageTintDeath);
+        foreach (var n in Npcs)
+            if (n != null) n.ApplyBossPhaseTint();
+        ApplyDeathDustVisuals();
+        ApplyBloomVisuals(1f);
 
         AudioManager.Instance?.PlayBgm("death");
         SpawnDeathMonster();

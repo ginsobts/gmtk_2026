@@ -415,6 +415,12 @@ public class Npc : MonoBehaviour
     {
         if (_renderer == null) return;
 
+        if (GameManager.Instance != null && GameManager.Instance.IsDeathPerforming)
+        {
+            _renderer.color = GameManager.BossPhaseTint;
+            return;
+        }
+
         if (_revealedByPose || _deflated)
             _renderer.color = new Color(1f, 0.82f, 0.82f, 1f); // 露馅：略带红色警示
         else if (_inFrame)
@@ -424,6 +430,9 @@ public class Npc : MonoBehaviour
         else
             _renderer.color = Color.white;
     }
+
+    /// <summary>Boss 阶段刷新立绘色调（与植物一致）。</summary>
+    public void ApplyBossPhaseTint() => RefreshColor();
 
     /// <summary>NPC 在屏幕上的取景参考点（用身体中心）。</summary>
     public Vector3 GetScreenPoint(Camera cam)
