@@ -180,7 +180,7 @@ public class GameManager : MonoBehaviour
         ground.transform.localScale = new Vector3(4f, 1f, 4f);
         var groundMaterial = ground.GetComponent<Renderer>().material;
         groundMaterial.mainTexture = GeneratedArt.GroundTexture;
-        groundMaterial.mainTextureScale = new Vector2(5f, 5f);
+        groundMaterial.mainTextureScale = new Vector2(2f, 2f);
         groundMaterial.color = Color.white;
         _groundMat = groundMaterial;
 

@@ -27,6 +27,7 @@ public class UIManager : MonoBehaviour
 
     // HUD
     GameObject _hudRoot;
+    GameObject _vignetteRoot;   // 探索态暗角：独立于 HUD，按游戏状态显隐
     Text _foundText, _promptText;
     Text _labelToggleLabel;   // 右上角「显示/隐藏名字」按钮文案（随开关状态切换）
     Image _timelineFill;
@@ -304,16 +305,19 @@ public class UIManager : MonoBehaviour
         SetRect(_hudRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         var hud = _hudRoot.transform;
 
-        // 探索态暗角（相机/相册等模式随 HUD 一起隐藏，不会进照片）
-        var vignette = new GameObject("Vignette", typeof(RectTransform));
-        vignette.transform.SetParent(hud, false);
-        var vimg = vignette.AddComponent<Image>();
+        // 探索态暗角：不再挂在 HUD 下（否则一进对话 HUD 整体隐藏，暗角消失，画面看起来像"变亮/变光照"）。
+        // 改为独立挂在 Canvas 最底层，由 Update() 按游戏状态显隐：探索 + 对话都显示，画面保持一致；
+        // 相机/相册/结算等隐藏，拍照时也天然不会进照片。
+        _vignetteRoot = new GameObject("Vignette", typeof(RectTransform));
+        _vignetteRoot.transform.SetParent(_canvas.transform, false);
+        var vimg = _vignetteRoot.AddComponent<Image>();
         vimg.sprite = GeneratedArt.VignetteSprite;
         vimg.type = Image.Type.Simple;
         vimg.color = new Color(1f, 1f, 1f, 0.7f);
         vimg.raycastTarget = false;
-        SetRect(vignette.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40));
-        vignette.transform.SetAsFirstSibling();
+        SetRect(_vignetteRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40));
+        _vignetteRoot.transform.SetAsFirstSibling();
+        _vignetteRoot.SetActive(false);
 
         BuildTimelineBar(hud);
 
@@ -1151,6 +1155,15 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
+        // 暗角只在"探索 / 对话"两种状态显示，让对话画面与探索完全一致（不再随 HUD 隐藏而突然变亮）。
+        // 其余状态（相机/相册/指认/结算/菜单/教程等）隐藏；相机模式下隐藏，拍照时也天然不进照片。
+        if (_vignetteRoot != null && GameManager.Instance != null)
+        {
+            var st = GameManager.Instance.State;
+            bool vis = st == GameState.Playing || st == GameState.Dialogue;
+            if (_vignetteRoot.activeSelf != vis) _vignetteRoot.SetActive(vis);
+        }
+
         // 相机整体（外壳 + 开口 + 手）跟随鼠标，让取景开口中心对准鼠标。
         if (_cameraRoot != null && _cameraRoot.activeSelf && _cameraUnit != null)
         {

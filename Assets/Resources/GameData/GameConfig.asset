@@ -18,10 +18,15 @@ MonoBehaviour:
   cameraTilt: 35
   cameraOffset: {x: 0, y: 13, z: -10}
   cameraFollowLerp: 8
-  playerStart: {x: 0, y: 0, z: -6}
+  playerStart: {x: 4.143133, y: 0, z: -8.075355}
   playerScale: 1
   playerMoveSpeed: 5.5
   playerInteractRange: 2.6
+  mapHalfX: 17.5
+  mapHalfZ: 17.5
+  cameraBoundsEnabled: 1
+  cameraBoundsCenter: {x: 0, y: 0}
+  cameraBoundsSize: {x: 16, y: 12}
   npcScale: 1
   npcDefaultYaw: 0
   npcYawRandom: 0
@@ -30,6 +35,4 @@ MonoBehaviour:
   dialogueTimePoints: 3
   photoTimePoints: 1
   deathThreshold: 90
-  stageThresholds:
-  - 30
-  - 60
+  stageThresholds: 1e0000003c000000

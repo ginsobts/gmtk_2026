@@ -30,7 +30,7 @@ public static class GeneratedArt
     static Sprite _sixFingerReveal, _scarySmileReveal, _stitchedReveal, _deflateReveal;
 
     // 程序化生成的表现用贴图（阴影/软点/箭头/暗角）
-    static Sprite _blobShadow, _softDot, _downArrow, _vignette, _recDot;
+    static Sprite _blobShadow, _softDot, _downArrow, _vignette, _recDot, _ring;
 
     public static Texture2D GroundTexture =>
         _ground ??= Resources.Load<Texture2D>("Art/town_ground_texture");
@@ -233,6 +233,9 @@ public static class GeneratedArt
     /// <summary>白色软圆点（粒子 / 标记徽章 复用，按需染色）。</summary>
     public static Sprite SoftDotSprite => _softDot ??= MakeRadialSprite(64, Color.white, 1.6f);
 
+    /// <summary>白色空心圆环（脚下"可交互"提示，铺在地面上，按需染色/调透明）。</summary>
+    public static Sprite RingSprite => _ring ??= MakeRingSprite(128, Color.white, 0.72f, 0.97f);
+
     /// <summary>指向下方的实心三角（靠近可交互提示）。</summary>
     public static Sprite DownArrowSprite => _downArrow ??= MakeDownTriangleSprite(48);
 
@@ -329,6 +332,28 @@ public static class GeneratedArt
                 float d = Mathf.Sqrt(dx * dx + dy * dy);
                 float a = Mathf.Clamp01(1f - d);
                 a = Mathf.Pow(a, falloff);
+                px[y * size + x] = new Color(color.r, color.g, color.b, color.a * a);
+            }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    /// <summary>生成一个空心圆环贴图：innerFrac~outerFrac 之间为实心，两侧边缘做柔和过渡。</summary>
+    static Sprite MakeRingSprite(int size, Color color, float innerFrac, float outerFrac)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        float r = size * 0.5f;
+        const float edge = 0.06f; // 归一化半径下的柔化宽度
+        var px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f - r) / r;
+                float dy = (y + 0.5f - r) / r;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float aOuter = Mathf.Clamp01((outerFrac - d) / edge);   // 外沿渐隐
+                float aInner = Mathf.Clamp01((d - innerFrac) / edge);   // 内沿渐隐
+                float a = Mathf.Min(aOuter, aInner);
                 px[y * size + x] = new Color(color.r, color.g, color.b, color.a * a);
             }
         tex.SetPixels(px); tex.Apply();
