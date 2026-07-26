@@ -34,5 +34,5 @@ MonoBehaviour:
   spawnAreaZ: {x: -13, y: 13}
   dialogueTimePoints: 3
   photoTimePoints: 1
-  deathThreshold: 90
-  stageThresholds: 1e0000003c000000
+  deathThreshold: 150
+  stageThresholds: 3200000064000000

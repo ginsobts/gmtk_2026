@@ -118,8 +118,8 @@ public static class Loc
         ["credits.back"] = new[] { "Back", "返回" },
         ["credits.body"] = new[]
         {
-            "The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity",
-            "寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作"
+            "The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity\n\nAudio Credits\nMusic: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org\nUI Audio: Kenney / Kenney.nl",
+            "寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作\n\n音频署名\n音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org\n界面音效：Kenney / Kenney.nl"
         },
 
         // 开场目标说明

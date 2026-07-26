@@ -11,7 +11,7 @@ using UnityEngine;
 /// PhotoMismatch—— 相册线：真人在取景框里，但照片里变成另一个样子（程书，照片与本人不一致）
 /// Deflate     —— 世界线：玩家靠近接触时会“变瘪”
 /// SkinDog     —— 对话线/时间轴：三阶段差分，最终扒皮恐怖立绘（魏大爷）
-/// LookAway    —— 取景线：镜头移开时表情在三态间循环切换（顾映，N3）
+/// LookAway    —— 取景线：镜头移开时表情在三态间循环切换（李东阳，N3）
 /// </summary>
 public enum NpcKind
 {
@@ -658,7 +658,7 @@ public static class GameContent
             C("wei_daye", "Uncle Wei", "魏大爷", NpcKind.SkinDog),
             C("an_an", "An'an", "安安", NpcKind.Normal),
             C("han_lu", "Han Lu", "韩露", NpcKind.SixFinger, "Reception", "前台"),
-            C("gu_ying", "Gu Ying", "顾映", NpcKind.LookAway, "Brand", "品牌"),
+            C("gu_ying", "Li Dongyang", "李东阳", NpcKind.LookAway, "Brand", "品牌"),
             C("cheng_shu", "Cheng Shu", "程书", NpcKind.PhotoMismatch, "Compliance", "合规"),
         };
         return list;
@@ -680,8 +680,8 @@ public static class GameContent
     static List<PhaseDef> DefaultPhases() => new List<PhaseDef>
     {
         new PhaseDef { phaseId = "p1", order = 1, threshold = 0, nameEn = "Morning", nameZh = "上午" },
-        new PhaseDef { phaseId = "p2", order = 2, threshold = 30, nameEn = "Afternoon", nameZh = "下午" },
-        new PhaseDef { phaseId = "p3", order = 3, threshold = 60, nameEn = "Evening", nameZh = "晚上" }
+        new PhaseDef { phaseId = "p2", order = 2, threshold = 50, nameEn = "Afternoon", nameZh = "下午" },
+        new PhaseDef { phaseId = "p3", order = 3, threshold = 100, nameEn = "Evening", nameZh = "晚上" }
     };
 
     static List<DialogueLineDef> L(params DialogueLineDef[] lines) => new List<DialogueLineDef>(lines);

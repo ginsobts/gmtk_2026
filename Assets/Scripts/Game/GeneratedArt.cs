@@ -104,7 +104,7 @@ public static class GeneratedArt
         return s != null ? s : GetCharacterSprite(artFolder);
     }
 
-    /// <summary>角色命名差分棋子（如顾映 look-away 的 reveal_smile/reveal_sad）。缺失返回 null，调用方自行回退。</summary>
+    /// <summary>角色命名差分棋子（如李东阳 look-away 的 reveal_smile/reveal_sad）。缺失返回 null，调用方自行回退。</summary>
     public static Sprite GetCharacterVariantSprite(string artFolder, string variant)
     {
         if (string.IsNullOrEmpty(artFolder) || string.IsNullOrEmpty(variant)) return null;

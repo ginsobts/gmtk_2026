@@ -56,6 +56,9 @@ public class UIManager : MonoBehaviour
     Image _dialoguePortrait;
     GameObject _dialoguePortraitRoot;
     Button _dialogueNextBtn;            // “继续”按钮（选分支时隐藏）
+    Coroutine _dialogueTypeCo;
+    string _dialogueFullText = "";
+    bool _dialogueTyping;
     GameObject _choiceRoot;             // 分支选项容器
     Button[] _choiceBtns;
     Text[] _choiceLabels;
@@ -98,7 +101,7 @@ public class UIManager : MonoBehaviour
 
     // 结算
     GameObject _resultRoot;
-    Text _resultTitle, _resultDetail;
+    Text _resultDetail;
     Image _resultImage;
 
     // 新手引导（进入场景后分步高亮 + 压暗其它区域）
@@ -706,19 +709,28 @@ public class UIManager : MonoBehaviour
         _resultRoot = MakePanel(_canvas.transform, "Result", new Color(0.04f, 0.05f, 0.08f, 0.97f));
         SetRect(_resultRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
-        _resultTitle = MakeText(_resultRoot.transform, "RTitle", "", 84, TextAnchor.UpperCenter);
-        SetRect(_resultTitle.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(1400, 130));
-
-        // 结算大图（胜/负），居中显示，缺图时隐藏
+        // 胜/负结算图铺满整个屏幕。两张图均为 16:9，不再额外显示顶部 Victory/Defeat 文字。
         var imgGO = new GameObject("REndingImage", typeof(RectTransform));
         imgGO.transform.SetParent(_resultRoot.transform, false);
         _resultImage = imgGO.AddComponent<Image>();
         _resultImage.preserveAspect = true;
         _resultImage.raycastTarget = false;
-        SetRect(_resultImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(940, 528));
+        SetRect(_resultImage.rectTransform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        var resultAspect = imgGO.AddComponent<AspectRatioFitter>();
+        resultAspect.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent; // 铺满屏幕；非 16:9 时裁边而不拉伸
+        resultAspect.aspectRatio = 16f / 9f;
+
+        // 全屏图上叠一条底部半透明遮罩，保留“猜对进度”和返回按钮的可读性。
+        var shadeGO = new GameObject("ResultBottomShade", typeof(RectTransform));
+        shadeGO.transform.SetParent(_resultRoot.transform, false);
+        var shade = shadeGO.AddComponent<Image>();
+        shade.color = new Color(0f, 0f, 0f, 0.62f);
+        shade.raycastTarget = false;
+        SetRect(shade.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0),
+            Vector2.zero, new Vector2(0, 300));
 
         _resultDetail = MakeText(_resultRoot.transform, "RDetail", "", 40, TextAnchor.LowerCenter);
-        SetRect(_resultDetail.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 180), new Vector2(1300, 120));
+        SetRect(_resultDetail.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 205), new Vector2(1300, 70));
 
         MakeButton(_resultRoot.transform, "result.replay", 34, () => GameManager.Instance.StartRound(),
             new Vector2(0.5f, 0), new Vector2(-180, 70), new Vector2(320, 80));
@@ -1054,7 +1066,9 @@ public class UIManager : MonoBehaviour
         if (_choiceRoot != null) _choiceRoot.SetActive(false);
         if (_dialogueNextBtn != null) _dialogueNextBtn.gameObject.SetActive(true);
         _dialogueName.text = name;
-        _dialogueLine.text = line != null && !string.IsNullOrEmpty(line.text) ? line.text : "";
+        _dialogueFullText = line != null && !string.IsNullOrEmpty(line.text) ? line.text : "";
+        if (_dialogueTypeCo != null) StopCoroutine(_dialogueTypeCo);
+        _dialogueTypeCo = StartCoroutine(TypeDialogueText(_dialogueFullText));
 
         var portrait = line != null ? PortraitArt.GetPortrait(line.portraitId) : null;
         if (_dialoguePortraitRoot != null)
@@ -1073,6 +1087,34 @@ public class UIManager : MonoBehaviour
             }
         }
         if (!wasActive) PlayShow(_dialogueRoot);
+    }
+
+    IEnumerator TypeDialogueText(string fullText)
+    {
+        _dialogueTyping = true;
+        _dialogueLine.text = "";
+        for (int i = 0; i < fullText.Length; i++)
+        {
+            char c = fullText[i];
+            _dialogueLine.text += c;
+            // 空格/换行不发声；隔一个可见字符播放一次，避免音效过密刺耳。
+            if (!char.IsWhiteSpace(c) && i % 2 == 0)
+                AudioManager.Instance?.PlaySfx("typewriter" + (1 + i % 3), 0.28f);
+            yield return new WaitForSecondsRealtime(0.025f);
+        }
+        _dialogueTyping = false;
+        _dialogueTypeCo = null;
+    }
+
+    /// <summary>继续键在逐字播放期间先补全本句，不直接跳到下一句。</summary>
+    public bool CompleteDialogueTyping()
+    {
+        if (!_dialogueTyping) return false;
+        if (_dialogueTypeCo != null) StopCoroutine(_dialogueTypeCo);
+        _dialogueTypeCo = null;
+        _dialogueTyping = false;
+        _dialogueLine.text = _dialogueFullText;
+        return true;
     }
 
     /// <summary>台词播完后展示分支选项（替换“继续”按钮）。</summary>
@@ -1097,6 +1139,9 @@ public class UIManager : MonoBehaviour
 
     public void HideDialogue()
     {
+        if (_dialogueTypeCo != null) StopCoroutine(_dialogueTypeCo);
+        _dialogueTypeCo = null;
+        _dialogueTyping = false;
         if (_dialogueRoot != null) _dialogueRoot.SetActive(false);
         if (_dialoguePortraitRoot != null) _dialoguePortraitRoot.SetActive(false);
         if (_choiceRoot != null) _choiceRoot.SetActive(false);
@@ -1342,10 +1387,8 @@ public class UIManager : MonoBehaviour
     {
         _resultRoot.SetActive(true);
         PlayShow(_resultRoot);
-        _resultTitle.text = Loc.Get(win ? "result.win" : "result.lose");
-        _resultTitle.color = win ? new Color(0.6f, 1f, 0.6f) : new Color(1f, 0.55f, 0.5f);
 
-        // 结算大图：优先 Art/Endings/win|lose，缺图则隐藏
+        // 结算只显示全屏胜/负图片；底部继续展示猜对数量，不揭示具体身份。
         var sprite = GeneratedArt.EndingSprite(win);
         if (_resultImage != null)
         {

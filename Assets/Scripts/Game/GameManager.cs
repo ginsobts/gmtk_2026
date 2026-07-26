@@ -822,6 +822,7 @@ public class GameManager : MonoBehaviour
     public void DialogueNext()
     {
         if (State != GameState.Dialogue || _awaitingChoice) return;
+        if (UI.CompleteDialogueTyping()) return;
         _dialogueIndex++;
         if (_dialogueIndex >= _dialogueLines.Length)
         {
@@ -854,7 +855,6 @@ public class GameManager : MonoBehaviour
         var choices = GameContent.GetChoices(_dialogueId);
         if (choices == null || index < 0 || index >= choices.Count) return;
         var ch = choices[index];
-        AudioManager.Instance?.PlaySfx("ui_click");
         _awaitingChoice = false;
 
         if (ch.effect == "special_death") { TriggerSpecialDeath(); return; }
@@ -1159,7 +1159,6 @@ public class GameManager : MonoBehaviour
     {
         ShowNpcLabels = !ShowNpcLabels;
         UI?.UpdateNpcLabelButton(ShowNpcLabels);
-        AudioManager.Instance?.PlaySfx("ui_click");
     }
 
     public void OpenMarkList()
@@ -1292,7 +1291,7 @@ public class GameManager : MonoBehaviour
         PlayerDied(true);
     }
 
-    /// <summary>死亡结算：清理怪物 → 死亡旁白（占位结局图）→ 揭示伪人的结果面板。</summary>
+    /// <summary>死亡结算：清理怪物后直接进入全屏失败图，不再显示“它抓住了你”文字过场。</summary>
     void PlayerDied(bool special)
     {
         if (_monster != null) { Destroy(_monster); _monster = null; }
@@ -1300,9 +1299,15 @@ public class GameManager : MonoBehaviour
         UI.HideAllPanels();
         UI.SetHudVisible(false);
         AudioManager.Instance?.PlaySfx(special ? "special_death" : "death");
-        // 死亡结局图留待美术；这里用全屏旁白占位，点击后进结果面板
-        string key = special ? "death.special" : "death.normal";
-        UI.ShowNarration(Loc.Get(key), () => EndRound(false, 0, 0));
+
+        // 即使因时间耗尽/怪物抓住而失败，底部仍显示玩家当前猜对的数量。
+        int correct = 0, wrong = 0;
+        foreach (var n in Npcs)
+        {
+            if (n == null || !n.marked) continue;
+            if (n.IsImposter) correct++; else wrong++;
+        }
+        EndRound(false, correct, wrong);
     }
 
     public static string KindLabel(NpcKind k) => GameContent.KindLabel(k);

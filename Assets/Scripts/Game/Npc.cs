@@ -37,8 +37,8 @@ public class Npc : MonoBehaviour
     bool _revealedByPose;       // 因摆动作而露馅（六指 / 可怕笑）
     bool _exposed;              // 已被抓到露馅(持久)：韩露被拍到鬼脸笑后，对话立绘持续显示六指伪人形态
     bool _deflated;             // 变瘪人已被接触
-    float _lookAwayTimer;       // 顾映表情切换计时（N3）
-    Sprite[] _lookAwayFrames;   // 顾映 look-away 循环帧：[面无, 诡异微笑, 极度悲伤]
+    float _lookAwayTimer;       // 李东阳表情切换计时（N3）
+    Sprite[] _lookAwayFrames;   // 李东阳 look-away 循环帧：[面无, 诡异微笑, 极度悲伤]
     string[] _lookAwayExprs;    // 与 _lookAwayFrames 平行：每帧对应立绘表情后缀（null=neutral），供对话立绘同步
     int _lookAwayIndex;         // 当前表情帧下标
 
@@ -80,7 +80,7 @@ public class Npc : MonoBehaviour
         _activeSprite = _normalSprite;
         _activeScale = _baseScale;
 
-        // 顾映 look-away（N3）：加载三表情帧 [面无(base)/诡异微笑/极度悲伤]，缺图自动跳过
+        // 李东阳 look-away（N3）：加载三表情帧 [面无(base)/诡异微笑/极度悲伤]，缺图自动跳过
         if (kind == NpcKind.LookAway)
         {
             var s1 = GeneratedArt.GetCharacterVariantSprite(artFolder, "reveal_smile");
@@ -153,7 +153,7 @@ public class Npc : MonoBehaviour
         // 变瘪人（策划案）：场景里不做变身。破绽在【对话立绘】(袖口露出一小截变瘪的手) + 【对话】(表现抗拒肢体接触)。
         // 原"靠近整体塌成空衣服"是占位错图(通用成人西装)，已按策划案去掉；_deflated 保留但不再由场景触发。
 
-        // 顾映（look-away, N3）：镜头移开时在三表情间循环切换；对准取景框则定格「面无表情」(帧0)
+        // 李东阳（look-away, N3）：镜头移开时在三表情间循环切换；对准取景框则定格「面无表情」(帧0)
         if (kind == NpcKind.LookAway && !DebugControl.Frozen && !_deflated && !_revealedByPose &&
             _lookAwayFrames != null && _lookAwayFrames.Length > 1 &&
             gm != null && (gm.State == GameState.Playing || gm.State == GameState.Camera))
@@ -333,7 +333,7 @@ public class Npc : MonoBehaviour
 
     /// <summary>
     /// 该 NPC 当前应显示的【对话立绘表情后缀】（如 "reveal_smile"）；neutral/无变体返回 null。
-    /// 让对话立绘与场景棋子的露馅态同步：顾映按 look-away 当前表情帧返回，进对话时定格该帧。
+    /// 让对话立绘与场景棋子的露馅态同步：李东阳按 look-away 当前表情帧返回，进对话时定格该帧。
     /// </summary>
     public string PortraitExpression()
     {

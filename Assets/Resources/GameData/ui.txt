@@ -10,7 +10,7 @@ menu.quit	Quit	退出游戏
 menu.language	Language: {0}	语言：{0}
 credits.title	Credits	制作者名单
 credits.back	Back	返回
-credits.body	The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity	寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作
+credits.body	The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity\n\nAudio Credits\nMusic: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org\nUI Audio: Kenney / Kenney.nl	寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作\n\n音频署名\n音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org\n界面音效：Kenney / Kenney.nl
 briefing.title	Your Objective	你的目标
 briefing.body	Something is wrong at the company.\n\nHidden among your coworkers are <b>Refined Ones</b> — imposters wearing human skins. Each one has a subtle tell.Find them all — and don't get too close to the wrong one.	公司里有些不对劲。\n\n同事之中混进了<b>炼化人</b>——披着人皮的伪装者，每一个都有细微的破绽。找出全部炼化人——也别太靠近不该靠近的人。
 briefing.confirm	Got it — Start [Enter]	明白了，开始 [回车]

@@ -47,11 +47,11 @@ public class GameConfig : ScriptableObject
     [Header("时间点（策划 1.2/1.3）")]
     public int dialogueTimePoints = 3;   // 每完成一次对话 +N
     public int photoTimePoints = 1;      // 每次拍照 +M
-    public int deathThreshold = 90;      // 时间点到 X 触发死亡演出（超过第 3 stage 之后，策划 5.1）
+    public int deathThreshold = 150;     // 时间点到 X 触发死亡演出（超过第 3 stage 之后，策划 5.1）
 
     [Header("时间轴 stage（策划 1.3）")]
-    // 3 个调查 stage（遛狗/狗丢/真面目，对齐魏大爷 base/s2/s3），死亡在 deathThreshold：stage2=30 / stage3=60
-    public int[] stageThresholds = new int[] { 30, 60 };
+    // 3 个调查 stage（遛狗/狗丢/真面目，对齐魏大爷 base/s2/s3），每阶段 50：stage2=50 / stage3=100
+    public int[] stageThresholds = new int[] { 50, 100 };
 
     static GameConfig _instance;
 

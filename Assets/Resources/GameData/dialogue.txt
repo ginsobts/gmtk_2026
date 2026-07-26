@@ -110,11 +110,11 @@ han_c2	1	han_lu_neutral	Sorry — new policy, we nod instead of shaking hands. R
 han_c2	2	han_lu_neutral	Just tell me what you need — no need to hand things over. I'm… not really in a position to reach out.	你要办什么手续直接跟我说就行，不用递东西过来。我这边……不太方便伸手。
 han_c3	1	han_lu_reveal	No peace signs, no waving. …Why are you staring at my hands? Totally normal. Five fingers. Always five. You miscounted.	别比耶，也别挥手。……你干嘛一直盯着我的手看？很正常。五根。一直都是五根。你数错了。
 han_c3	2	han_lu_reveal	If you insist on a handshake I'll have to log you as a security incident. Front desk has its rules.	你要非跟我握手不可，我就只能把你登记成安全事件了。前台有前台的规矩。
-gu_c1	1	gu_ying_neutral	I'm Gu Ying, brand comms. Company image, social media, all of it.	我是顾映，品牌宣传部的。公司对外形象、社交媒体运营都是我负责。
+gu_c1	1	gu_ying_neutral	I'm Li Dongyang, brand comms. Company image, social media, all of it.	我是李东阳，品牌宣传部的。公司对外形象、社交媒体运营都是我负责。
 gu_c1	2	gu_ying_neutral	You're filming? Good. Let me know what you need.	你来拍纪录片的？好。有什么需要跟我说。
 gu_c2	1	gu_ying_reveal_sad	You're back… I'm sorry, I don't know why… I feel so sad. Can you… wait a moment…	你又来了……对不起，我不知道为什么……好难过。你能不能……等一下……
 gu_c2	2	gu_ying_reveal_sad	I'm fine. Really fine. Just suddenly… so, so sad. Can't explain it. Go ahead, I'll pull myself together.	我没事。真的没事。就是突然觉得……特别特别难过。说不上来为什么。你先走吧，我缓一缓。
-gu_c3	1	gu_ying_neutral	Hello. I'm Gu Ying, brand comms. How can I help you?	你好。我是顾映，品牌宣传部的。有什么可以帮你的吗？
+gu_c3	1	gu_ying_neutral	Hello. I'm Li Dongyang, brand comms. How can I help you?	你好。我是李东阳，品牌宣传部的。有什么可以帮你的吗？
 gu_c3	2	gu_ying_neutral	Huh? Last time? What last time? I don't remember. …Wrong person, maybe?	嗯？上次？什么上次？我不记得。……你是不是认错人了？
 gu_c4	1	gu_ying_reveal_smile	You know what — I'm in such a good mood today. Can't explain why. Everything feels great. You feel great too, right?	你知道吗——我今天心情特别好。也说不上来为什么。就是觉得什么都挺好的。你也觉得挺好的对吧？
 gu_c4	2	gu_ying_reveal_smile	Why that face? Smile. Look, I'm smiling. Can't stop smiling. That's good, right?	你怎么那个表情？笑一下嘛。你看我就在笑。一直在笑。停不下来。挺好的。

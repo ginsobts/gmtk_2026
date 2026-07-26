@@ -21,6 +21,10 @@ public class UIButtonFeedback : MonoBehaviour,
 
     public void OnPointerEnter(PointerEventData e) { if (_rt) _rt.localScale = _base * 1.05f; }
     public void OnPointerExit(PointerEventData e) { if (_rt) _rt.localScale = _base; }
-    public void OnPointerDown(PointerEventData e) { if (_rt) _rt.localScale = _base * 0.93f; }
+    public void OnPointerDown(PointerEventData e)
+    {
+        if (_rt) _rt.localScale = _base * 0.93f;
+        AudioManager.Instance?.PlaySfx("ui_click", 0.7f);
+    }
     public void OnPointerUp(PointerEventData e) { if (_rt) _rt.localScale = _base * 1.05f; }
 }

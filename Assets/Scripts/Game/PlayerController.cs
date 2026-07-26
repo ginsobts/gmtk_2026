@@ -23,6 +23,8 @@ public class PlayerController : MonoBehaviour
     public Sprite sideSprite;   // 侧：美术默认朝左（-X / A），向右走时水平翻转
 
     Npc _nearest;
+    float _footstepTimer;
+    int _footstepIndex;
 
     void Update()
     {
@@ -48,6 +50,7 @@ public class PlayerController : MonoBehaviour
         Vector3 dir = new Vector3(h, 0f, v);
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
+        Vector3 before = transform.position;
         Vector3 pos = transform.position + dir * moveSpeed * Time.deltaTime;
         pos.x = Mathf.Clamp(pos.x, -mapHalfX, mapHalfX);
         pos.z = Mathf.Clamp(pos.z, -mapHalfZ, mapHalfZ);
@@ -56,6 +59,21 @@ public class PlayerController : MonoBehaviour
         pos.x = Mathf.Clamp(pos.x, -mapHalfX, mapHalfX);
         pos.z = Mathf.Clamp(pos.z, -mapHalfZ, mapHalfZ);
         transform.position = pos;
+
+        bool actuallyMoving = dir.sqrMagnitude > 0.01f && (pos - before).sqrMagnitude > 0.000001f;
+        if (!actuallyMoving)
+        {
+            _footstepTimer = 0f; // 再次起步时立即响第一步
+            return;
+        }
+
+        _footstepTimer -= Time.deltaTime;
+        if (_footstepTimer <= 0f)
+        {
+            _footstepIndex = (_footstepIndex + Random.Range(1, 4)) % 4;
+            AudioManager.Instance?.PlaySfx("footstep" + (_footstepIndex + 1), 0.55f);
+            _footstepTimer = 0.38f;
+        }
     }
 
     /// <summary>按行进方向切换棋子朝向：纵向为主取 背/正，横向为主取 侧（默认朝左，向右翻转）。静止时保持。</summary>

@@ -46,7 +46,13 @@ public class AudioManager : MonoBehaviour
         if (_currentBgmKey == key && _bgm.isPlaying) return;
         _currentBgmKey = key;
         var clip = Load("BGM", key);
+        // 当前先接入一首通用的“平静但诡异”BGM。菜单与未单独配乐的调查阶段
+        // 自动回退到 phase1，避免切阶段后因为 phase2/phase3 缺文件而突然静音。
+        if (clip == null && (key == "menu" || (!string.IsNullOrEmpty(key) && key.StartsWith("phase"))))
+            clip = Load("BGM", "phase1");
         if (clip == null) { _bgm.Stop(); _bgm.clip = null; return; }
+        // 回退后若仍是同一首音乐，保持当前播放进度，不从头重播。
+        if (_bgm.isPlaying && _bgm.clip == clip) return;
         _bgm.clip = clip; _bgm.volume = bgmVolume; _bgm.Play();
     }
 
@@ -54,8 +60,12 @@ public class AudioManager : MonoBehaviour
 
     /// <summary>播放一次性音效；缺资源则静默。</summary>
     public void PlaySfx(string key)
+        => PlaySfx(key, 1f);
+
+    /// <summary>播放一次性音效，并允许调用方按类型调节相对音量。</summary>
+    public void PlaySfx(string key, float volumeScale)
     {
         var clip = Load("SFX", key);
-        if (clip != null) _sfx.PlayOneShot(clip, sfxVolume);
+        if (clip != null) _sfx.PlayOneShot(clip, sfxVolume * Mathf.Clamp01(volumeScale));
     }
 }

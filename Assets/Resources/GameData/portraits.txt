@@ -30,7 +30,7 @@ an_an_neutral	Portraits/an_an/neutral
 han_lu_neutral	Portraits/han_lu/neutral
 gu_ying_neutral	Portraits/gu_ying/neutral
 cheng_shu_neutral	Portraits/cheng_shu/neutral
-# 露馅变体立绘：顾映三表情由 Npc.PortraitExpression 活体选择(<charId>_<expr>)；女学生/韩露在各自破绽台词行(zhao_c3/han_c3)显式引用
+# 露馅变体立绘：李东阳三表情由 Npc.PortraitExpression 活体选择(<charId>_<expr>)；女学生/韩露在各自破绽台词行(zhao_c3/han_c3)显式引用
 gu_ying_reveal_smile	Portraits/gu_ying/reveal_smile
 gu_ying_reveal_sad	Portraits/gu_ying/reveal_sad
 shrink_girl_reveal	Portraits/shrink_girl/reveal
