@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum GameState { MainMenu, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
+public enum GameState { MainMenu, Briefing, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
 
 /// <summary>相册里的一张照片：截图 + 拍摄时处于取景框内的 NPC 名单。</summary>
 public class PhotoEntry
@@ -80,10 +80,20 @@ public class GameManager : MonoBehaviour
         UI.ShowMainMenu();
     }
 
-    /// <summary>点“开始游戏”。</summary>
+    /// <summary>点“开始游戏”：先展示目标说明，玩家确认后才进入场景。</summary>
     public void StartGame()
     {
         UI.HideMainMenu();
+        State = GameState.Briefing;
+        UI.SetHudVisible(false);
+        UI.ShowBriefing();
+    }
+
+    /// <summary>目标说明看完点“确认”：真正开始一局。</summary>
+    public void ConfirmBriefing()
+    {
+        if (State != GameState.Briefing) return;
+        UI.HideBriefing();
         StartRound();
     }
 
@@ -342,9 +352,10 @@ public class GameManager : MonoBehaviour
         rig.followLerp = cfg.cameraFollowLerp;
         camGO.transform.position = _player.position + rig.offset;
 
-        // 运行时调试面板（F1 呼出），仅在编辑器 / 开发包里挂载
+        // 运行时调试面板（F1 呼出）+ 摆位模式（F2 拖棋子），仅在编辑器 / 开发包里挂载
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         gameObject.AddComponent<DebugPanel>().Init(_mainCamera, rig);
+        gameObject.AddComponent<SceneArranger>().Init(_mainCamera);
 #endif
     }
 
@@ -362,10 +373,10 @@ public class GameManager : MonoBehaviour
         shadow.sprite = GeneratedArt.BlobShadowSprite;
         shadow.sortingOrder = 4;
 
-        // 呼吸浮动包装物（Npc 的位移/缩放逻辑作用在 Portrait 上，互不干扰）
+        // 立绘包装物（Npc 的位移/缩放逻辑作用在 Portrait 上，互不干扰）。
+        // 原来的 IdleBob 上下浮动已按需求去掉，棋子保持静止。
         var bob = new GameObject("Bob");
         bob.transform.SetParent(root.transform, false);
-        bob.AddComponent<IdleBob>();
 
         var portraitGO = new GameObject("Portrait");
         portraitGO.transform.SetParent(bob.transform, false);
@@ -418,10 +429,6 @@ public class GameManager : MonoBehaviour
         var chosen = new List<CharacterDef>(GameContent.Characters);
         var cfg = GameConfig.Instance;
 
-        // 场景里手摆的出生点（有则优先按它们摆，位置与朝向都用手摆的）。按名字排序保证稳定映射。
-        var spawnPoints = new List<NpcSpawnPoint>(Object.FindObjectsByType<NpcSpawnPoint>(FindObjectsSortMode.None));
-        spawnPoints.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
-
         for (int i = 0; i < chosen.Count; i++)
         {
             var def = chosen[i];
@@ -433,29 +440,37 @@ public class GameManager : MonoBehaviour
             var npc = go.AddComponent<Npc>();
             npc.Setup(def.DisplayLabel, def.charId, def.kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
 
-            if (i < spawnPoints.Count && spawnPoints[i] != null)
+            // 每个角色的固定坐标来自 spawns.txt（可用运行时 F2「摆位模式」调好再保存）。
+            // 没配到的角色回退到确定性网格（每局一致，不再随机）。
+            var spawn = GameContent.GetSpawn(def.charId);
+            if (spawn != null)
             {
-                var sp = spawnPoints[i];
-                go.transform.position = sp.transform.position;
-                npc.SetFacing(sp.ResolvedYaw, sp.faceCamera);
+                go.transform.position = new Vector3(spawn.x, 0f, spawn.z);
+                npc.SetFacing(spawn.yaw, spawn.faceCamera);
             }
             else
             {
-                go.transform.position = RandomGroundPos();
-                float yaw = cfg.npcDefaultYaw + (cfg.npcYawRandom > 0f ? Random.Range(-cfg.npcYawRandom, cfg.npcYawRandom) : 0f);
-                npc.SetFacing(yaw, true);
+                go.transform.position = FixedFallbackPos(i, chosen.Count);
+                npc.SetFacing(cfg.npcDefaultYaw, true);
             }
 
             Npcs.Add(npc);
         }
     }
 
-    Vector3 RandomGroundPos()
+    /// <summary>没有 spawns.txt 记录时的确定性布局（每局一致）：按索引在出生范围里铺成网格。</summary>
+    Vector3 FixedFallbackPos(int index, int count)
     {
         var cfg = GameConfig.Instance;
+        int cols = Mathf.Max(1, Mathf.CeilToInt(Mathf.Sqrt(count)));
+        int rows = Mathf.Max(1, Mathf.CeilToInt(count / (float)cols));
+        int col = index % cols;
+        int row = index / cols;
+        float tx = cols <= 1 ? 0.5f : col / (float)(cols - 1);
+        float tz = rows <= 1 ? 0.5f : row / (float)(rows - 1);
         return new Vector3(
-            Random.Range(cfg.spawnAreaX.x, cfg.spawnAreaX.y), 0f,
-            Random.Range(cfg.spawnAreaZ.x, cfg.spawnAreaZ.y));
+            Mathf.Lerp(cfg.spawnAreaX.x, cfg.spawnAreaX.y, tx), 0f,
+            Mathf.Lerp(cfg.spawnAreaZ.x, cfg.spawnAreaZ.y, tz));
     }
 
     static void Shuffle<T>(IList<T> list)
@@ -556,10 +571,20 @@ public class GameManager : MonoBehaviour
                 if (_creditsOpen && Input.GetKeyDown(KeyCode.Escape)) CloseCredits();
                 break;
 
+            case GameState.Briefing:
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+                    ConfirmBriefing();
+                else if (Input.GetKeyDown(KeyCode.Escape))
+                    EnterMainMenu();
+                break;
+
             case GameState.Playing:
                 if (Input.GetKeyDown(KeyCode.Space)) OpenCamera();
                 else if (Input.GetKeyDown(KeyCode.Tab)) OpenAlbum();
                 else if (Input.GetKeyDown(KeyCode.M)) OpenMarkList();
+                else if (Input.GetKeyDown(KeyCode.E)) TalkNearest();
+                else if (Input.GetKeyDown(KeyCode.Q)) ViewNearestPhotos();
+                else if (Input.GetKeyDown(KeyCode.F)) ToggleMarkNearest();
                 break;
 
             case GameState.Camera:
@@ -808,7 +833,7 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Playing) return;
         State = GameState.Album;
         UI.SetHudVisible(false);
-        UI.ShowAlbum(Album, Loc.Format("album.titleAll", Album.Count), allowAccuse: true);
+        UI.ShowAlbum(Album, Loc.Format("album.titleAll", Album.Count));
     }
 
     /// <summary>查看某个角色出现过的照片（靠近该角色时触发）。</summary>

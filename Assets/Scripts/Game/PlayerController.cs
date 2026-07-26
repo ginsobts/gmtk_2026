@@ -35,13 +35,8 @@ public class PlayerController : MonoBehaviour
 
         if (!playing) return;   // Death：只能逃，不做最近 NPC 查找 / 交互
         FindNearestNpc();
-
-        if (_nearest != null)
-        {
-            if (Input.GetKeyDown(KeyCode.E)) gm.BeginDialogue(_nearest);
-            else if (Input.GetKeyDown(KeyCode.Q)) gm.ViewCharacterPhotos(_nearest);
-            else if (Input.GetKeyDown(KeyCode.F)) gm.ToggleMark(_nearest);
-        }
+        // 交互热键 E/Q/F 统一在 GameManager.Update 的 Playing 分支处理，
+        // 避免与相册等状态在同一帧内互相触发（例如按 Q 关闭又被立刻重新打开）。
     }
 
     void HandleMovement(float h, float v)

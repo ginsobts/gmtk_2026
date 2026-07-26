@@ -18,9 +18,10 @@ public class UIManager : MonoBehaviour
     // 本地化：登记所有静态文案（Text, key），语言切换时统一重刷
     readonly List<(Text text, string key)> _locStatic = new List<(Text, string)>();
 
-    // 主菜单 / 制作者名单
+    // 主菜单 / 制作者名单 / 开场目标说明
     GameObject _menuRoot;
     GameObject _creditsRoot;
+    GameObject _briefingRoot;
     Text _menuLangLabel;
 
     // HUD
@@ -83,11 +84,7 @@ public class UIManager : MonoBehaviour
     readonly List<GameObject> _albumDynamic = new List<GameObject>();
     List<PhotoEntry> _albumEntries;
     int _selectedPhoto = -1;
-    // 相册指认（策划 1.4：勾选照片后点指认）
-    bool _albumAllowAccuse;
-    readonly HashSet<int> _photoSelected = new HashSet<int>();
     readonly List<RawImage> _thumbImages = new List<RawImage>();
-    GameObject _albumAccuseBtn;
 
     // 结算
     GameObject _resultRoot;
@@ -140,6 +137,7 @@ public class UIManager : MonoBehaviour
         BuildToast();
         BuildMainMenu();
         BuildCredits();
+        BuildBriefing();
         BuildFadeOverlay();
 
         Loc.OnChanged += Relocalize;
@@ -220,6 +218,41 @@ public class UIManager : MonoBehaviour
     public void HideCredits()
     {
         if (_creditsRoot != null) _creditsRoot.SetActive(false);
+    }
+
+    // ---------------- 开场目标说明 ----------------
+
+    void BuildBriefing()
+    {
+        _briefingRoot = MakePanel(_canvas.transform, "Briefing", new Color(0.04f, 0.05f, 0.09f, 0.98f));
+        SetRect(_briefingRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+        var title = MakeLocText(_briefingRoot.transform, "BTitle", "briefing.title", 64, TextAnchor.UpperCenter);
+        SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -90), new Vector2(1400, 90));
+        title.color = new Color(1f, 0.9f, 0.55f);
+
+        var body = MakeLocText(_briefingRoot.transform, "BBody", "briefing.body", 30, TextAnchor.UpperLeft);
+        SetRect(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(1120, 620));
+        body.color = new Color(0.9f, 0.93f, 1f);
+        body.lineSpacing = 1.15f;
+
+        MakeButton(_briefingRoot.transform, "briefing.confirm", 32, () => GameManager.Instance.ConfirmBriefing(),
+            new Vector2(0.5f, 0), new Vector2(0, 80), new Vector2(460, 92));
+
+        _briefingRoot.SetActive(false);
+    }
+
+    public void ShowBriefing()
+    {
+        if (_briefingRoot == null) return;
+        _briefingRoot.SetActive(true);
+        _briefingRoot.transform.SetAsLastSibling();   // 盖在其它面板之上
+        PlayShow(_briefingRoot);
+    }
+
+    public void HideBriefing()
+    {
+        if (_briefingRoot != null) _briefingRoot.SetActive(false);
     }
 
     void BuildFadeOverlay()
@@ -339,25 +372,30 @@ public class UIManager : MonoBehaviour
     {
         _dialogueRoot = MakePanel(_canvas.transform, "Dialogue", new Color(0.06f, 0.07f, 0.1f, 0.94f));
         SetRect(_dialogueRoot.GetComponent<RectTransform>(), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-            new Vector2(0, 200), new Vector2(1200, 300));
+            new Vector2(0, 40), new Vector2(1200, 300));
 
-        // 对话立绘（左侧，来自 wxc 的 PortraitArt；缺图自动隐藏）
-        _dialoguePortraitRoot = new GameObject("Portrait", typeof(RectTransform));
-        _dialoguePortraitRoot.transform.SetParent(_dialogueRoot.transform, false);
+        // 对话立绘：放大到屏幕左下角、并挂在「对话框后面」（作为 Canvas 子物体，sibling 排在对话框之前 → 渲染在其下层）。
+        // 尺寸随立绘长宽比在 ShowDialogue 里按固定高度贴底计算，脚踩屏幕底边。
+        _dialoguePortraitRoot = new GameObject("DialoguePortrait", typeof(RectTransform));
+        _dialoguePortraitRoot.transform.SetParent(_canvas.transform, false);
         SetRect(_dialoguePortraitRoot.GetComponent<RectTransform>(),
-            new Vector2(0, 0), new Vector2(0, 1), new Vector2(0, 0.5f),
-            new Vector2(20, 10), new Vector2(200, 280));
+            new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0),
+            new Vector2(96, 0), new Vector2(460, 660));
         _dialoguePortrait = _dialoguePortraitRoot.AddComponent<Image>();
         _dialoguePortrait.preserveAspect = true;
+        _dialoguePortrait.raycastTarget = false;
         _dialoguePortrait.color = Color.white;
         _dialoguePortraitRoot.SetActive(false);
+        // 渲染顺序：紧跟在对话框之后，使立绘始终盖在对话框前面
+        _dialoguePortraitRoot.transform.SetSiblingIndex(_dialogueRoot.transform.GetSiblingIndex() + 1);
 
         _dialogueName = MakeText(_dialogueRoot.transform, "DName", "", 36, TextAnchor.UpperLeft);
-        SetRect(_dialogueName.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 1), new Vector2(240, -24), new Vector2(600, 50));
+        SetRect(_dialogueName.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(240, -20), new Vector2(720, 46));
         _dialogueName.color = new Color(1f, 0.85f, 0.5f);
 
+        // 台词框：从立绘右侧起，固定宽度并自动换行，右侧留边，避免超框。
         _dialogueLine = MakeText(_dialogueRoot.transform, "DLine", "", 32, TextAnchor.UpperLeft);
-        SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(240, -90), new Vector2(-80, 120));
+        SetRect(_dialogueLine.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(240, -80), new Vector2(900, 170));
 
         MakeButton(_dialogueRoot.transform, "dlg.next", 30, () => GameManager.Instance.DialogueNext(),
             new Vector2(1, 0), new Vector2(-150, 50), new Vector2(220, 66));
@@ -523,30 +561,28 @@ public class UIManager : MonoBehaviour
         _thumbRow = thumbGO.transform;
         SetRect(thumbGO.GetComponent<RectTransform>(), new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, -92), new Vector2(-80, 130));
 
-        // 固定尺寸的照片框；照片用 AspectRatioFitter 按真实宽高比适配（所见即所拍，不拉伸）
+        // 固定尺寸的照片框（略偏左，右侧留出名单栏）；照片用 AspectRatioFitter 按真实宽高比适配。
         var frameGO = MakePanel(_albumRoot.transform, "PhotoFrame", new Color(0.02f, 0.02f, 0.03f, 1f));
-        SetRect(frameGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(1180, 620));
+        SetRect(frameGO.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-180, 10), new Vector2(1000, 620));
 
         _albumBigImage = MakeRawImage(frameGO.transform, "BigPhoto",
-            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 620));
+            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 620));
         _albumBigImage.color = Color.white;
         _albumFitter = _albumBigImage.gameObject.AddComponent<AspectRatioFitter>();
         _albumFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
         _albumFitter.aspectRatio = _vfW / _vfH;
 
-        _albumCaption = MakeText(_albumRoot.transform, "ACaption", "", 26, TextAnchor.UpperCenter);
-        SetRect(_albumCaption.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 118), new Vector2(1180, 44));
+        // 名单栏：显示当前照片里都有谁（在照片右侧，竖排）
+        _albumCaption = MakeText(_albumRoot.transform, "ACaption", "", 26, TextAnchor.UpperLeft);
+        SetRect(_albumCaption.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 1), new Vector2(400, 310), new Vector2(400, 620));
         _albumCaption.color = new Color(0.8f, 0.9f, 1f);
 
+        // 空相册提示（居中）
         _albumHint = MakeText(_albumRoot.transform, "AHint", "", 30, TextAnchor.MiddleCenter);
         SetRect(_albumHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 80));
 
-        _albumAccuseBtn = MakeButton(_albumRoot.transform, "album.accuse", 30, () => AccuseSelected(),
-            new Vector2(0.5f, 0), new Vector2(-230, 40), new Vector2(340, 70)).gameObject;
-        SetButtonColor(_albumAccuseBtn.GetComponent<Button>(), new Color(0.75f, 0.3f, 0.3f));
-
         MakeButton(_albumRoot.transform, "album.close", 30, () => GameManager.Instance.CloseAlbum(),
-            new Vector2(0.5f, 0), new Vector2(230, 40), new Vector2(280, 70));
+            new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(280, 70));
 
         _albumRoot.SetActive(false);
     }
@@ -803,7 +839,16 @@ public class UIManager : MonoBehaviour
         {
             bool show = portrait != null;
             _dialoguePortraitRoot.SetActive(show);
-            if (show) _dialoguePortrait.sprite = portrait;
+            if (show)
+            {
+                _dialoguePortrait.sprite = portrait;
+                // 统一贴底高度，宽度按长宽比推导；pivot 在左下角 → 脚踩屏幕底边
+                const float targetH = 660f;
+                float ratio = portrait.rect.height > 0.01f ? portrait.rect.width / portrait.rect.height : 0.6f;
+                _dialoguePortrait.rectTransform.sizeDelta = new Vector2(targetH * ratio, targetH);
+                // 始终紧跟在对话框之后 → 立绘稳定盖在对话框前面（不再随「继续」翻转层级）
+                _dialoguePortraitRoot.transform.SetSiblingIndex(_dialogueRoot.transform.GetSiblingIndex() + 1);
+            }
         }
         if (!wasActive) PlayShow(_dialogueRoot);
     }
@@ -811,6 +856,7 @@ public class UIManager : MonoBehaviour
     public void HideDialogue()
     {
         if (_dialogueRoot != null) _dialogueRoot.SetActive(false);
+        if (_dialoguePortraitRoot != null) _dialoguePortraitRoot.SetActive(false);
     }
 
     // ---------------- 相机 ----------------
@@ -903,11 +949,9 @@ public class UIManager : MonoBehaviour
     // ---------------- 相册 ----------------
 
     /// <summary>显示一组照片（title 用于区分“全部照片 / 某角色的照片”）。纯查看，不再在此指认。</summary>
-    public void ShowAlbum(List<PhotoEntry> entries, string title, bool allowAccuse = false)
+    public void ShowAlbum(List<PhotoEntry> entries, string title)
     {
         _albumEntries = entries;
-        _albumAllowAccuse = allowAccuse;
-        _photoSelected.Clear();
         _thumbImages.Clear();
         _albumRoot.SetActive(true);
         PlayShow(_albumRoot);
@@ -915,8 +959,6 @@ public class UIManager : MonoBehaviour
         ClearAlbumDynamic();
 
         bool hasPhotos = entries != null && entries.Count > 0;
-        if (_albumAccuseBtn != null) _albumAccuseBtn.SetActive(allowAccuse && hasPhotos);
-
         if (!hasPhotos)
         {
             _selectedPhoto = -1;
@@ -926,7 +968,7 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        _albumHint.text = allowAccuse ? Loc.Get("album.accuseHint") : "";
+        _albumHint.text = "";
         _albumBigImage.gameObject.SetActive(true);
 
         for (int i = 0; i < entries.Count; i++)
@@ -937,44 +979,12 @@ public class UIManager : MonoBehaviour
             thumb.texture = entries[i].image;
             thumb.color = Color.white;
             var btn = thumb.gameObject.AddComponent<Button>();
-            if (allowAccuse) btn.onClick.AddListener(() => ToggleSelect(index));
-            else btn.onClick.AddListener(() => SelectPhoto(index));
+            btn.onClick.AddListener(() => SelectPhoto(index));
             _thumbImages.Add(thumb);
             _albumDynamic.Add(thumb.gameObject);
         }
 
         SelectPhoto(entries.Count - 1);
-        RefreshThumbHighlight();
-    }
-
-    /// <summary>指认模式下勾选/取消勾选一张照片，并显示其大图。</summary>
-    void ToggleSelect(int index)
-    {
-        if (_photoSelected.Contains(index)) _photoSelected.Remove(index);
-        else _photoSelected.Add(index);
-        RefreshThumbHighlight();
-        SelectPhoto(index);
-    }
-
-    /// <summary>刷新缩略图勾选态：选中=绿，未选=白。</summary>
-    void RefreshThumbHighlight()
-    {
-        for (int i = 0; i < _thumbImages.Count; i++)
-        {
-            if (_thumbImages[i] == null) continue;
-            _thumbImages[i].color = (_albumAllowAccuse && _photoSelected.Contains(i))
-                ? new Color(0.5f, 1f, 0.55f) : Color.white;
-        }
-    }
-
-    /// <summary>点「指认」：收集勾选的照片交给 GameManager 判定。</summary>
-    void AccuseSelected()
-    {
-        var sel = new List<PhotoEntry>();
-        if (_albumEntries != null)
-            foreach (int i in _photoSelected)
-                if (i >= 0 && i < _albumEntries.Count) sel.Add(_albumEntries[i]);
-        GameManager.Instance.AccuseWithPhotos(sel);
     }
 
     void SelectPhoto(int index)
@@ -987,9 +997,12 @@ public class UIManager : MonoBehaviour
         if (entry.image != null && entry.image.height > 0)
             _albumFitter.aspectRatio = entry.image.width / (float)entry.image.height;
 
+        // 名单竖排显示在照片右侧：标题 + 每人一行
         var names = new List<string>();
         foreach (var n in entry.framed) if (n != null) names.Add(n.npcName);
-        _albumCaption.text = names.Count > 0 ? Loc.Format("album.inphoto", string.Join(Sep, names)) : "";
+        _albumCaption.text = names.Count > 0
+            ? Loc.Format("album.inphoto", "\n" + string.Join("\n", names))
+            : Loc.Get("album.inphotoNone");
     }
 
     void ClearAlbumDynamic()
@@ -1096,6 +1109,7 @@ public class UIManager : MonoBehaviour
         if (_interactRoot != null) _interactRoot.SetActive(false);
         if (_menuRoot != null) _menuRoot.SetActive(false);
         if (_creditsRoot != null) _creditsRoot.SetActive(false);
+        if (_briefingRoot != null) _briefingRoot.SetActive(false);
     }
 
     public void ShowToast(string msg, bool positive)
