@@ -44,6 +44,7 @@ public class Npc : MonoBehaviour
 
     // 头顶标记 / 靠近提示
     SpriteRenderer _marker;
+    SpriteRenderer _feetRing;   // 脚下半透明白圈：提示"当前可交互的就是这个人"
     bool _nearest;
     float _pulseT;
     float _markerPhase;
@@ -95,6 +96,7 @@ public class Npc : MonoBehaviour
         }
 
         EnsureMarker();
+        EnsureFeetRing();
         _markerPhase = Random.value * Mathf.PI * 2f;
         RefreshColor();
     }
@@ -108,6 +110,21 @@ public class Npc : MonoBehaviour
         _marker.sortingOrder = 20;
         go.AddComponent<CameraFacingSprite>();
         _marker.enabled = false;
+    }
+
+    void EnsureFeetRing()
+    {
+        if (_feetRing != null) return;
+        var go = new GameObject("FeetRing");
+        go.transform.SetParent(transform, false);
+        // 平铺在地面上（法线朝上），2.5D 斜视角下自然呈椭圆，像地面上的光圈
+        go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        go.transform.localPosition = new Vector3(0f, 0.03f, 0f);   // 略高于脚下阴影，避免被盖住
+        _feetRing = go.AddComponent<SpriteRenderer>();
+        _feetRing.sprite = GeneratedArt.RingSprite;
+        _feetRing.color = new Color(1f, 1f, 1f, 0.5f);
+        _feetRing.sortingOrder = 5;   // 在脚下阴影(4)之上、角色身体之下
+        _feetRing.enabled = false;
     }
 
     void Update()
@@ -165,6 +182,7 @@ public class Npc : MonoBehaviour
         }
 
         UpdateMarker();
+        UpdateFeetRing();
         UpdateLabel();
     }
 
@@ -174,21 +192,14 @@ public class Npc : MonoBehaviour
         var gm = GameManager.Instance;
         bool playing = gm == null || gm.State == GameState.Playing;
 
-        // 相机/对话/结算态一律隐藏，避免出现在照片里。
-        bool show = playing && (marked || _nearest);
+        // 头顶标记只表示"已指认"。相机/对话/结算态一律隐藏，避免出现在照片里。
+        // "当前可交互"改用脚下白圈提示（见 UpdateFeetRing）。
+        bool show = playing && marked;
         if (_marker.enabled != show) _marker.enabled = show;
         if (!show) return;
 
-        if (marked)
-        {
-            _marker.sprite = GeneratedArt.SoftDotSprite;
-            _marker.color = new Color(1f, 0.12f, 0.1f, 1f);   // 更红更醒目
-        }
-        else
-        {
-            _marker.sprite = GeneratedArt.DownArrowSprite;
-            _marker.color = new Color(0.9f, 1f, 1f, 0.95f);
-        }
+        _marker.sprite = GeneratedArt.SoftDotSprite;
+        _marker.color = new Color(1f, 0.12f, 0.1f, 1f);   // 更红更醒目
 
         // 头顶定位 + 上下浮动
         float bob = Mathf.Sin(Time.unscaledTime * 3.2f + _markerPhase) * 0.1f;
@@ -198,10 +209,29 @@ public class Npc : MonoBehaviour
         if (_pulseT > 0f) _pulseT -= Time.unscaledDeltaTime;
         float pulse = Mathf.Max(0f, _pulseT) / 0.3f;
         // 标记态：更大 + 持续呼吸；点击瞬间再额外弹一下
-        float baseSize = marked ? 0.62f : 0.32f;
-        float breathe = marked ? (1f + 0.16f * Mathf.Sin(Time.unscaledTime * 4.2f + _markerPhase)) : 1f;
-        float s = baseSize * breathe * (1f + 0.6f * pulse);
+        float breathe = 1f + 0.16f * Mathf.Sin(Time.unscaledTime * 4.2f + _markerPhase);
+        float s = 0.62f * breathe * (1f + 0.6f * pulse);
         _marker.transform.localScale = Vector3.one * s;
+    }
+
+    void UpdateFeetRing()
+    {
+        if (_feetRing == null) return;
+        var gm = GameManager.Instance;
+        // 仅在探索态、且是"当前最近可交互"的 NPC 时显示脚下白圈
+        bool show = (gm == null || gm.State == GameState.Playing) && _nearest;
+        if (_feetRing.enabled != show) _feetRing.enabled = show;
+        if (!show) return;
+
+        // 圈的大小按角色实际脚下宽度自适应（root 缩放为 1，RingSprite 在 localScale=1 时世界直径约 1.28）
+        float footW = _renderer != null ? _renderer.bounds.size.x : 1f;
+        float diameter = Mathf.Clamp(footW * 1.35f, 0.7f, 2.2f);
+        float baseScale = diameter / 1.28f;
+
+        // 轻微呼吸（透明度 + 尺寸），让它更像"提示光圈"
+        float t = Time.unscaledTime * 3f + _markerPhase;
+        _feetRing.color = new Color(1f, 1f, 1f, 0.42f + 0.18f * (0.5f + 0.5f * Mathf.Sin(t)));
+        _feetRing.transform.localScale = Vector3.one * baseScale * (1f + 0.05f * Mathf.Sin(t));
     }
 
     public void SetMarked(bool value)

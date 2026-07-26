@@ -8,15 +8,17 @@ using UnityEngine;
 ///
 /// 用法：
 ///   F2   进入 / 退出摆位模式（进入时会冻结场景，棋子不再抖动）
-///   左键 在棋子附近按下并拖动 = 把该棋子挪到落点
-///   保存 点面板上的按钮，把当前所有棋子位置写回 Assets/Resources/GameData/spawns.txt
+///   左键 在棋子附近按下并拖动 = 把该棋子挪到落点（NPC 和「玩家」都能拖）
+///   保存 点面板上的按钮，把当前所有 NPC 位置写回 spawns.txt；玩家出生点写回 GameConfig（仅基准）
 /// </summary>
 public class SceneArranger : MonoBehaviour
 {
     Camera _cam;
     bool _active;
     bool _prevFrozen;
-    Npc _dragging;
+    Npc _draggingNpc;
+    bool _draggingPlayer;
+    Transform _player;
     string _status = "";
     int _savePhase = 1;   // 1 = 基准(spawns.txt)；>=2 = 该阶段(phase_spawns.txt)
     readonly Plane _ground = new Plane(Vector3.up, Vector3.zero);
@@ -32,42 +34,72 @@ public class SceneArranger : MonoBehaviour
 
         // 鼠标在面板区域内时不拖棋子，避免和「保存」按钮冲突
         Vector2 gui = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-        if (_panelRect.Contains(gui)) { if (Input.GetMouseButtonUp(0)) _dragging = null; return; }
+        if (_panelRect.Contains(gui)) { if (Input.GetMouseButtonUp(0)) ClearDrag(); return; }
 
-        if (Input.GetMouseButtonDown(0)) _dragging = PickNpc();
-        if (Input.GetMouseButtonUp(0)) _dragging = null;
+        if (Input.GetMouseButtonDown(0)) Pick();
+        if (Input.GetMouseButtonUp(0)) ClearDrag();
 
-        if (_dragging != null && Input.GetMouseButton(0) && TryGround(out var p))
+        if ((_draggingNpc != null || _draggingPlayer) && Input.GetMouseButton(0) && TryGround(out var p))
         {
             var cfg = GameConfig.Instance;
-            p.x = Mathf.Clamp(p.x, cfg.spawnAreaX.x, cfg.spawnAreaX.y);
-            p.z = Mathf.Clamp(p.z, cfg.spawnAreaZ.x, cfg.spawnAreaZ.y);
-            _dragging.transform.position = new Vector3(p.x, 0f, p.z);
+            if (_draggingPlayer)
+            {
+                // 玩家夹到空气墙范围内
+                p.x = Mathf.Clamp(p.x, -cfg.mapHalfX, cfg.mapHalfX);
+                p.z = Mathf.Clamp(p.z, -cfg.mapHalfZ, cfg.mapHalfZ);
+                var pl = Player();
+                if (pl != null) pl.position = new Vector3(p.x, 0f, p.z);
+            }
+            else
+            {
+                p.x = Mathf.Clamp(p.x, cfg.spawnAreaX.x, cfg.spawnAreaX.y);
+                p.z = Mathf.Clamp(p.z, cfg.spawnAreaZ.x, cfg.spawnAreaZ.y);
+                _draggingNpc.transform.position = new Vector3(p.x, 0f, p.z);
+            }
         }
     }
+
+    void ClearDrag() { _draggingNpc = null; _draggingPlayer = false; }
 
     void Toggle()
     {
         _active = !_active;
         if (_active) { _prevFrozen = DebugControl.Frozen; DebugControl.Frozen = true; }
-        else { DebugControl.Frozen = _prevFrozen; _dragging = null; }
+        else { DebugControl.Frozen = _prevFrozen; ClearDrag(); }
     }
 
-    Npc PickNpc()
+    Transform Player()
     {
-        if (!TryGround(out var p)) return null;
+        if (_player == null)
+        {
+            var pc = Object.FindFirstObjectByType<PlayerController>();
+            if (pc != null) _player = pc.transform;
+        }
+        return _player;
+    }
+
+    /// <summary>在落点附近选中最近的棋子（NPC 或玩家）。</summary>
+    void Pick()
+    {
+        ClearDrag();
+        if (!TryGround(out var p)) return;
         var gm = GameManager.Instance;
-        if (gm == null) return null;
-        Npc best = null;
+        if (gm == null) return;
         float bestDist = PickRadius * PickRadius;
         foreach (var n in gm.Npcs)
         {
             if (n == null) continue;
             Vector3 d = n.transform.position - p; d.y = 0f;
             float sq = d.sqrMagnitude;
-            if (sq < bestDist) { bestDist = sq; best = n; }
+            if (sq < bestDist) { bestDist = sq; _draggingNpc = n; _draggingPlayer = false; }
         }
-        return best;
+        var pl = Player();
+        if (pl != null)
+        {
+            Vector3 d = pl.position - p; d.y = 0f;
+            float sq = d.sqrMagnitude;
+            if (sq < bestDist) { bestDist = sq; _draggingNpc = null; _draggingPlayer = true; }
+        }
     }
 
     bool TryGround(out Vector3 point)
@@ -88,8 +120,9 @@ public class SceneArranger : MonoBehaviour
 
     void DrawPanel(int id)
     {
-        GUILayout.Label("左键在棋子附近按住并拖动 = 挪动该棋子");
-        GUILayout.Label(_dragging != null ? "拖动中：" + _dragging.name : "未选中棋子");
+        GUILayout.Label("左键在棋子附近按住并拖动 = 挪动该棋子（含玩家）");
+        string sel = _draggingPlayer ? "玩家" : (_draggingNpc != null ? _draggingNpc.name : null);
+        GUILayout.Label(sel != null ? "拖动中：" + sel : "未选中棋子");
         GUILayout.Space(4);
 
         GUILayout.BeginHorizontal();
@@ -119,6 +152,12 @@ public class SceneArranger : MonoBehaviour
             n.SetFacing(s.yaw, s.faceCamera);
             moved++;
         }
+        // 玩家没有分阶段，只在基准时把它摆到 GameConfig 里的起点
+        if (phase <= 1)
+        {
+            var pl = Player();
+            if (pl != null) pl.position = GameConfig.Instance.playerStart;
+        }
         _status = $"已载入 {moved} 个棋子（{(phase <= 1 ? "基准" : "阶段" + phase)}）";
     }
 
@@ -146,6 +185,35 @@ public class SceneArranger : MonoBehaviour
             sb.AppendLine($"{n.charId}\t{pos.x:0.##}\t{pos.z:0.##}\t{yaw:0.##}\t{(face ? 1 : 0)}");
         }
         WriteFile("spawns.txt", sb.ToString());
+        SavePlayerStart();   // 玩家出生点随基准一起保存（写回 GameConfig）
+    }
+
+    /// <summary>把当前玩家棋子的位置写回 GameConfig.playerStart（仅编辑器持久化）。</summary>
+    void SavePlayerStart()
+    {
+        var pl = Player();
+        if (pl == null) return;
+        Vector3 pos = pl.position;
+#if UNITY_EDITOR
+        var cfg = GameConfig.Instance;
+        string path = "Assets/Resources/GameData/GameConfig.asset";
+        if (!UnityEditor.AssetDatabase.Contains(cfg))
+        {
+            System.IO.Directory.CreateDirectory("Assets/Resources/GameData");
+            var asset = ScriptableObject.CreateInstance<GameConfig>();
+            UnityEditor.AssetDatabase.CreateAsset(asset, path);
+            cfg = asset; GameConfig.SetInstance(cfg);
+        }
+        cfg.playerStart = new Vector3(pos.x, 0f, pos.z);
+        UnityEditor.EditorUtility.SetDirty(cfg);
+        UnityEditor.AssetDatabase.SaveAssets();
+        _status += "；玩家出生点→GameConfig";
+        if (Object.FindFirstObjectByType<PlayerSpawnPoint>() != null)
+            _status += "（注意：场景里有 PlayerSpawn 物体会覆盖它）";
+        Debug.Log($"[SceneArranger] 玩家出生点已写回 GameConfig: {cfg.playerStart}");
+#else
+        Debug.Log($"[SceneArranger] 玩家出生点(仅编辑器可写盘): {pos}");
+#endif
     }
 
     /// <summary>写 phase_spawns.txt 里「本阶段」的行，保留其它阶段已有的行。</summary>

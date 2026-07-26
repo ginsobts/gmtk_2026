@@ -6,12 +6,12 @@ lin_cai	-4.6	11.54	0	1
 wang_jianguo	2.2	5.49	0	1
 chen_wei	-1.69	13	0	1
 su_qing	-8.47	10	0	1
-shrink_girl	12.17	-0.19	0	1
+shrink_girl	12.8	4.87	0	1
 fang_xiao	-1.59	6.79	0	1
-wu_ang	8.85	-7.1	0	1
+wu_ang	11.51	-3.64	0	1
 lu_yuan	7.93	4.19	0	1
 wei_daye	8.92	13	0	1
 an_an	-2.24	-4.56	0	1
 han_lu	5.12	9.98	0	1
-gu_ying	5.43	-9.41	0	1
+gu_ying	7.03	-4.82	0	1
 cheng_shu	1.36	-1.49	0	1
