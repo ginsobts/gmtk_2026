@@ -86,3 +86,5 @@ uncle_p1	2	uncle_normal	This mutt's behaved better than most interns.	这狗比�
 uncle_p2	1	uncle_anxious	The leash is empty! Where did it go?!	绳子上空了！狗去哪儿了？！
 uncle_p2	2	uncle_anxious	You work here — you must've seen a dog pass by!	你在公司里上班，肯定看见有狗跑过去了吧？
 uncle_p3	1	uncle_horror	Hsssh... hsssh...	斯哈……斯哈……
+lin_branch_probe	1	doubao_glitch	(placeholder) Efficiency reform means... optimizing... human resources. Please rephrase your query.	（占位）效率改革，是指……优化……人力资源。请换一种提问方式。
+lin_branch_probe	2	doubao_calm	(placeholder) This concludes the available information. Thank you.	（占位）以上是可提供的全部信息，谢谢。

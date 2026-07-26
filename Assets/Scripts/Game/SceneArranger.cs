@@ -18,6 +18,7 @@ public class SceneArranger : MonoBehaviour
     bool _prevFrozen;
     Npc _dragging;
     string _status = "";
+    int _savePhase = 1;   // 1 = 基准(spawns.txt)；>=2 = 该阶段(phase_spawns.txt)
     readonly Plane _ground = new Plane(Vector3.up, Vector3.zero);
 
     const float PickRadius = 2.8f;
@@ -77,7 +78,7 @@ public class SceneArranger : MonoBehaviour
         return false;
     }
 
-    Rect _panelRect = new Rect(12, 12, 340, 150);
+    Rect _panelRect = new Rect(12, 12, 360, 220);
 
     void OnGUI()
     {
@@ -90,16 +91,48 @@ public class SceneArranger : MonoBehaviour
         GUILayout.Label("左键在棋子附近按住并拖动 = 挪动该棋子");
         GUILayout.Label(_dragging != null ? "拖动中：" + _dragging.name : "未选中棋子");
         GUILayout.Space(4);
-        if (GUILayout.Button("保存位置到 spawns.txt")) Save();
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(_savePhase <= 1 ? "目标：基准(全阶段默认)" : "目标：阶段 " + _savePhase);
+        if (GUILayout.Button("-", GUILayout.Width(28))) _savePhase = Mathf.Max(1, _savePhase - 1);
+        if (GUILayout.Button("+", GUILayout.Width(28))) _savePhase = Mathf.Min(9, _savePhase + 1);
+        GUILayout.EndHorizontal();
+
+        if (GUILayout.Button("载入该目标已存位置")) LoadIntoScene(_savePhase);
+        if (GUILayout.Button(_savePhase <= 1 ? "保存到 spawns.txt(基准)" : $"保存到 phase_spawns.txt(阶段{_savePhase})")) Save(_savePhase);
         if (!string.IsNullOrEmpty(_status)) GUILayout.Label(_status);
         GUI.DragWindow();
     }
 
-    void Save()
+    /// <summary>把某目标(基准/某阶段)已存的坐标载入到当前棋子上，方便对着编辑。</summary>
+    void LoadIntoScene(int phase)
+    {
+        var gm = GameManager.Instance;
+        if (gm == null) return;
+        int moved = 0;
+        foreach (var n in gm.Npcs)
+        {
+            if (n == null || string.IsNullOrEmpty(n.charId)) continue;
+            var s = phase <= 1 ? GameContent.GetSpawn(n.charId) : GameContent.GetPhaseSpawn(n.charId, phase);
+            if (s == null) continue;
+            n.transform.position = new Vector3(s.x, 0f, s.z);
+            n.SetFacing(s.yaw, s.faceCamera);
+            moved++;
+        }
+        _status = $"已载入 {moved} 个棋子（{(phase <= 1 ? "基准" : "阶段" + phase)}）";
+    }
+
+    void Save(int phase)
     {
         var gm = GameManager.Instance;
         if (gm == null) { _status = "没有 GameManager"; return; }
 
+        if (phase <= 1) SaveBase(gm);
+        else SavePhase(gm, phase);
+    }
+
+    void SaveBase(GameManager gm)
+    {
         var sb = new StringBuilder();
         sb.AppendLine("# 固定出生点（Tab 分隔）。每个角色一行，坐标为世界坐标(x,z)，y 恒为 0。");
         sb.AppendLine("# yaw：绕世界 Y 的朝向（度）；faceCamera=1 时始终正对相机(billboard)，yaw 被忽略。");
@@ -112,16 +145,55 @@ public class SceneArranger : MonoBehaviour
             n.TryGetFacing(out float yaw, out bool face);
             sb.AppendLine($"{n.charId}\t{pos.x:0.##}\t{pos.z:0.##}\t{yaw:0.##}\t{(face ? 1 : 0)}");
         }
+        WriteFile("spawns.txt", sb.ToString());
+    }
 
+    /// <summary>写 phase_spawns.txt 里「本阶段」的行，保留其它阶段已有的行。</summary>
+    void SavePhase(GameManager gm, int phase)
+    {
+        var kept = new System.Collections.Generic.List<string>();
 #if UNITY_EDITOR
-        string path = System.IO.Path.Combine(Application.dataPath, "Resources/GameData/spawns.txt");
-        System.IO.File.WriteAllText(path, sb.ToString());
+        string path = System.IO.Path.Combine(Application.dataPath, "Resources/GameData/phase_spawns.txt");
+        if (System.IO.File.Exists(path))
+        {
+            foreach (var raw in System.IO.File.ReadAllLines(path))
+            {
+                string line = raw.TrimEnd('\r');
+                if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#")) continue;
+                var c = line.Split('\t');
+                if (c.Length < 2) continue;
+                if (c[0].Trim() == "charId") continue;                 // 表头
+                if (int.TryParse(c[1].Trim(), out int p) && p == phase) continue; // 丢掉本阶段旧行
+                kept.Add(line);
+            }
+        }
+#endif
+        var sb = new StringBuilder();
+        sb.AppendLine("# 每阶段坐标覆盖（Tab 分隔）。charId phase x z yaw faceCamera。");
+        sb.AppendLine("# 只需要写「和基准不同」的角色/阶段；没写的 = 沿用基准 spawns.txt，位置不变。");
+        sb.AppendLine("charId\tphase\tx\tz\tyaw\tfaceCamera");
+        foreach (var k in kept) sb.AppendLine(k);
+        foreach (var n in gm.Npcs)
+        {
+            if (n == null || string.IsNullOrEmpty(n.charId)) continue;
+            Vector3 pos = n.transform.position;
+            n.TryGetFacing(out float yaw, out bool face);
+            sb.AppendLine($"{n.charId}\t{phase}\t{pos.x:0.##}\t{pos.z:0.##}\t{yaw:0.##}\t{(face ? 1 : 0)}");
+        }
+        WriteFile("phase_spawns.txt", sb.ToString());
+    }
+
+    void WriteFile(string fileName, string content)
+    {
+#if UNITY_EDITOR
+        string path = System.IO.Path.Combine(Application.dataPath, "Resources/GameData/" + fileName);
+        System.IO.File.WriteAllText(path, content);
         UnityEditor.AssetDatabase.Refresh();
-        _status = "已保存：" + path;
-        Debug.Log("[SceneArranger] " + _status);
+        _status = "已保存：" + fileName;
+        Debug.Log("[SceneArranger] 已写回 " + path);
 #else
-        _status = "仅编辑器可写回 spawns.txt。当前布局：\n" + sb;
-        Debug.Log("[SceneArranger] 运行时布局：\n" + sb);
+        _status = "仅编辑器可写盘。内容已打印到 Console。";
+        Debug.Log("[SceneArranger] " + fileName + "\n" + content);
 #endif
     }
 }

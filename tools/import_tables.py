@@ -16,7 +16,7 @@
 import os
 import sys
 
-SHEETS = ("characters", "dialogue", "rounds", "ui", "phases", "npc_dialogues", "portraits", "spawns")
+SHEETS = ("characters", "dialogue", "rounds", "ui", "phases", "npc_dialogues", "portraits", "spawns", "phase_spawns", "choices")
 SRC_DIR = os.path.join("Assets", "Resources", "GameData")
 
 

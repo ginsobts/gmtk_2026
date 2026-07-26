@@ -35,6 +35,40 @@ public static class GeneratedArt
     public static Texture2D GroundTexture =>
         _ground ??= Resources.Load<Texture2D>("Art/town_ground_texture");
 
+    static readonly Dictionary<string, Texture2D> _groundVariants = new Dictionary<string, Texture2D>();
+    static readonly Dictionary<string, Sprite> _propFileCache = new Dictionary<string, Sprite>();
+    static readonly Dictionary<string, Sprite> _endingCache = new Dictionary<string, Sprite>();
+
+    /// <summary>加载独立的场景道具 PNG：Resources/Art/Props/&lt;name&gt;（树/灌木/椅子/垃圾桶/健身器材）。缺失静默返回 null。</summary>
+    public static Sprite PropFileSprite(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return null;
+        if (_propFileCache.TryGetValue(name, out var s)) return s;
+        s = TryLoadWholeSprite("Art/Props/" + name);
+        _propFileCache[name] = s;
+        return s;
+    }
+
+    /// <summary>结算大图：Resources/Art/Endings/win 或 lose。缺失返回 null（结果面板据此隐藏图片）。</summary>
+    public static Sprite EndingSprite(bool win)
+    {
+        string name = win ? "win" : "lose";
+        if (_endingCache.TryGetValue(name, out var s)) return s;
+        s = TryLoadWholeSprite("Art/Endings/" + name);
+        _endingCache[name] = s;
+        return s;
+    }
+
+    /// <summary>按后缀取地面贴图变体：Resources/Art/ground_&lt;suffix&gt;（如 ground_phase2 / ground_death）。缺则返回 null（调用方回退到基础地面）。</summary>
+    public static Texture2D GroundTextureNamed(string suffix)
+    {
+        if (string.IsNullOrEmpty(suffix)) return null;
+        if (_groundVariants.TryGetValue(suffix, out var t)) return t;
+        t = Resources.Load<Texture2D>("Art/ground_" + suffix);
+        _groundVariants[suffix] = t;
+        return t;
+    }
+
     /// <summary>按角色美术文件夹加载默认立绘（artFolder 例如 Characters/npc_00）。</summary>
     public static Sprite GetCharacterSprite(string artFolder)
     {

@@ -1,0 +1,1 @@
+把循环背景乐放在这个文件夹，文件名用 key（menu / phase1 / phase2 / phase3 / death），不带扩展名调用。见上级 README.txt。

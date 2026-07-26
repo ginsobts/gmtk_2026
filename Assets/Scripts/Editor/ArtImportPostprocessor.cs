@@ -19,7 +19,9 @@ public class ArtImportPostprocessor : AssetPostprocessor
             p.Contains("/Resources/Art/Characters/") ||
             p.Contains("/Resources/Art/Imposters/") ||
             p.Contains("/Resources/Art/Camera/") ||
-            p.Contains("/Resources/Art/Portraits/");   // 对话立绘同样按 Sprite 导入
+            p.Contains("/Resources/Art/Portraits/") ||   // 对话立绘同样按 Sprite 导入
+            p.Contains("/Resources/Art/Props/") ||        // 场景道具（树/灌木/椅子/垃圾桶/健身器材）
+            p.Contains("/Resources/Art/Endings/");        // 结算大图（胜/负）
         if (!isCharacterLike) return;
 
         var ti = (TextureImporter)assetImporter;

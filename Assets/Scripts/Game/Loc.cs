@@ -200,7 +200,7 @@ public static class Loc
         ["death.flee"] = new[] { "Something is coming. RUN.", "有什么东西来了。快跑。" },
         ["death.normal"] = new[] { "It caught you.", "它抓住了你。" },
         ["death.special"] = new[] { "You shouldn't have looked closer.", "你不该再靠近看的。" },
-        ["result.detail"] = new[] { "Correct {0}/{1}   Wrong {2}\nPhotos taken: {3}\n\nThe real imposters were:\n{4}", "指认正确 {0}/{1}　误指 {2} 人\n共拍摄 {3} 张照片\n\n真正的炼化人是：\n{4}" },
+        ["result.detail"] = new[] { "You correctly identified {0} / {1} imposters.", "你成功识破了 {0} / {1} 名炼化人。" },
         ["result.none"] = new[] { "(none)", "（无）" },
         ["result.replay"] = new[] { "Play Again", "再玩一次" },
         ["result.menu"] = new[] { "Main Menu", "返回主菜单" },

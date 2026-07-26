@@ -1,0 +1,5 @@
+# 每阶段坐标覆盖（Tab 分隔）。charId phase x z yaw faceCamera。
+# 只需要写「和基准不同」的角色/阶段行；没写的角色/阶段 = 沿用基准 spawns.txt，位置不变。
+# 默认这张表是空的（除注释），所以所有阶段位置都一样。
+# 可在运行时按 F2 摆位模式选好目标阶段后一键写回本表。
+charId	phase	x	z	yaw	faceCamera
