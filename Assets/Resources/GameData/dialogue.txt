@@ -55,8 +55,8 @@ zhao_c1	1	generic_neutral	Zhao Yan, security. IDs, patrols, fire exits.	我叫�
 zhao_c1	2	generic_neutral	Stay on the marked route and we won't have problems.	按地上标的路线走，大家都省事。
 zhao_c2	1		Hey — keep a step back. Uniform's… sensitive to contact.	哎——退后一步，这制服……不太经碰。
 zhao_c2	2		No handshakes. Company policy after the last incident. Allegedly.	握手就免了，上次那事之后公司定的规矩，据说是。
-zhao_c3	1		Please don't touch me. There's nothing inside to bump into.	请别碰我，里面……其实没什么可撞的。
-zhao_c3	2		I'm hollow— I mean, hollow security policy. Just… hollow.	我是说空的——不对，是安保条例比较空洞，对，空洞。
+zhao_c3	1	shrink_girl_reveal	Please don't touch me. There's nothing inside to bump into.	请别碰我，里面……其实没什么可撞的。
+zhao_c3	2	shrink_girl_reveal	I'm hollow— I mean, hollow security policy. Just… hollow.	我是说空的——不对，是安保条例比较空洞，对，空洞。
 wu_c1	1	generic_neutral	Wu Ang, algorithm team. Training models, tuning pipelines.	我是吴昂，算法组的，训模型、调管线这些。
 wu_c1	2	generic_neutral	Busy week. If I seem distracted, the loss function is screaming.	这周忙疯了，我要是看起来走神，那是损失函数在尖叫。
 wu_c2	1		We've been in crunch — no time to dress. Shirt from yesterday, jacket from last week.	最近连轴转，根本没时间收拾，上衣是昨天的，外套是上周的。

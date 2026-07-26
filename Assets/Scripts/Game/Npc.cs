@@ -26,6 +26,7 @@ public class Npc : MonoBehaviour
     SpriteRenderer _renderer;
     Sprite _normalSprite;
     Sprite _stageSprite;        // 当前 stage 的正常立绘（T4：随时间轴换，如魏大爷扒皮）
+    int _stage = 1;             // 当前时间轴 stage（1..N），供对话立绘按 phase 同步（如吴昂拼接演变）
     Sprite _activeSprite;       // 当前逻辑立绘（拍照异常恢复时用）
     Vector3 _baseScale;
     Vector3 _activeScale;
@@ -34,9 +35,11 @@ public class Npc : MonoBehaviour
     bool _inFrame;
     PoseType _pose;
     bool _revealedByPose;       // 因摆动作而露馅（六指 / 可怕笑）
+    bool _exposed;              // 已被抓到露馅(持久)：韩露被拍到鬼脸笑后，对话立绘持续显示六指伪人形态
     bool _deflated;             // 变瘪人已被接触
     float _lookAwayTimer;       // 顾映表情切换计时（N3）
     Sprite[] _lookAwayFrames;   // 顾映 look-away 循环帧：[面无, 诡异微笑, 极度悲伤]
+    string[] _lookAwayExprs;    // 与 _lookAwayFrames 平行：每帧对应立绘表情后缀（null=neutral），供对话立绘同步
     int _lookAwayIndex;         // 当前表情帧下标
 
     // 头顶标记 / 靠近提示
@@ -64,6 +67,7 @@ public class Npc : MonoBehaviour
         _inFrame = false;
         _pose = PoseType.None;
         _revealedByPose = false;
+        _exposed = false;
         _deflated = false;
 
         _activeSprite = _normalSprite;
@@ -76,10 +80,11 @@ public class Npc : MonoBehaviour
             var s2 = GeneratedArt.GetCharacterVariantSprite(artFolder, "reveal_sad");
             int n = 1 + (s1 != null ? 1 : 0) + (s2 != null ? 1 : 0);
             _lookAwayFrames = new Sprite[n];
+            _lookAwayExprs = new string[n];   // 平行记录每帧对应的立绘表情后缀，供对话立绘同步
             int idx = 0;
-            _lookAwayFrames[idx++] = _normalSprite;
-            if (s1 != null) _lookAwayFrames[idx++] = s1;
-            if (s2 != null) _lookAwayFrames[idx++] = s2;
+            _lookAwayFrames[idx] = _normalSprite; _lookAwayExprs[idx] = null; idx++;
+            if (s1 != null) { _lookAwayFrames[idx] = s1; _lookAwayExprs[idx] = "reveal_smile"; idx++; }
+            if (s2 != null) { _lookAwayFrames[idx] = s2; _lookAwayExprs[idx] = "reveal_sad"; idx++; }
             _lookAwayIndex = 0;
         }
 
@@ -216,9 +221,28 @@ public class Npc : MonoBehaviour
         RefreshColor();
     }
 
+    /// <summary>
+    /// 该 NPC 当前应显示的【对话立绘表情后缀】（如 "reveal_smile"）；neutral/无变体返回 null。
+    /// 让对话立绘与场景棋子的露馅态同步：顾映按 look-away 当前表情帧返回，进对话时定格该帧。
+    /// </summary>
+    public string PortraitExpression()
+    {
+        if (kind == NpcKind.LookAway && _lookAwayExprs != null &&
+            _lookAwayIndex >= 0 && _lookAwayIndex < _lookAwayExprs.Length)
+            return _lookAwayExprs[_lookAwayIndex];
+        // 拼接人（吴昂）：对话立绘随时间轴 stage 演变，与场景棋子(base/s2/s3)配套
+        if (kind == NpcKind.Stitched && _stage >= 2)
+            return "s" + _stage;
+        // 六指人（韩露）：被抓到笑出鬼脸笑后(_exposed)，对话立绘持续显示六指伪人形态
+        if (kind == NpcKind.SixFinger && _exposed)
+            return "reveal";
+        return null;
+    }
+
     /// <summary>按时间轴 stage 切换该 NPC 的正常立绘（T4/N4：如魏大爷随 stage 被扒皮）。</summary>
     public void ApplyStage(int stage)
     {
+        _stage = stage;
         if (_renderer == null) return;
         Sprite s = GeneratedArt.GetCharacterStageSprite(artFolder, stage);
         _stageSprite = s != null ? s : _normalSprite;
@@ -226,30 +250,31 @@ public class Npc : MonoBehaviour
             SetBodySprite(_stageSprite, matchHeight: false);
     }
 
-    /// <summary>指挥该 NPC 摆动作。所有 NPC 都会换成对应姿势立绘；部分伪人会当场露馅。</summary>
+    /// <summary>
+    /// 指挥该 NPC 摆拍照动作（比耶 / 笑）。所有 NPC 换成对应姿势差分立绘（美术对齐的等大叠加合成，
+    /// Art/&lt;folder&gt;/{yeah,smile,grimace}.png）。韩露（六指人）命令"笑"时笑不出正常笑、露出【鬼脸笑】(红眼)当场露馅。
+    /// </summary>
     public void SetPose(PoseType pose)
     {
         if (_deflated) return;         // 已变瘪则保持
         _pose = pose;
         _revealedByPose = false;
 
-        if (kind == NpcKind.SixFinger && pose == PoseType.Yeah)
-        {
-            _revealedByPose = true;
-            SetBodySprite(GeneratedArt.SixFingerRevealSprite, matchHeight: true);
-        }
-        else if (kind == NpcKind.ScarySmile && pose == PoseType.Smile)
-        {
-            _revealedByPose = true;
-            SetBodySprite(GeneratedArt.ScarySmileRevealSprite, matchHeight: true);
-        }
-        else if (pose == PoseType.None)
+        if (pose == PoseType.None)
         {
             SetBodySprite(_stageSprite, matchHeight: false);
         }
+        else if (pose == PoseType.Smile && kind == NpcKind.SixFinger)
+        {
+            // 韩露（六指人）：命令"笑"时露出鬼脸笑（红眼）—— 破绽。此刻拍照即拍到；六指伪人立绘在对话(han_c3)展示。
+            _revealedByPose = true;
+            _exposed = true;   // 持久标记：之后对话立绘持续显示六指伪人形态
+            Sprite grim = GeneratedArt.GetCharacterVariantSprite(artFolder, "grimace");
+            SetBodySprite(grim != null ? grim : _normalSprite, matchHeight: false);
+        }
         else
         {
-            // 普通姿势差分（同一角色），没有对应美术就保持普通立绘
+            // 通用拍照姿势差分：比耶=yeah.png / 正常笑=smile.png。缺图回退普通立绘。
             Sprite poseSprite = GeneratedArt.GetCharacterPoseSprite(artFolder, pose == PoseType.Smile);
             SetBodySprite(poseSprite != null ? poseSprite : _normalSprite, matchHeight: false);
         }
@@ -301,9 +326,18 @@ public class Npc : MonoBehaviour
     public void ApplyPhotoState()
     {
         if (_renderer == null) return;
-        if (kind == NpcKind.PhotoMissing)
+        if (kind == NpcKind.PhotoMismatch)
         {
-            _renderer.enabled = false;                 // 照片里消失
+            // 照片里「变成另外的样子」：换成 Art/<folder>/photo.png（本人在场景里不变），照片与本人不一致。
+            Sprite alt = GeneratedArt.GetCharacterVariantSprite(artFolder, "photo");
+            if (alt != null)
+            {
+                _renderer.sprite = alt;
+                float baseH = _normalSprite != null ? _normalSprite.bounds.size.y : 0f;
+                float newH = alt.bounds.size.y;
+                _renderer.transform.localScale =
+                    (baseH > 0.0001f && newH > 0.0001f) ? _baseScale * (baseH / newH) : _baseScale;
+            }
         }
         else if (kind == NpcKind.Stitched && !_deflated)
         {

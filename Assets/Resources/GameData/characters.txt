@@ -12,4 +12,4 @@ wei_daye	Characters/wei_daye	generic	Uncle Wei	魏大爷	SkinDog
 an_an	Characters/an_an	generic	An'an	安安	Normal			
 han_lu	Characters/han_lu	generic	Han Lu	韩露	SixFinger	Reception	前台	
 gu_ying	Characters/gu_ying	generic	Gu Ying	顾映	LookAway	Brand	品牌	
-cheng_shu	Characters/cheng_shu	generic	Cheng Shu	程书	PhotoMissing	Compliance	合规	
+cheng_shu	Characters/cheng_shu	generic	Cheng Shu	程书	PhotoMismatch	Compliance	合规	

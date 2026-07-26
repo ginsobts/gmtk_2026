@@ -202,7 +202,7 @@ public static class Loc
         ["kind.scarysmile"] = new[] { "Scary Smile", "一笑变可怕人" },
         ["kind.framedrop"] = new[] { "Frame-Drop", "掉帧人" },
         ["kind.stitched"] = new[] { "Stitched", "拼接人" },
-        ["kind.photomissing"] = new[] { "Photo-Ghost", "照片消失人" },
+        ["kind.photomismatch"] = new[] { "Photo-Mismatch", "照片不符人" },
         ["kind.deflate"] = new[] { "Deflate", "变瘪人" },
         ["kind.lookaway"] = new[] { "Look-Away", "悲工坊人" },
         ["kind.skindog"] = new[] { "Skin-Dog", "人皮狗" },
