@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum GameState { MainMenu, Briefing, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
+public enum GameState { MainMenu, Briefing, Tutorial, Playing, Dialogue, Camera, Album, MarkList, Result, Death }
 
 /// <summary>相册里的一张照片：截图 + 拍摄时处于取景框内的 NPC 名单。</summary>
 public class PhotoEntry
@@ -23,6 +23,8 @@ public class GameManager : MonoBehaviour
 
     public GameState State { get; private set; } = GameState.MainMenu;
     bool _creditsOpen;
+    bool _tutorialSeen;    // 世界观介绍后只演示一次新手引导
+    int _tutorialStep;
     public List<Npc> Npcs { get; private set; } = new List<Npc>();
     public UIManager UI { get; private set; }
     public List<PhotoEntry> Album { get; private set; } = new List<PhotoEntry>();
@@ -100,6 +102,32 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Briefing) return;
         UI.HideBriefing();
         StartRound();
+        // 进入场景后，第一次分三步高亮教学（再玩一次不再重复）
+        if (!_tutorialSeen) BeginTutorial();
+    }
+
+    /// <summary>进入场景后开始分步高亮引导：第1步场景/第2步时间/第3步指认列表。</summary>
+    void BeginTutorial()
+    {
+        _tutorialStep = 0;
+        State = GameState.Tutorial;
+        UI.SetInteractPrompt(null);
+        UI.ShowTutorial(_tutorialStep);
+    }
+
+    /// <summary>点“继续”或按 空格/回车 进入下一步；三步走完结束引导，回到正常游玩。</summary>
+    public void TutorialNext()
+    {
+        if (State != GameState.Tutorial) return;
+        _tutorialStep++;
+        if (_tutorialStep >= 3)
+        {
+            _tutorialSeen = true;
+            UI.HideTutorial();
+            State = GameState.Playing;
+            return;
+        }
+        UI.ShowTutorial(_tutorialStep);
     }
 
     public void OpenCredits()
@@ -613,6 +641,11 @@ public class GameManager : MonoBehaviour
                     ConfirmBriefing();
                 else if (Input.GetKeyDown(KeyCode.Escape))
                     EnterMainMenu();
+                break;
+
+            case GameState.Tutorial:
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+                    TutorialNext();
                 break;
 
             case GameState.Playing:

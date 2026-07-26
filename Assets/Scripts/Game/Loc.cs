@@ -205,6 +205,13 @@ public static class Loc
         ["result.replay"] = new[] { "Play Again", "再玩一次" },
         ["result.menu"] = new[] { "Main Menu", "返回主菜单" },
 
+        // 新手引导
+        ["tutorial.next"] = new[] { "Continue ▶", "继续 ▶" },
+        ["tutorial.progress"] = new[] { "{0}/{1}", "{0}/{1}" },
+        ["tutorial.s1"] = new[] { "This is the town. Walk up to anyone — press E to talk, or hold up your camera (Space) to photograph them. Some tells only show in the photo.", "这里是小镇。走近任何人：按 E 交谈，或举起相机（空格）拍照。有些破绽只有在照片里才看得出来。" },
+        ["tutorial.s2"] = new[] { "This bar is your time. Talking and taking photos both cost time. Find the imposters before the countdown runs out.", "上方这条是你的时间。交谈和拍照都会消耗时间，必须在倒计时结束前找出所有伪人。" },
+        ["tutorial.s3"] = new[] { "Stand near an NPC and press F to mark them as a suspect. Open the Accusation List (bottom-right) and submit before time runs out — get everyone right to win.", "靠近某个 NPC 按 F 可将其标记为嫌疑人。在时间用完前打开右下角「指认列表」提交结果，全部猜对即获胜。" },
+
         // 炼化人类型名
         ["kind.normal"] = new[] { "Normal", "普通人" },
         ["kind.doubao"] = new[] { "AI Bot", "豆包人" },

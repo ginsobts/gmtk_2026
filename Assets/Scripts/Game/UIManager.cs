@@ -97,6 +97,15 @@ public class UIManager : MonoBehaviour
     Text _resultTitle, _resultDetail;
     Image _resultImage;
 
+    // 新手引导（进入场景后分步高亮 + 压暗其它区域）
+    GameObject _tutorialRoot;
+    Image _tutDimLeft, _tutDimRight, _tutDimTop, _tutDimBottom;
+    readonly Image[] _tutBorder = new Image[4];
+    GameObject _tutBox;
+    Text _tutBody, _tutProgress;
+    RectTransform _timelineBarRt;   // 时间轴容器（第2步高亮用）
+    RectTransform _markListBtnRt;   // 「指认列表」按钮（第3步高亮用）
+
     // 指认旁白过场（策划 1.4：点指认后先弹旁白，点击继续）
     GameObject _narrationRoot;
     Text _narrationText;
@@ -145,6 +154,7 @@ public class UIManager : MonoBehaviour
         BuildMainMenu();
         BuildCredits();
         BuildBriefing();
+        BuildTutorial();
         BuildFadeOverlay();
 
         Loc.OnChanged += Relocalize;
@@ -323,6 +333,7 @@ public class UIManager : MonoBehaviour
         var markListBtn = MakeButton(hud, "btn.marklist", 28, () => GameManager.Instance.OpenMarkList(),
             new Vector2(1, 0), new Vector2(-150, 50), new Vector2(240, 70));
         SetButtonColor(markListBtn, new Color(0.7f, 0.4f, 0.3f));
+        _markListBtnRt = markListBtn.GetComponent<RectTransform>();
 
         BuildInteractPanel(hud);
     }
@@ -696,6 +707,145 @@ public class UIManager : MonoBehaviour
         _resultRoot.SetActive(false);
     }
 
+    // ---------------- 新手引导（分步高亮 spotlight） ----------------
+
+    void BuildTutorial()
+    {
+        _tutorialRoot = new GameObject("Tutorial", typeof(RectTransform));
+        _tutorialRoot.transform.SetParent(_canvas.transform, false);
+        SetRect(_tutorialRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+        var dim = new Color(0f, 0f, 0f, 0.78f);
+        _tutDimLeft = MakeTutDim("DimLeft", dim);
+        _tutDimRight = MakeTutDim("DimRight", dim);
+        _tutDimTop = MakeTutDim("DimTop", dim);
+        _tutDimBottom = MakeTutDim("DimBottom", dim);
+
+        // 高亮框（四条细亮边），不吃射线
+        var edge = new Color(1f, 0.86f, 0.4f, 0.95f);
+        for (int i = 0; i < 4; i++)
+        {
+            var go = new GameObject("Border" + i, typeof(RectTransform));
+            go.transform.SetParent(_tutorialRoot.transform, false);
+            var img = go.AddComponent<Image>();
+            img.color = edge; img.raycastTarget = false;
+            SetRect(go.GetComponent<RectTransform>(), Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            _tutBorder[i] = img;
+        }
+
+        // 文字教程盒（body + 进度 + 继续）
+        _tutBox = MakePanel(_tutorialRoot.transform, "TutBox", new Color(0.1f, 0.12f, 0.18f, 0.98f));
+        SetRect(_tutBox.GetComponent<RectTransform>(), Vector2.zero, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(960, 200), new Vector2(940, 240));
+
+        _tutProgress = MakeText(_tutBox.transform, "TutProgress", "", 24, TextAnchor.UpperRight);
+        SetRect(_tutProgress.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -16), new Vector2(160, 34));
+        _tutProgress.color = new Color(1f, 0.86f, 0.4f, 0.95f);
+
+        _tutBody = MakeText(_tutBox.transform, "TutBody", "", 30, TextAnchor.UpperLeft);
+        SetRect(_tutBody.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(30, -26), new Vector2(880, 130));
+
+        MakeButton(_tutBox.transform, "tutorial.next", 28, () => GameManager.Instance.TutorialNext(),
+            new Vector2(1, 0), new Vector2(-30, 26), new Vector2(220, 62));
+
+        _tutorialRoot.SetActive(false);
+    }
+
+    Image MakeTutDim(string name, Color color)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(_tutorialRoot.transform, false);
+        var img = go.AddComponent<Image>();
+        img.color = color;
+        img.raycastTarget = true;   // 挡住背后场景/HUD 点击
+        return img;
+    }
+
+    /// <summary>把四块压暗面板摆成一个中间镂空的高亮框（hole 用引导层本地坐标，左下角原点）。</summary>
+    void SetSpotlight(Rect hole)
+    {
+        const float OS = 1500f;   // 向外超扫，保证任何屏幕比例都盖满边缘
+        var canvasRect = _tutorialRoot.GetComponent<RectTransform>().rect;
+        float W = canvasRect.width, H = canvasRect.height;
+        float xMin = hole.xMin, xMax = hole.xMax, yMin = hole.yMin, yMax = hole.yMax;
+
+        PlaceBL(_tutDimLeft.rectTransform, -OS, -OS, xMin + OS, H + 2 * OS);
+        PlaceBL(_tutDimRight.rectTransform, xMax, -OS, W - xMax + OS, H + 2 * OS);
+        PlaceBL(_tutDimTop.rectTransform, xMin, yMax, xMax - xMin, H - yMax + OS);
+        PlaceBL(_tutDimBottom.rectTransform, xMin, -OS, xMax - xMin, yMin + OS);
+
+        // 高亮亮边（贴着 hole 外侧 4px）
+        const float t = 4f;
+        PlaceBL(_tutBorder[0].rectTransform, xMin - t, yMin - t, xMax - xMin + 2 * t, t);      // 下
+        PlaceBL(_tutBorder[1].rectTransform, xMin - t, yMax, xMax - xMin + 2 * t, t);          // 上
+        PlaceBL(_tutBorder[2].rectTransform, xMin - t, yMin, t, yMax - yMin);                  // 左
+        PlaceBL(_tutBorder[3].rectTransform, xMax, yMin, t, yMax - yMin);                      // 右
+    }
+
+    /// <summary>以画布左下角为原点(anchor/pivot=0,0)摆一个矩形。</summary>
+    static void PlaceBL(RectTransform rt, float x, float y, float w, float h)
+    {
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.zero; rt.pivot = Vector2.zero;
+        rt.anchoredPosition = new Vector2(x, y); rt.sizeDelta = new Vector2(w, h);
+    }
+
+    /// <summary>取某个 UI 元素在引导层里的矩形（含内边距）。用它真实的屏幕角换算，适配任意分辨率/锚点。</summary>
+    Rect HoleOfTarget(RectTransform target, float pad, float W, float H)
+    {
+        if (target == null) return new Rect(W * 0.4f, H * 0.4f, W * 0.2f, H * 0.2f);
+        var tutRT = _tutorialRoot.GetComponent<RectTransform>();
+        var corners = new Vector3[4];
+        target.GetWorldCorners(corners);   // ScreenSpaceOverlay 下即屏幕像素
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(tutRT, corners[0], null, out var bl);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(tutRT, corners[2], null, out var tr);
+        float halfW = tutRT.rect.width / 2f, halfH = tutRT.rect.height / 2f;   // 本地(中心原点) → 左下角原点
+        return Rect.MinMaxRect(bl.x + halfW - pad, bl.y + halfH - pad, tr.x + halfW + pad, tr.y + halfH + pad);
+    }
+
+    /// <summary>显示第 step 步引导（0/1/2）：高亮对应区域 + 文字盒摆在附近。</summary>
+    public void ShowTutorial(int step)
+    {
+        _tutorialRoot.SetActive(true);
+        _tutorialRoot.transform.SetAsLastSibling();   // 压在 HUD/面板之上
+        Canvas.ForceUpdateCanvases();                 // 确保能取到 HUD 元素的最新屏幕矩形
+
+        var canvasRect = _tutorialRoot.GetComponent<RectTransform>().rect;
+        float W = canvasRect.width, H = canvasRect.height;
+        var boxSize = _tutBox.GetComponent<RectTransform>().sizeDelta;
+        float bhw = boxSize.x / 2f, bhh = boxSize.y / 2f;
+
+        Rect hole; Vector2 boxCenter;
+        switch (step)
+        {
+            case 0: // 高亮场景中部：对话 + 拍照
+                hole = new Rect(W * 0.16f, H * 0.32f, W * 0.68f, H * 0.56f);
+                boxCenter = new Vector2(W * 0.5f, hole.yMin - bhh - 24f);
+                break;
+            case 1: // 高亮顶部时间轴（按真实矩形）
+                hole = HoleOfTarget(_timelineBarRt, 24f, W, H);
+                boxCenter = new Vector2(W * 0.5f, hole.yMin - bhh - 30f);
+                break;
+            default: // 高亮右下「指认列表」按钮（按真实矩形，紧贴按钮）
+                hole = HoleOfTarget(_markListBtnRt, 14f, W, H);
+                boxCenter = new Vector2(hole.xMin - bhw - 40f, hole.center.y + 30f);
+                break;
+        }
+
+        // 文字盒始终留在屏幕内
+        boxCenter.x = Mathf.Clamp(boxCenter.x, bhw + 20f, W - bhw - 20f);
+        boxCenter.y = Mathf.Clamp(boxCenter.y, bhh + 20f, H - bhh - 20f);
+
+        SetSpotlight(hole);
+        _tutBox.GetComponent<RectTransform>().anchoredPosition = boxCenter;
+        _tutBody.text = Loc.Get("tutorial.s" + (step + 1));
+        _tutProgress.text = Loc.Format("tutorial.progress", step + 1, 3);
+        PlayShow(_tutBox);
+    }
+
+    public void HideTutorial()
+    {
+        if (_tutorialRoot != null) _tutorialRoot.SetActive(false);
+    }
+
     // ---------------- 指认旁白过场 ----------------
 
     void BuildNarration()
@@ -761,6 +911,7 @@ public class UIManager : MonoBehaviour
         root.transform.SetParent(hud, false);
         SetRect(root.GetComponent<RectTransform>(), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1),
             new Vector2(0, -58), new Vector2(barW, 52));
+        _timelineBarRt = root.GetComponent<RectTransform>();
 
         var track = MakePanel(root.transform, "Track", new Color(0.12f, 0.14f, 0.19f, 0.92f));
         SetRect(track.GetComponent<RectTransform>(), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1),
