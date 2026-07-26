@@ -8,6 +8,10 @@ lin_p1	1	lin_neutral	Welcome to Human Company! I'm Lin Cai from PR — I'll be w
 lin_p1	2	lin_neutral	The company is pushing an efficiency reform, and leadership really cares about this shoot. We want the world to see a real, transparent Human Company.	公司最近在推效率改革，上面非常重视这次拍摄。我们希望借这个机会，让外界看到一个真实、透明的人类公司。
 lin_p1	3	lin_neutral	Follow the tour route and you'll see how happy our employees are. Work-life balance has always been one of our core competitive advantages.	跟着参观路线走一圈，你会发现我们的员工幸福感非常高。工作与生活的平衡，是我们一直以来的核心竞争力之一。
 lin_p1	4	lin_neutral	Ask me anything — I'm happy to help. Though areas outside the tour route… I'd suggest you don't go there. Construction. Not safe.	有什么问题尽管问我——我很高兴为您提供帮助。不过参观路线之外的区域……建议就不要去了哦。那边正在施工，不安全。
+lin_p1	5	lin_neutral	By the way, would you like a little robot to accompany you on the tour? It doesn't do much, but it is very good at following along.	对了，需要一个小机器人陪你逛逛吗？它没什么功能，不过很会乖乖跟着人走。
+lin_robot_yes	1	lin_neutral	Of course. Little Me will be waiting right beside you. I hope it makes the rest of your visit a little less lonely.	当然可以。小我马上就在你身边等着你，希望接下来的参观不会那么孤单。
+lin_robot_no	1	lin_neutral	No problem. If you change your mind, just come and ask me again.	没关系。如果改变主意了，之后再来找我就好。
+lin_robot_repeat	1	lin_neutral	Little Me seems to like you. Don't worry — it will keep following you.	小我看起来很喜欢你。放心，它会一直跟着你的。
 lin_p2	1	lin_neutral	How's the shoot going? Enough footage? Human Company is always committed to creating the best content environment for our partners.	你拍得怎么样？素材够用吗？人类公司始终致力于为合作伙伴创造最优质的内容产出环境。
 lin_p2	2	lin_neutral	About the efficiency reform — I can walk you through it from a strategy and talent-optimization angle. First— …First, um, honestly I'm not sure of the details. They just told me everyone would have it easier afterward.	关于效率改革，我可以从企业战略和人才优化两个维度帮你梳理一下。首先——……首先，嗯，其实我也说不太清楚。他们只跟我说，改完之后大家都会轻松很多。
 lin_p2	3	lin_neutral	You want my personal take? I think… it's fine. Work got a lot easier. A lot of things I don't have to think about — the words just come out. Convenient.	你问我个人的感受？我觉得……挺好的。工作轻松了很多。很多事情不用想，话到嘴边就自己出来了。省心。

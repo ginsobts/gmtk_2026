@@ -22,6 +22,8 @@ public class ArtImportPostprocessor : AssetPostprocessor
             p.Contains("/Resources/Art/Portraits/") ||   // 对话立绘同样按 Sprite 导入
             p.Contains("/Resources/Art/Props/") ||        // 场景道具（树/灌木/椅子/垃圾桶/健身器材）
             p.Contains("/Resources/Art/Endings/") ||       // 结算大图（胜/负）
+            p.Contains("/Resources/Art/Robot/") ||         // “小我”跟随机器人（三方向棋子）
+            p.Contains("/Resources/Art/Menu/") ||          // 主菜单随机背景
             p.Contains("/Resources/Art/Anim/");            // 死亡演出怪物行走帧
         if (!isCharacterLike) return;
 

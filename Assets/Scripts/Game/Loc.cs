@@ -121,6 +121,18 @@ public static class Loc
             "The Imposter Hunt\n\nGame Design & Programming: Your Name\nArt: Your Name\nSpecial Thanks: GMTK 2026\n\nMade with Unity\n\nAudio Credits\nMusic: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org\nUI Audio: Kenney / Kenney.nl",
             "寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作\n\n音频署名\n音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org\n界面音效：Kenney / Kenney.nl"
         },
+        ["credits.center"] = new[] { "We couldn't agree on how to order the credits,\nso we made them spin instead.", "因为不想纠结怎么排序，\n所以做成旋转的了。" },
+        ["credits.member.silver"] = new[] { "silver\n<size=21><color=#AAB2C4>Programming</color></size>", "silver\n<size=21><color=#AAB2C4>程序</color></size>" },
+        ["credits.member.zhanzhan"] = new[] { "詹詹\n<size=21><color=#AAB2C4>Design · Programming</color></size>", "詹詹\n<size=21><color=#AAB2C4>策划 · 程序</color></size>" },
+        ["credits.member.zaptaind"] = new[] { "zaptaind\n<size=21><color=#AAB2C4>Design · Art</color></size>", "zaptaind\n<size=21><color=#AAB2C4>策划 · 美术</color></size>" },
+        ["credits.member.yigubigu"] = new[] { "依古比古\n<size=21><color=#AAB2C4>Design · Art</color></size>", "依古比古\n<size=21><color=#AAB2C4>策划 · 美术</color></size>" },
+        ["credits.member.viktor"] = new[] { "Viktor Tu\n<size=21><color=#AAB2C4>Programming</color></size>", "Viktor Tu\n<size=21><color=#AAB2C4>程序</color></size>" },
+        ["credits.ai.gpt"] = new[] { "GPT5.6\n<size=21><color=#AAB2C4>AI Model</color></size>", "GPT5.6\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
+        ["credits.ai.opus48"] = new[] { "Opus4.8\n<size=21><color=#AAB2C4>AI Model</color></size>", "Opus4.8\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
+        ["credits.ai.composer"] = new[] { "Composer2.5\n<size=21><color=#AAB2C4>AI Model</color></size>", "Composer2.5\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
+        ["credits.ai.doubao"] = new[] { "豆包\n<size=21><color=#AAB2C4>AI Model</color></size>", "豆包\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
+        ["credits.ai.opus46"] = new[] { "Opus4.6\n<size=21><color=#AAB2C4>AI Model</color></size>", "Opus4.6\n<size=21><color=#AAB2C4>AI 模型</color></size>" },
+        ["credits.audio"] = new[] { "Music: “Sirens in Darkness” — The Cynic Project / cynicmusic.com / pixelsphere.org   ·   UI Audio: Kenney / Kenney.nl", "音乐：《Sirens in Darkness》— The Cynic Project / cynicmusic.com / pixelsphere.org   ·   界面音效：Kenney / Kenney.nl" },
 
         // 开场目标说明
         ["briefing.title"] = new[] { "Your Objective", "你的目标" },
@@ -153,6 +165,9 @@ public static class Loc
         // 对话
         ["dlg.next"] = new[] { "Continue \u25B6", "继续 \u25B6" },
         ["dlg.end"] = new[] { "End", "结束对话" },
+        ["robot.reward.title"] = new[] { "Companion Acquired!", "获得伙伴！" },
+        ["robot.reward.body"] = new[] { "You got the Little Me robot!\nIt will follow you around and keep you company.", "你获得了小我机器人！\n它会跟着你、陪你逛逛。" },
+        ["robot.reward.confirm"] = new[] { "Take It With Me", "确认带上它" },
 
         // 相机
         ["cam.tip"] = new[] { "Move mouse to aim;  [1] Peace   [2] Smile   [Space] Shoot   [Esc] Exit", "移动鼠标瞄准；[1] 比耶　[2] 笑　[空格] 拍照　[Esc] 退出" },
