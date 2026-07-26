@@ -28,6 +28,11 @@ public class GameConfig : ScriptableObject
     public float mapHalfX = 17.5f;   // 左右边界：x ∈ [-mapHalfX, mapHalfX]
     public float mapHalfZ = 17.5f;   // 前后边界：z ∈ [-mapHalfZ, mapHalfZ]
 
+    [Header("相机跟随范围（镜头只在这块框内跟随角色；走到框外镜头停住）")]
+    public bool cameraBoundsEnabled = true;              // 关掉=镜头无限跟随（旧行为）
+    public Vector2 cameraBoundsCenter = new Vector2(0f, 0f);
+    public Vector2 cameraBoundsSize = new Vector2(16f, 12f);   // 全宽/全长（世界单位）。场景里放 CameraBounds 物体可覆盖它并可视化拖框
+
     [Header("NPC")]
     public float npcScale = 1f;
     [Tooltip("所有 NPC 绕世界 Y 轴的默认朝向偏移；0 = 正对相机。出生点可单独覆盖。")]

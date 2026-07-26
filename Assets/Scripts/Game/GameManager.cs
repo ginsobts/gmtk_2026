@@ -22,6 +22,7 @@ public class GameManager : MonoBehaviour
     public int imposterCount = 0;   // 本局炼化人数量：StartRound 按 characters 表 kind!=Normal 统计
 
     public GameState State { get; private set; } = GameState.MainMenu;
+    public bool ShowNpcLabels { get; private set; }   // 是否在 NPC 头顶显示名字/职位（右上角按钮切换，默认关）
     bool _creditsOpen;
     bool _tutorialSeen;    // 世界观介绍后只演示一次新手引导
     int _tutorialStep;
@@ -192,7 +193,10 @@ public class GameManager : MonoBehaviour
         _sun = light;
 
         _npcRoot = new GameObject("NPCs").transform;
-        BuildTownProps();
+        MapObstacles.Clear();   // 重建场景：清空上一局的空气墙，随后由森林/道具/树丛重新登记
+        // 参考图是「纯森林空地」，没有建筑/长椅/垃圾桶/健身器材，故先不摆城镇道具。
+        // 若之后想加回，取消下一行注释即可（会连同空气墙一起登记）。
+        // BuildTownProps();
         BuildForestBoundary();
         BuildCloudLayer();
         BuildAmbientParticles();
@@ -256,70 +260,139 @@ public class GameManager : MonoBehaviour
         Sprite trash = GeneratedArt.PropFileSprite("trashcan");
         Sprite gym = GeneratedArt.PropFileSprite("gym");
 
-        BuildCard(propsRoot, "Corner Shop", GeneratedArt.GetTownPropSprite(0), new Vector3(-14f, 0f, 12f), 1.15f, 2);
-        BuildCard(propsRoot, "Tree North", tree, new Vector3(11f, 0f, 13f), 1.15f, 2, true);
-        BuildCard(propsRoot, "Tree West", tree, new Vector3(-15f, 0f, -8f), 0.95f, 2, true);
-        BuildCard(propsRoot, "Tree East", tree, new Vector3(15f, 0f, -8f), 0.95f, 2, true);
-        BuildCard(propsRoot, "Park Bench", chair, new Vector3(11f, 0f, 5f), 0.9f, 2);
-        BuildCard(propsRoot, "Bench West", chair, new Vector3(-10f, 0f, -12f), 0.8f, 2);
+        // 道具同时登记为空气墙障碍：建筑大、树中、长椅/垃圾桶/器材小
+        BuildProp(propsRoot, "Corner Shop", GeneratedArt.GetTownPropSprite(0), new Vector3(-14f, 0f, 12f), 1.15f, 2, false, 1.7f);
+        BuildProp(propsRoot, "Tree North", tree, new Vector3(11f, 0f, 13f), 1.15f, 2, true, 0.9f);
+        BuildProp(propsRoot, "Tree West", tree, new Vector3(-15f, 0f, -8f), 0.95f, 2, true, 0.9f);
+        BuildProp(propsRoot, "Tree East", tree, new Vector3(15f, 0f, -8f), 0.95f, 2, true, 0.9f);
+        BuildProp(propsRoot, "Park Bench", chair, new Vector3(11f, 0f, 5f), 0.9f, 2, false, 0.8f);
+        BuildProp(propsRoot, "Bench West", chair, new Vector3(-10f, 0f, -12f), 0.8f, 2, false, 0.8f);
 
         // 新增装饰：垃圾桶 / 健身器材（有新素材才摆，缺则跳过）
         if (trash != null)
         {
-            BuildCard(propsRoot, "Trash Can A", trash, new Vector3(-7.5f, 0f, 4f), 0.7f, 2);
-            BuildCard(propsRoot, "Trash Can B", trash, new Vector3(8.5f, 0f, -3f), 0.7f, 2);
+            BuildProp(propsRoot, "Trash Can A", trash, new Vector3(-7.5f, 0f, 4f), 0.7f, 2, false, 0.5f);
+            BuildProp(propsRoot, "Trash Can B", trash, new Vector3(8.5f, 0f, -3f), 0.7f, 2, false, 0.5f);
         }
         if (gym != null)
         {
-            BuildCard(propsRoot, "Gym Gear A", gym, new Vector3(-4f, 0f, 9f), 0.95f, 2);
-            BuildCard(propsRoot, "Gym Gear B", gym, new Vector3(3.5f, 0f, -10f), 0.95f, 2);
+            BuildProp(propsRoot, "Gym Gear A", gym, new Vector3(-4f, 0f, 9f), 0.95f, 2, false, 0.7f);
+            BuildProp(propsRoot, "Gym Gear B", gym, new Vector3(3.5f, 0f, -10f), 0.95f, 2, false, 0.7f);
         }
+    }
+
+    /// <summary>摆一张卡片道具，并把它登记为空气墙障碍（obstacleRadius&gt;0 时）。</summary>
+    void BuildProp(Transform parent, string name, Sprite sprite, Vector3 position, float scale, int sortingOrder, bool sway, float obstacleRadius)
+    {
+        BuildCard(parent, name, sprite, position, scale, sortingOrder, sway);
+        if (obstacleRadius > 0f) MapObstacles.Add(position, obstacleRadius);
+    }
+
+    /// <summary>一棵树/灌木的布局定义。运行时生成 + 编辑器「生成可拖动标记」共用这一份数据结构。</summary>
+    public struct TreeDef
+    {
+        public Vector3 pos;
+        public bool isBush;    // true=灌木(bush.png)；false=松树(tree.png)
+        public float scale;
+        public int sorting;    // 排序层级（外圈/远处更小，画在后面）
+        public bool obstacle;  // 是否登记为空气墙（挡玩家）
+        public float radius;   // 空气墙半径
     }
 
     void BuildForestBoundary()
     {
         var forestRoot = new GameObject("Forest Boundary").transform;
 
-        // 外层：宽幅密林连续覆盖四条边，彻底遮住正方形地图边缘。
-        for (int i = -18; i <= 18; i += 6)
+        // 松树/灌木一律用新场景素材（浅绿），缺图才回退旧图集。旧深绿占位密林已弃用。
+        Sprite bush = GeneratedArt.PropFileSprite("bush") ?? GeneratedArt.GetForestSprite(1);
+        Sprite tree = GeneratedArt.PropFileSprite("tree") ?? GeneratedArt.GetForestSprite(3);
+
+        // 若场景里手摆了 TreeMarker（用 GMTK 菜单一键生成再拖动），就完全按标记来；否则用内置默认布局。
+        var markers = Object.FindObjectsByType<TreeMarker>(FindObjectsSortMode.None);
+        if (markers != null && markers.Length > 0)
         {
-            float scale = i % 12 == 0 ? 1.05f : 0.9f;
-            BuildCard(forestRoot, "Forest North " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(i, 0f, 19f), scale, 1, true);
-            BuildCard(forestRoot, "Forest South " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(i, 0f, -19f), scale, 1, true);
-        }
-        for (int i = -12; i <= 12; i += 6)
-        {
-            BuildCard(forestRoot, "Forest East " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(19f, 0f, i), 0.98f, 1, true);
-            BuildCard(forestRoot, "Forest West " + i, GeneratedArt.DenseForestEdgeSprite,
-                new Vector3(-19f, 0f, i), 0.98f, 1, true);
+            for (int i = 0; i < markers.Length; i++)
+                BuildOneTree(forestRoot, "Tree " + i, markers[i].ToDef(), tree, bush);
+            return;
         }
 
-        // 内层：低矮灌木和松树形成高—中—低三层，边缘不会显得像一堵平墙。
-        // 灌木/松树优先用新场景素材，缺图回退旧图集。
-        Sprite shrub = GeneratedArt.PropFileSprite("bush") ?? GeneratedArt.GetForestSprite(1);
-        Sprite pine = GeneratedArt.PropFileSprite("tree") ?? GeneratedArt.GetForestSprite(3);
+        int n = 0;
+        foreach (var d in DefaultTreeLayout())
+            BuildOneTree(forestRoot, "Tree " + (n++), d, tree, bush);
+    }
+
+    /// <summary>按一个 TreeDef 生成一张树/灌木卡片，并按需登记空气墙。</summary>
+    void BuildOneTree(Transform root, string name, TreeDef d, Sprite tree, Sprite bush)
+    {
+        BuildCard(root, name, d.isBush ? bush : tree, d.pos, d.scale, d.sorting, true);
+        if (d.obstacle && d.radius > 0f) MapObstacles.Add(d.pos, d.radius);
+    }
+
+    /// <summary>
+    /// 内置默认树木布局（浅绿新素材）：外圈围边(纯装饰) + 内圈(空气墙) + 四角 + 西侧密林树丛。
+    /// 运行时与「GMTK/树木：生成可调标记」编辑器菜单共用这份唯一数据，保证两边一致。
+    /// </summary>
+    public static System.Collections.Generic.List<TreeDef> DefaultTreeLayout()
+    {
+        var list = new System.Collections.Generic.List<TreeDef>();
+        void Add(Vector3 p, bool bush, float scale, int sorting, bool obstacle, float radius)
+            => list.Add(new TreeDef { pos = p, isBush = bush, scale = scale, sorting = sorting, obstacle = obstacle, radius = radius });
+
+        // 外圈：浅绿松树两排交错围边（都在 mapHalf 之外，纯装饰，不做空气墙）
+        for (int i = -18; i <= 18; i += 3)
+        {
+            float s = 1.15f + (Mathf.Abs(i) % 6 == 0 ? 0.15f : 0f);
+            Add(new Vector3(i, 0f, 19f), false, s, 1, false, 0f);
+            Add(new Vector3(i + 1.5f, 0f, 20.8f), false, s * 0.92f, 0, false, 0f);
+            Add(new Vector3(i, 0f, -19f), false, s, 1, false, 0f);
+            Add(new Vector3(i + 1.5f, 0f, -20.8f), false, s * 0.92f, 0, false, 0f);
+            Add(new Vector3(19f, 0f, i), false, 1.15f, 1, false, 0f);
+            Add(new Vector3(20.8f, 0f, i + 1.5f), false, 1.06f, 0, false, 0f);
+            Add(new Vector3(-19f, 0f, i), false, 1.15f, 1, false, 0f);
+            Add(new Vector3(-20.8f, 0f, i + 1.5f), false, 1.06f, 0, false, 0f);
+        }
+
+        // 内圈：北松树、南/东/西灌木（作为空气墙，把玩家挡在边缘外）
         for (int i = -15; i <= 15; i += 5)
         {
-            BuildCard(forestRoot, "North Shrub " + i, shrub,
-                new Vector3(i, 0f, 15.6f), 0.75f, 2, true);
-            BuildCard(forestRoot, "South Shrub " + i, shrub,
-                new Vector3(i, 0f, -15.6f), 0.75f, 2, true);
+            Add(new Vector3(i, 0f, 15.6f), false, 0.95f, 2, true, 1.0f);
+            Add(new Vector3(i, 0f, -15.6f), true, 0.75f, 2, true, 0.9f);
         }
         for (int i = -10; i <= 10; i += 5)
         {
-            BuildCard(forestRoot, "East Shrub " + i, shrub,
-                new Vector3(15.6f, 0f, i), 0.7f, 2, true);
-            BuildCard(forestRoot, "West Shrub " + i, shrub,
-                new Vector3(-15.6f, 0f, i), 0.7f, 2, true);
+            Add(new Vector3(15.6f, 0f, i), true, 0.7f, 2, true, 0.9f);
+            Add(new Vector3(-15.6f, 0f, i), true, 0.7f, 2, true, 0.9f);
         }
 
-        BuildCard(forestRoot, "Pine NW", pine, new Vector3(-16f, 0f, 14f), 1.05f, 3, true);
-        BuildCard(forestRoot, "Pine NE", pine, new Vector3(16f, 0f, 14f), 1.05f, 3, true);
-        BuildCard(forestRoot, "Pine SW", pine, new Vector3(-16f, 0f, -14f), 1.05f, 3, true);
-        BuildCard(forestRoot, "Pine SE", pine, new Vector3(16f, 0f, -14f), 1.05f, 3, true);
+        // 四角松树
+        Add(new Vector3(-16f, 0f, 14f), false, 1.05f, 3, true, 1.0f);
+        Add(new Vector3(16f, 0f, 14f), false, 1.05f, 3, true, 1.0f);
+        Add(new Vector3(-16f, 0f, -14f), false, 1.05f, 3, true, 1.0f);
+        Add(new Vector3(16f, 0f, -14f), false, 1.05f, 3, true, 1.0f);
+
+        // 西侧 / 左下密林树丛（对照参考图；每丛随机散布并互相重叠，拼成实心空气墙）
+        var groves = new (float x, float z, float r)[]
+        {
+            (-9f,  -1f, 2.6f), (-10f, -6f, 2.8f), (-6f,  -7f, 2.5f),
+            (-10f,-10f, 2.2f), (-8f,  -3f, 2.4f), (-6f,   1f, 2.2f),
+            (-9f,   3f, 2.0f), (-13f,  7f, 2.2f), (-13f, 11f, 2.2f),
+        };
+        foreach (var g in groves)
+        {
+            var center = new Vector3(g.x, 0f, g.z);
+            var rng = new System.Random($"Grove_{g.x}_{g.z}".GetHashCode());
+            int count = Mathf.Max(6, Mathf.RoundToInt(g.r * g.r * 1.4f));
+            for (int i = 0; i < count; i++)
+            {
+                double a = rng.NextDouble() * System.Math.PI * 2.0;
+                double rr = g.r * System.Math.Sqrt(rng.NextDouble());
+                var p = center + new Vector3((float)(System.Math.Cos(a) * rr), 0f, (float)(System.Math.Sin(a) * rr));
+                bool isTree = rng.NextDouble() > 0.4;
+                Add(p, !isTree, isTree ? 1.0f : 0.72f, isTree ? 3 : 2, true, isTree ? 1.0f : 0.85f);
+            }
+        }
+
+        return list;
     }
 
     void BuildCloudLayer()
@@ -405,12 +478,30 @@ public class GameManager : MonoBehaviour
         rig.target = _player;
         rig.offset = cfg.cameraOffset;
         rig.followLerp = cfg.cameraFollowLerp;
-        camGO.transform.position = _player.position + rig.offset;
+
+        // 相机跟随范围：场景里放了 CameraBounds 就用它（可视化拖框）；否则用 GameConfig 默认框。
+        rig.bounds = Object.FindFirstObjectByType<CameraBounds>();
+        rig.useBounds = cfg.cameraBoundsEnabled;
+        rig.minX = cfg.cameraBoundsCenter.x - cfg.cameraBoundsSize.x * 0.5f;
+        rig.maxX = cfg.cameraBoundsCenter.x + cfg.cameraBoundsSize.x * 0.5f;
+        rig.minZ = cfg.cameraBoundsCenter.y - cfg.cameraBoundsSize.y * 0.5f;
+        rig.maxZ = cfg.cameraBoundsCenter.y + cfg.cameraBoundsSize.y * 0.5f;
+
+        // 初始位置也按范围夹一次，避免开局镜头跳动
+        Vector3 focus0 = _player.position;
+        if (rig.bounds != null) focus0 = rig.bounds.Clamp(focus0);
+        else if (rig.useBounds)
+        {
+            focus0.x = Mathf.Clamp(focus0.x, Mathf.Min(rig.minX, rig.maxX), Mathf.Max(rig.minX, rig.maxX));
+            focus0.z = Mathf.Clamp(focus0.z, Mathf.Min(rig.minZ, rig.maxZ), Mathf.Max(rig.minZ, rig.maxZ));
+        }
+        camGO.transform.position = focus0 + rig.offset;
 
         // 运行时调试面板（F1 呼出）+ 摆位模式（F2 拖棋子），仅在编辑器 / 开发包里挂载
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         gameObject.AddComponent<DebugPanel>().Init(_mainCamera, rig);
         gameObject.AddComponent<SceneArranger>().Init(_mainCamera);
+        gameObject.AddComponent<MapObstacleGizmo>();   // Scene 视图里画出空气墙障碍圈，便于调走位
 #endif
     }
 
@@ -494,6 +585,7 @@ public class GameManager : MonoBehaviour
 
             var npc = go.AddComponent<Npc>();
             npc.Setup(def.DisplayLabel, def.charId, def.kind, def.artFolder, def.dialogueId, bodyR, def.harmless);
+            npc.SetHeadLabel(def.DisplayName, def.DisplayTitle);   // 头顶名字/职位（默认隐藏）
 
             // 每个角色的固定坐标来自 spawns.txt（可用运行时 F2「摆位模式」调好再保存）。
             // 没配到的角色回退到确定性网格（每局一致，不再随机）。
@@ -1049,6 +1141,14 @@ public class GameManager : MonoBehaviour
     }
 
     // ---------------- 指认列表 / 提交 ----------------
+
+    /// <summary>右上角按钮：切换所有 NPC 头顶名字/职位显示。各 NPC 在 Update 里读取该开关。</summary>
+    public void ToggleNpcLabels()
+    {
+        ShowNpcLabels = !ShowNpcLabels;
+        UI?.UpdateNpcLabelButton(ShowNpcLabels);
+        AudioManager.Instance?.PlaySfx("ui_click");
+    }
 
     public void OpenMarkList()
     {

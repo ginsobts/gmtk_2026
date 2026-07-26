@@ -54,4 +54,55 @@ public static class DebugTools
         Selection.activeGameObject = root;
         Debug.Log("已在场景创建出生点脚手架：拖动 NpcSpawn 改位置、旋转 Y 轴改朝向。多于出生点数量的 NPC 会随机生成。");
     }
+
+    [MenuItem("GMTK/树木：生成可调标记", priority = 62)]
+    public static void GenerateTreeMarkers()
+    {
+        var existing = Object.FindObjectsByType<TreeMarker>(FindObjectsSortMode.None);
+        if (existing.Length > 0 && !EditorUtility.DisplayDialog("生成树木标记",
+            $"场景里已有 {existing.Length} 个树木标记。继续会再生成一份默认布局（不会删旧的，可能重叠）。是否继续？", "继续", "取消"))
+            return;
+
+        var root = new GameObject("Tree Markers");
+        Undo.RegisterCreatedObjectUndo(root, "Generate Tree Markers");
+
+        var layout = GameManager.DefaultTreeLayout();
+        int i = 0;
+        foreach (var d in layout)
+        {
+            var go = new GameObject($"Tree_{i:000}_{(d.isBush ? "bush" : "tree")}");
+            var m = go.AddComponent<TreeMarker>();
+            m.kind = d.isBush ? TreeMarker.Kind.Bush : TreeMarker.Kind.Tree;
+            m.scale = d.scale;
+            m.sorting = d.sorting;
+            m.obstacle = d.obstacle;
+            m.obstacleRadius = d.radius;
+            go.transform.SetParent(root.transform);
+            go.transform.position = d.pos;
+            i++;
+        }
+
+        Selection.activeGameObject = root;
+        Debug.Log($"已生成 {i} 个树木标记（Tree Markers）。在 Scene 视图里拖动/增删/改参数，Play 时森林会【完全】按这些标记生成。" +
+                  "删掉全部标记则回退到内置默认布局。（记得 Ctrl+S 保存场景）");
+    }
+
+    [MenuItem("GMTK/树木：清除全部标记", priority = 63)]
+    public static void ClearTreeMarkers()
+    {
+        var markers = Object.FindObjectsByType<TreeMarker>(FindObjectsSortMode.None);
+        if (markers.Length == 0) { Debug.Log("场景里没有树木标记。"); return; }
+
+        var parents = new System.Collections.Generic.HashSet<Transform>();
+        foreach (var m in markers)
+        {
+            if (m.transform.parent != null) parents.Add(m.transform.parent);
+            Undo.DestroyObjectImmediate(m.gameObject);
+        }
+        foreach (var p in parents)
+            if (p != null && p.name == "Tree Markers" && p.childCount == 0)
+                Undo.DestroyObjectImmediate(p.gameObject);
+
+        Debug.Log("已清除全部树木标记，Play 时回退到内置默认布局。");
+    }
 }

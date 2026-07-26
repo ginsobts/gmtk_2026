@@ -139,6 +139,8 @@ public static class Loc
         ["btn.camera"] = new[] { "Camera (Space)", "相机 (空格)" },
         ["btn.album"] = new[] { "Album (Tab)", "相册 (Tab)" },
         ["btn.marklist"] = new[] { "Accuse List (M)", "指认列表 (M)" },
+        ["btn.labelsShow"] = new[] { "Show Names", "显示名字" },
+        ["btn.labelsHide"] = new[] { "Hide Names", "隐藏名字" },
 
         // 靠近交互
         ["interact.talk"] = new[] { "Talk [E]", "交谈 [E]" },

@@ -48,6 +48,12 @@ public class Npc : MonoBehaviour
     float _pulseT;
     float _markerPhase;
 
+    // 头顶名字/职位（默认隐藏，由右上角按钮全局开关）
+    GameObject _labelGO;
+    TextMesh _label;
+    string _labelName;
+    string _labelTitle;
+
     public void Setup(string name, string charId, NpcKind kind, string artFolder, string dialogueId, SpriteRenderer renderer, bool harmless = false)
     {
         npcName = name;
@@ -159,6 +165,7 @@ public class Npc : MonoBehaviour
         }
 
         UpdateMarker();
+        UpdateLabel();
     }
 
     void UpdateMarker()
@@ -175,7 +182,7 @@ public class Npc : MonoBehaviour
         if (marked)
         {
             _marker.sprite = GeneratedArt.SoftDotSprite;
-            _marker.color = new Color(1f, 0.55f, 0.2f, 1f);
+            _marker.color = new Color(1f, 0.12f, 0.1f, 1f);   // 更红更醒目
         }
         else
         {
@@ -184,13 +191,16 @@ public class Npc : MonoBehaviour
         }
 
         // 头顶定位 + 上下浮动
-        float bob = Mathf.Sin(Time.unscaledTime * 3.2f + _markerPhase) * 0.08f;
-        Vector3 top = _renderer != null ? _renderer.bounds.center + Vector3.up * (_renderer.bounds.extents.y + 0.45f) : transform.position + Vector3.up * 2f;
+        float bob = Mathf.Sin(Time.unscaledTime * 3.2f + _markerPhase) * 0.1f;
+        Vector3 top = _renderer != null ? _renderer.bounds.center + Vector3.up * (_renderer.bounds.extents.y + 0.5f) : transform.position + Vector3.up * 2f;
         _marker.transform.position = top + Vector3.up * bob;
 
         if (_pulseT > 0f) _pulseT -= Time.unscaledDeltaTime;
         float pulse = Mathf.Max(0f, _pulseT) / 0.3f;
-        float s = 0.32f * (1f + 0.6f * pulse);
+        // 标记态：更大 + 持续呼吸；点击瞬间再额外弹一下
+        float baseSize = marked ? 0.62f : 0.32f;
+        float breathe = marked ? (1f + 0.16f * Mathf.Sin(Time.unscaledTime * 4.2f + _markerPhase)) : 1f;
+        float s = baseSize * breathe * (1f + 0.6f * pulse);
         _marker.transform.localScale = Vector3.one * s;
     }
 
@@ -199,6 +209,66 @@ public class Npc : MonoBehaviour
         marked = value;
         if (value) _pulseT = 0.3f;
         RefreshColor();
+    }
+
+    /// <summary>设置头顶显示的名字/职位（本地化后的文本）。默认隐藏，由右上角按钮全局开关。</summary>
+    public void SetHeadLabel(string name, string title)
+    {
+        _labelName = name;
+        _labelTitle = title;
+        if (_label != null) _label.text = BuildLabelText();
+    }
+
+    string BuildLabelText()
+    {
+        // 名字在上，职位用小字灰色显示在下面
+        if (string.IsNullOrEmpty(_labelTitle)) return _labelName;
+        return $"{_labelName}\n<size=30><color=#B7BCC7>{_labelTitle}</color></size>";
+    }
+
+    void EnsureLabel()
+    {
+        if (_label != null) return;
+        var ui = GameManager.Instance != null ? GameManager.Instance.UI : null;
+        Font font = ui != null ? ui.Font : null;
+        if (font == null) return;   // 字体未就绪，稍后再建
+
+        _labelGO = new GameObject("HeadLabel");
+        _labelGO.transform.SetParent(transform, false);
+        _label = _labelGO.AddComponent<TextMesh>();
+        _label.font = font;
+        _label.fontSize = 56;
+        _label.characterSize = 0.05f;
+        _label.anchor = TextAnchor.LowerCenter;
+        _label.alignment = TextAlignment.Center;
+        _label.richText = true;
+        _label.color = Color.white;
+        _label.text = BuildLabelText();
+
+        var mr = _labelGO.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = font.material;
+        mr.sortingOrder = 30;
+
+        _labelGO.AddComponent<CameraFacingSprite>();
+        _labelGO.SetActive(false);
+    }
+
+    void UpdateLabel()
+    {
+        var gm = GameManager.Instance;
+        bool show = gm != null && gm.ShowNpcLabels && gm.State == GameState.Playing && !string.IsNullOrEmpty(_labelName);
+
+        if (show && _label == null) EnsureLabel();
+        if (_labelGO == null) return;
+
+        if (_labelGO.activeSelf != show) _labelGO.SetActive(show);
+        if (!show) return;
+
+        // 头顶定位：比标记再高一点，避免重叠
+        Vector3 top = _renderer != null
+            ? _renderer.bounds.center + Vector3.up * (_renderer.bounds.extents.y + 0.62f)
+            : transform.position + Vector3.up * 2.2f;
+        _labelGO.transform.position = top;
     }
 
     /// <summary>设置该 NPC 的朝向（供出生点 / 配置使用）。</summary>

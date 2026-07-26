@@ -59,6 +59,9 @@ public class CharacterDef
 
     public string DisplayName => Loc.Pick(nameEn, nameZh);
 
+    /// <summary>本地化后的岗位/职位（可空）。</summary>
+    public string DisplayTitle => Loc.Pick(titleEn, titleZh);
+
     /// <summary>UI 显示名：有岗位时，岗位以更小字号 + 灰色显示在名字右侧（富文本，各 UI Text 均已开启 rich text）。</summary>
     public string DisplayLabel
     {

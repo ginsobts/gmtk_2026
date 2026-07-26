@@ -12,6 +12,8 @@ public class PlayerController : MonoBehaviour
     // 空气墙半宽（由 GameManager 从 GameConfig 注入；可在 Inspector / F1 面板调）
     public float mapHalfX = 17.5f;
     public float mapHalfZ = 17.5f;
+    // 玩家碰撞半径：与森林/道具障碍（MapObstacles）求解时使用
+    public float radius = 0.5f;
 
     // 方向棋子：由 GameManager 生成主角时注入（缺某张图则回退到背面 back）。
     [Header("Directional pieces (2.5D facing)")]
@@ -47,6 +49,10 @@ public class PlayerController : MonoBehaviour
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
         Vector3 pos = transform.position + dir * moveSpeed * Time.deltaTime;
+        pos.x = Mathf.Clamp(pos.x, -mapHalfX, mapHalfX);
+        pos.z = Mathf.Clamp(pos.z, -mapHalfZ, mapHalfZ);
+        // 森林/树丛/建筑作为空气墙：把玩家推出障碍圆（可沿墙滑动），再夹回外框
+        pos = MapObstacles.Resolve(pos, radius);
         pos.x = Mathf.Clamp(pos.x, -mapHalfX, mapHalfX);
         pos.z = Mathf.Clamp(pos.z, -mapHalfZ, mapHalfZ);
         transform.position = pos;

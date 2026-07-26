@@ -21,6 +21,8 @@ hud.prompt	Move [WASD]   Photo [Space]   Album [Tab]   Accuse List [M]	移动 [W
 btn.camera	Camera (Space)	相机 (空格)
 btn.album	Album (Tab)	相册 (Tab)
 btn.marklist	Accuse List (M)	指认列表 (M)
+btn.labelsShow	Show Names	显示名字
+btn.labelsHide	Hide Names	隐藏名字
 interact.talk	Talk [E]	交谈 [E]
 interact.viewphotos	View Photos [Q]	查看照片 [Q]
 interact.mark	Mark Suspect [F]	标记嫌疑人 [F]

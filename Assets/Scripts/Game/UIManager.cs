@@ -12,6 +12,7 @@ using UnityEngine.EventSystems;
 public class UIManager : MonoBehaviour
 {
     Font _font;
+    public Font Font => _font;   // 供世界空间头顶名字标签（TextMesh）复用同一动态字体
     Canvas _canvas;
     RectTransform _canvasRect;
 
@@ -27,6 +28,7 @@ public class UIManager : MonoBehaviour
     // HUD
     GameObject _hudRoot;
     Text _foundText, _promptText;
+    Text _labelToggleLabel;   // 右上角「显示/隐藏名字」按钮文案（随开关状态切换）
     Image _timelineFill;
     RectTransform _timelineFillRt;
     readonly List<Text> _phaseLabels = new List<Text>();
@@ -335,7 +337,21 @@ public class UIManager : MonoBehaviour
         SetButtonColor(markListBtn, new Color(0.7f, 0.4f, 0.3f));
         _markListBtnRt = markListBtn.GetComponent<RectTransform>();
 
+        // 右上角：切换 NPC 头顶名字/职位显示（默认隐藏）。文案随状态变化，故不登记本地化，改由 UpdateNpcLabelButton 维护。
+        var labelBtn = MakeButton(hud, "btn.labelsShow", 24, () => GameManager.Instance.ToggleNpcLabels(),
+            new Vector2(1, 1), new Vector2(-150, -96), new Vector2(230, 60), register: false);
+        SetButtonColor(labelBtn, new Color(0.32f, 0.38f, 0.5f));
+        _labelToggleLabel = labelBtn.GetComponentInChildren<Text>();
+        UpdateNpcLabelButton(false);
+
         BuildInteractPanel(hud);
+    }
+
+    /// <summary>刷新右上角「显示/隐藏名字」按钮文案。</summary>
+    public void UpdateNpcLabelButton(bool on)
+    {
+        if (_labelToggleLabel != null)
+            _labelToggleLabel.text = Loc.Get(on ? "btn.labelsHide" : "btn.labelsShow");
     }
 
     /// <summary>靠近某个 NPC 时出现的交互面板：交谈 / 看照片 / 指认。</summary>
