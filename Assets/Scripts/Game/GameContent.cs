@@ -8,7 +8,7 @@ using UnityEngine;
 /// ScarySmile  —— 取景线：命令「笑」时变成恐怖脸
 /// FrameDrop   —— 取景线：在镜头里不停抖动/瞬移（掉帧）
 /// Stitched    —— 相册线：拍出的照片里身体是拼接的
-/// PhotoMissing—— 相册线：真人在取景框里，但照片里没有 TA
+/// PhotoMismatch—— 相册线：真人在取景框里，但照片里变成另一个样子（程书，照片与本人不一致）
 /// Deflate     —— 世界线：玩家靠近接触时会“变瘪”
 /// SkinDog     —— 对话线/时间轴：三阶段差分，最终扒皮恐怖立绘（魏大爷）
 /// LookAway    —— 取景线：镜头移开时表情在三态间循环切换（顾映，N3）
@@ -21,7 +21,7 @@ public enum NpcKind
     ScarySmile,
     FrameDrop,
     Stitched,
-    PhotoMissing,
+    PhotoMismatch,
     Deflate,
     SkinDog,
     LookAway
@@ -184,8 +184,8 @@ public static class GameContent
 
         string dialogueId = ResolveDialogueId(npc, currentPhase);
         if (TryGetLines(dialogueId, out var lines))
-            return PickLines(lines, npc.charId);
-        return PickLines(FallbackGenericDialogue(), npc.charId);
+            return PickLines(lines, npc);
+        return PickLines(FallbackGenericDialogue(), npc);
     }
 
     static string ResolveDialogueId(Npc npc, int currentPhase)
@@ -230,16 +230,19 @@ public static class GameContent
         return _dialogue.TryGetValue(dialogueId, out lines) && lines != null && lines.Count > 0;
     }
 
-    static DialogueLine[] PickLines(List<DialogueLineDef> lines, string fallbackCharId)
+    static DialogueLine[] PickLines(List<DialogueLineDef> lines, Npc npc)
     {
+        string fallbackCharId = npc != null ? npc.charId : null;
+        string expr = npc != null ? npc.PortraitExpression() : null;   // 当前露馅表情态（顾映 look-away 三表情），null=neutral
         var arr = new DialogueLine[lines.Count];
         for (int i = 0; i < lines.Count; i++)
         {
             var def = lines[i];
-            // 空 / generic_neutral 的 portraitId → 回退到「说话人自己的 neutral」(<charId>_neutral)
+            // 空 / generic_neutral 的 portraitId → 回退到说话人自己的立绘；
+            // 若说话人当前有露馅表情态则用变体（<charId>_<expr>），实现对话立绘与场景棋子同步。
             string pid = def.portraitId;
             if ((string.IsNullOrEmpty(pid) || pid == "generic_neutral") && !string.IsNullOrEmpty(fallbackCharId))
-                pid = fallbackCharId + "_neutral";
+                pid = !string.IsNullOrEmpty(expr) ? fallbackCharId + "_" + expr : fallbackCharId + "_neutral";
             arr[i] = new DialogueLine
             {
                 portraitId = pid,
@@ -258,7 +261,7 @@ public static class GameContent
             case NpcKind.ScarySmile: return Loc.Get("kind.scarysmile");
             case NpcKind.FrameDrop: return Loc.Get("kind.framedrop");
             case NpcKind.Stitched: return Loc.Get("kind.stitched");
-            case NpcKind.PhotoMissing: return Loc.Get("kind.photomissing");
+            case NpcKind.PhotoMismatch: return Loc.Get("kind.photomismatch");
             case NpcKind.Deflate: return Loc.Get("kind.deflate");
             case NpcKind.SkinDog: return Loc.Get("kind.skindog");
             case NpcKind.LookAway: return Loc.Get("kind.lookaway");
@@ -486,7 +489,7 @@ public static class GameContent
             C("an_an", "An'an", "安安", NpcKind.Normal),
             C("han_lu", "Han Lu", "韩露", NpcKind.SixFinger, "Reception", "前台"),
             C("gu_ying", "Gu Ying", "顾映", NpcKind.LookAway, "Brand", "品牌"),
-            C("cheng_shu", "Cheng Shu", "程书", NpcKind.PhotoMissing, "Compliance", "合规"),
+            C("cheng_shu", "Cheng Shu", "程书", NpcKind.PhotoMismatch, "Compliance", "合规"),
         };
         return list;
     }

@@ -30,3 +30,11 @@ an_an_neutral	Portraits/an_an/neutral
 han_lu_neutral	Portraits/han_lu/neutral
 gu_ying_neutral	Portraits/gu_ying/neutral
 cheng_shu_neutral	Portraits/cheng_shu/neutral
+# 露馅变体立绘：顾映三表情由 Npc.PortraitExpression 活体选择(<charId>_<expr>)；女学生/韩露在各自破绽台词行(zhao_c3/han_c3)显式引用
+gu_ying_reveal_smile	Portraits/gu_ying/reveal_smile
+gu_ying_reveal_sad	Portraits/gu_ying/reveal_sad
+shrink_girl_reveal	Portraits/shrink_girl/reveal
+han_lu_reveal	Portraits/han_lu/reveal
+# 吴昂 拼接人：对话立绘随时间轴 stage 演变(base→s2→s3)，由 Npc.PortraitExpression 按当前 phase 选择，与场景棋子配套
+wu_ang_s2	Portraits/wu_ang/s2
+wu_ang_s3	Portraits/wu_ang/s3
