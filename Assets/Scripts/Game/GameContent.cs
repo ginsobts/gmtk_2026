@@ -59,14 +59,14 @@ public class CharacterDef
 
     public string DisplayName => Loc.Pick(nameEn, nameZh);
 
-    /// <summary>UI 显示名：有岗位时为「名字·岗位」。</summary>
+    /// <summary>UI 显示名：有岗位时，岗位以更小字号 + 灰色显示在名字右侧（富文本，各 UI Text 均已开启 rich text）。</summary>
     public string DisplayLabel
     {
         get
         {
             string title = Loc.Pick(titleEn, titleZh);
             if (string.IsNullOrEmpty(title)) return DisplayName;
-            return $"{DisplayName}·{title}";
+            return $"{DisplayName}   <size=22><color=#9AA0AA>{title}</color></size>";
         }
     }
 }
@@ -75,6 +75,15 @@ public class CharacterDef
 public class RoundDef
 {
     public string roundId = "r1";
+}
+
+/// <summary>固定出生点（来自 spawns.txt）：某角色在场景里的固定坐标与朝向。</summary>
+public class SpawnDef
+{
+    public float x;
+    public float z;
+    public float yaw;
+    public bool faceCamera = true;
 }
 
 /// <summary>时间阶段（来自 phases.txt）。</summary>
@@ -108,9 +117,18 @@ public static class GameContent
     static List<PhaseDef> _phases;
     static Dictionary<string, List<NpcDialogueEntry>> _npcDialogues;
     static Dictionary<string, string> _portraits;
+    static Dictionary<string, SpawnDef> _spawns;
 
     public static IReadOnlyList<CharacterDef> Characters { get { EnsureLoaded(); return _characters; } }
     public static IReadOnlyList<PhaseDef> Phases { get { EnsureLoaded(); return _phases; } }
+
+    /// <summary>某角色的固定出生点（spawns.txt）；没配则返回 null，由调用方回退。</summary>
+    public static SpawnDef GetSpawn(string charId)
+    {
+        EnsureLoaded();
+        if (_spawns != null && !string.IsNullOrEmpty(charId) && _spawns.TryGetValue(charId, out var s)) return s;
+        return null;
+    }
 
     public static RoundDef GetDefaultRound()
     {
@@ -299,6 +317,7 @@ public static class GameContent
             LoadPhases();
             LoadNpcDialogues();
             LoadPortraits();
+            LoadSpawns();
         }
         catch (System.Exception e)
         {
@@ -310,6 +329,7 @@ public static class GameContent
         if (_phases == null || _phases.Count == 0) _phases = DefaultPhases();
         if (_npcDialogues == null) _npcDialogues = new Dictionary<string, List<NpcDialogueEntry>>();
         if (_portraits == null) _portraits = new Dictionary<string, string>();
+        if (_spawns == null) _spawns = new Dictionary<string, SpawnDef>();
     }
 
     static void LoadCharacters()
@@ -442,6 +462,24 @@ public static class GameContent
         }
     }
 
+    static void LoadSpawns()
+    {
+        var rows = ReadTable("GameData/spawns");
+        if (rows == null) return;
+        _spawns = new Dictionary<string, SpawnDef>();
+        foreach (var r in rows)
+        {
+            if (r.Length < 3 || string.IsNullOrEmpty(r[0])) continue;
+            _spawns[r[0].Trim()] = new SpawnDef
+            {
+                x = ParseFloat(r[1], 0f),
+                z = ParseFloat(r[2], 0f),
+                yaw = r.Length > 3 ? ParseFloat(r[3], 0f) : 0f,
+                faceCamera = r.Length <= 4 || r[4].Trim() != "0"
+            };
+        }
+    }
+
     static List<string[]> ReadTable(string resourcePath)
     {
         var asset = Resources.Load<TextAsset>(resourcePath);
@@ -464,6 +502,10 @@ public static class GameContent
 
     static int ParseInt(string s, int fallback)
         => int.TryParse(s?.Trim(), out int v) ? v : fallback;
+
+    static float ParseFloat(string s, float fallback)
+        => float.TryParse(s?.Trim(), System.Globalization.NumberStyles.Float,
+                          System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : fallback;
 
     static string Unescape(string s)
         => string.IsNullOrEmpty(s) ? s : s.Replace("\\n", "\n").Trim();

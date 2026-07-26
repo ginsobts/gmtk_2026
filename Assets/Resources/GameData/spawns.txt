@@ -1,0 +1,17 @@
+# 固定出生点（Tab 分隔）。每个角色一行，坐标为世界坐标(x,z)，y 恒为 0。
+# yaw：绕世界 Y 的朝向（度）；faceCamera=1 时始终正对相机(billboard)，yaw 被忽略。
+# 可在运行时(编辑器/开发版)按 F2 进入「摆位模式」，鼠标拖动棋子后按「保存」写回本表。
+charId	x	z	yaw	faceCamera
+lin_cai	-12	8	0	1
+wang_jianguo	-6	10	0	1
+chen_wei	0	11	0	1
+su_qing	6	10	0	1
+shrink_girl	12	8	0	1
+fang_xiao	-11	3	0	1
+wu_ang	-4	5	0	1
+lu_yuan	4	5	0	1
+wei_daye	11	3	0	1
+an_an	-8	-1	0	1
+han_lu	0	0	0	1
+gu_ying	8	-1	0	1
+cheng_shu	13	6	0	1

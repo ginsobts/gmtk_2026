@@ -204,6 +204,16 @@ public class Npc : MonoBehaviour
         if (cf != null) { cf.yawOffset = yaw; cf.faceCamera = faceCamera; }
     }
 
+    /// <summary>读回当前朝向（供摆位工具保存）。</summary>
+    public bool TryGetFacing(out float yaw, out bool faceCamera)
+    {
+        yaw = 0f; faceCamera = true;
+        if (_renderer == null) return false;
+        var cf = _renderer.GetComponent<CameraFacingSprite>();
+        if (cf == null) return false;
+        yaw = cf.yawOffset; faceCamera = cf.faceCamera; return true;
+    }
+
     public void SetNearest(bool value)
     {
         _nearest = value;

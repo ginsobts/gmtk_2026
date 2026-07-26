@@ -136,6 +136,7 @@ Assets/
     Editor/              # 打包工具、美术导入后处理（不进最终包）
 tools/
   export_tables.py       # 策划 Excel → .txt 导出脚本
+  import_tables.py       # .txt → 生成可编辑 Excel（首次初始化用）
   process_art.py         # 美术图批处理（去背景 / 裁剪 / 对齐身高）
 ```
 
@@ -143,23 +144,29 @@ tools/
 
 ## 三、策划：如何配置对话与关卡
 
-所有内容都在 `Assets/Resources/GameData/` 的配置表里，**改表即生效，无需改代码**。表为 **Tab（制表符）分隔**，`#` 开头的行是注释会被忽略，首个非注释行是表头。
+游戏运行时**只读 `Assets/Resources/GameData/` 下的 `.txt`**（Unity 打包不认 `.xlsx`）。但你**配置时用 Excel 就行**，中英各一列，改完一键导成 txt——txt 只是"游戏吃的格式"，不用手写。`#` 开头的行是注释会被忽略，首个非注释行是表头。
 
 > **双语说明**：需要显示给玩家的文本都拆成 `en` / `zh` 两列。游戏按当前语言取对应列；某列留空会自动回退到另一语言。
 
-### 推荐工作流（Excel → 表）
-1. 维护一个 `tools/game_tables.xlsx`，里面建 sheet：`characters`、`dialogue`、`rounds`、`ui`、`phases`、`npc_dialogues`、`portraits`，首行为列名。
-2. 运行导出脚本：
-   ```
-   pip install openpyxl
-   python tools/export_tables.py
-   ```
-3. 也可以直接手改 `.txt`（注意用 Tab 分隔）。
+### 推荐工作流（在 Excel 里编辑，最省事）
+用 Unity 菜单，全程不碰命令行（本机需装 Python 并 `pip install openpyxl`）：
+1. 首次：Unity 顶部菜单 **GMTK → 配置表：txt → Excel（生成可编辑表）**。会用当前内容生成 `tools/game_tables.xlsx`（含 `characters` / `dialogue` / `rounds` / `ui` / `phases` / `npc_dialogues` / `portraits` 七个 sheet，列已排好、中英分列），并自动打开所在文件夹。
+2. 用 Excel 编辑这个表：加角色、改台词、调关卡、翻译文案。多行文本直接在单元格里回车换行即可。
+3. 改完：Unity 菜单 **GMTK → 配置表：Excel → txt（导入游戏）**。会把 Excel 导成 `Resources/GameData/*.txt` 并刷新，下次 Play 生效。
+
+> 命令行等价物（不想用菜单时）：
+> ```
+> pip install openpyxl
+> python tools/import_tables.py     # txt → 生成可编辑 game_tables.xlsx
+> python tools/export_tables.py     # game_tables.xlsx → 覆盖生成 txt
+> ```
+
+也可以直接手改 `.txt`（**Tab 分隔**，`#` 开头是注释，首个非注释行是表头，单元格换行写成 `\n`）——但推荐走 Excel。
 
 ### characters.txt — 角色主表
 `charId  artFolder  dialogueId  name_en  name_zh  kind  title_en  title_zh`
 - `kind`：固定身份，`Normal` 或炼化人类型 enum 名（`DouBao`、`FrameDrop`、`DogSkin` 等）。
-- `title_en` / `title_zh`：岗位（可选）。有值时 UI 各处显示为 **名字·岗位**（如 `林采·公关`）；魏大爷、安安等非职员可留空。
+- `title_en` / `title_zh`：岗位（可选）。有值时 UI 各处在名字右侧以**更小字号、灰色**显示岗位（如 `林采  公关`）；魏大爷、安安等非职员可留空。
 - 游戏按表顺序生成**全部**角色，不再随机抽人。
 
 ### dialogue.txt — 台词表
@@ -219,9 +226,10 @@ Resources/Art/Portraits/<charId>/    # 对话 UI 立绘
 
 > 本作**整局是运行时用代码程序化生成的**。为方便可视化调试，提供了 GameConfig、出生点、场景预览、F1 调试面板等工具。
 
-### 出生点
-- 菜单 **`GMTK/创建出生点脚手架`** → 生成 1 个 `PlayerSpawn` + **13 个** `NpcSpawn`。
-- 本局 13 人按出生点名字顺序映射；无出生点时 fallback 随机位置。建议将 `NpcSpawn_08`、`NpcSpawn_09` 放在门口（魏大爷与安安）。
+### NPC 固定位置（每局一致）
+- 每个角色的出生坐标写在 **`Assets/Resources/GameData/spawns.txt`**（列：`charId  x  z  yaw  faceCamera`，`x/z` 为世界坐标，`faceCamera=1` 时始终正对相机）。开局按表摆放，**不再随机**；表里没配到的角色回退到一份确定性网格布局（仍每局一致）。
+- **手动挪棋子（推荐）**：Play 时按 **`F2`** 进入「摆位模式」——场景会冻结，用**鼠标左键**在某个棋子附近按住并拖动即可把它挪到落点；调好后点面板上的 **「保存位置到 spawns.txt」**，会把当前所有棋子位置写回该表（仅编辑器/开发包可写盘）。下次运行即生效。
+- 也可直接用文本 / Excel 编辑 `spawns.txt`（Excel 工作流见第四节，已含 `spawns` 页）。
 
 ### 场景预览 / GameConfig / F1 调试
 见原工程说明：菜单 **`GMTK/预览场景`**, **`GMTK/创建 GameConfig 资产`**, Play 时 **F1** 调试面板。

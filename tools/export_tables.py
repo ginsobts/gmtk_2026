@@ -24,7 +24,7 @@ Excel 里请建这些工作表（sheet），首行为表头：
 import os
 import sys
 
-SHEETS = ("characters", "dialogue", "rounds", "ui", "phases", "npc_dialogues", "portraits")
+SHEETS = ("characters", "dialogue", "rounds", "ui", "phases", "npc_dialogues", "portraits", "spawns")
 OUT_DIR = os.path.join("Assets", "Resources", "GameData")
 
 

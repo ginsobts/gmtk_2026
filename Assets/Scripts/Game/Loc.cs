@@ -122,6 +122,15 @@ public static class Loc
             "寻找炼化人\n\n策划 & 程序：你的名字\n美术：你的名字\n特别鸣谢：GMTK 2026\n\n使用 Unity 制作"
         },
 
+        // 开场目标说明
+        ["briefing.title"] = new[] { "Your Objective", "你的目标" },
+        ["briefing.body"] = new[]
+        {
+            "Something is wrong at the company.\n\nHidden among your coworkers are <b>Refined Ones</b> — imposters wearing human skins. Each one has a subtle tell.\n\n<b>·</b>  Walk up and <b>talk [E]</b> to people\n<b>·</b>  Raise your <b>camera [Space]</b> and photograph them — some tells only show through the lens\n<b>·</b>  <b>Mark [F]</b> anyone you suspect\n<b>·</b>  Open the <b>Accuse List [M]</b> and submit before time runs out\n\nAs the day goes on, things get darker. Find them all — and don't get too close to the wrong one.",
+            "公司里有些不对劲。\n\n同事之中混进了<b>炼化人</b>——披着人皮的伪装者，每一个都有细微的破绽。\n\n<b>·</b>  走近并<b>交谈 [E]</b>\n<b>·</b>  举起<b>相机 [空格]</b>拍照——有些破绽只有透过镜头才看得见\n<b>·</b>  对可疑的人<b>标记 [F]</b>\n<b>·</b>  打开<b>指认列表 [M]</b>，在时间耗尽前提交\n\n随着时间推进，一切会变得越来越危险。找出全部炼化人——也别太靠近不该靠近的人。"
+        },
+        ["briefing.confirm"] = new[] { "Got it — Start [Enter]", "明白了，开始 [回车]" },
+
         // HUD
         ["hud.film"] = new[] { "Film {0}", "胶卷 {0}" },
         ["hud.marked"] = new[] { "Marked {0} (imposters: {1})", "已标记 {0}（炼化人共 {1}）" },
@@ -160,7 +169,8 @@ public static class Loc
         ["album.titleChar"] = new[] { "{0}'s Photos ({1})", "{0} 的照片（{1} 张）" },
         ["album.empty"] = new[] { "No photos yet. Take some with the camera first.", "还没有照片，先用相机拍几张吧。" },
         ["album.close"] = new[] { "Close (Esc)", "关闭 (Esc)" },
-        ["album.inphoto"] = new[] { "In photo: {0}", "照片里：{0}" },
+        ["album.inphoto"] = new[] { "In this photo:{0}", "照片里有：{0}" },
+        ["album.inphotoNone"] = new[] { "In this photo:\n(nobody)", "照片里有：\n（无人）" },
         ["album.accuse"] = new[] { "Accuse (ticked)", "指认（勾选的）" },
         ["album.accuseHint"] = new[] { "Tick the photos of ALL imposters, then Accuse.", "勾选出所有炼化人的照片，再点指认。" },
         ["accuse.needphoto"] = new[] { "Please tick at least one photo first.", "请先勾选照片。" },
