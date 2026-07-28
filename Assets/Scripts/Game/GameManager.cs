@@ -71,6 +71,11 @@ public class GameManager : MonoBehaviour
     bool _hasRobot;
     GameObject _robotCompanion;
 
+    // 当前关卡 roundId（r1 = 正常，dlc = DLC 模式）
+    string _currentRoundId = "r1";
+    public string CurrentRoundId => _currentRoundId;
+    List<CharacterDef> _roundCharacters;
+
     // 取景态
     readonly List<Npc> _framed = new List<Npc>();
     bool _capturing;
@@ -103,12 +108,14 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>点“开始游戏”：先展示目标说明，玩家确认后才进入场景。</summary>
-    public void StartGame()
+    public void StartGame(string roundId = "r1")
     {
+        _currentRoundId = roundId;
         UI.HideMainMenu();
         State = GameState.Briefing;
         UI.SetHudVisible(false);
-        UI.ShowBriefing();
+        var round = GameContent.GetRound(roundId);
+        UI.ShowBriefing(round.briefingKey);
     }
 
     /// <summary>目标说明看完点“确认”：真正开始一局。</summary>
@@ -116,7 +123,7 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Briefing) return;
         UI.HideBriefing();
-        StartRound();
+        StartRound(_currentRoundId);
         // 进入场景后，第一次分三步高亮教学（再玩一次不再重复）
         if (!_tutorialSeen) BeginTutorial();
     }
@@ -558,8 +565,9 @@ public class GameManager : MonoBehaviour
 
     // ---------------- 回合流程 ----------------
 
-    public void StartRound()
+    public void StartRound(string roundId = "r1")
     {
+        _currentRoundId = roundId;
         foreach (var entry in Album)
             if (entry.image != null) Destroy(entry.image);
         Album.Clear();
@@ -567,9 +575,10 @@ public class GameManager : MonoBehaviour
         _robotRewardPending = false;
         _hasRobot = false;
 
-        // 本局炼化人数量 = characters 表里 kind != Normal 的角色数（wxc 固定剧本，身份写死在表）
+        // 本局炼化人数量 = 该 round 参与出场角色中 kind != Normal 的角色数
+        _roundCharacters = GameContent.GetCharactersForRound(_currentRoundId);
         imposterCount = 0;
-        foreach (var c in GameContent.Characters)
+        foreach (var c in _roundCharacters)
             if (c.kind != NpcKind.Normal) imposterCount++;
 
         _submitPending = false;
@@ -599,8 +608,8 @@ public class GameManager : MonoBehaviour
             if (n != null) Destroy(n.gameObject);
         Npcs.Clear();
 
-        // 固定剧本（wxc）：全部 characters 出场，身份直接取表里的 kind，不随机。
-        var chosen = new List<CharacterDef>(GameContent.Characters);
+        // 当前 round 出场角色（_roundCharacters 在 StartRound 里已按 roundId 筛过）。
+        var chosen = new List<CharacterDef>(_roundCharacters);
         var cfg = GameConfig.Instance;
 
         for (int i = 0; i < chosen.Count; i++)
@@ -630,6 +639,10 @@ public class GameManager : MonoBehaviour
             }
 
             Npcs.Add(npc);
+
+            // MisClick 伪人初始隐藏（仅 phase 2 可见）
+            if (def.kind == NpcKind.MisClick && CurrentPhase != 2)
+                go.SetActive(false);
         }
     }
 
@@ -706,6 +719,9 @@ public class GameManager : MonoBehaviour
         {
             if (n == null) continue;
             n.ApplyStage(CurrentPhase);   // T4/N4：立绘随阶段（魏大爷扒皮）
+            // MisClick 伪人只在下午（phase 2）出现
+            if (n.kind == NpcKind.MisClick)
+                n.gameObject.SetActive(CurrentPhase == 2);
             // T3：每阶段可指定坐标（phase_spawns.txt）；没配则位置不变（默认全阶段一致）
             var ps = GameContent.GetPhaseSpawn(n.charId, CurrentPhase);
             if (ps != null)
@@ -919,6 +935,8 @@ public class GameManager : MonoBehaviour
         State = GameState.Dialogue;
         UI.SetInteractPrompt(null);
         UI.SetHudVisible(false);
+        // BadUI 伪人：开始对话时搞乱全部 UI
+        if (npc.kind == NpcKind.BadUI) UI.SetBadUiGlitch(true);
         AudioManager.Instance?.PlaySfx("dialogue_open");
         if (_dialogueLines.Length > 0)
             UI.ShowDialogue(npc.npcName, _dialogueLines[0]);
@@ -961,7 +979,22 @@ public class GameManager : MonoBehaviour
         if (State != GameState.Dialogue || !_awaitingChoice) return;
         var choices = GameContent.GetChoices(_dialogueId);
         if (choices == null || index < 0 || index >= choices.Count) return;
+
+        // MisClick 伪人：玩家选了 hijack 标记的选项时，被"误点"到另一个
         var ch = choices[index];
+        if (ch.hijack && choices.Count >= 2 && _dialogueNpc != null && _dialogueNpc.kind == NpcKind.MisClick)
+        {
+            int targetIdx = (index + 1) % choices.Count;
+            UI.AnimateChoiceHijack(index, targetIdx, () => ExecuteChoice(choices[targetIdx]));
+            _awaitingChoice = false;
+            return;
+        }
+
+        ExecuteChoice(ch);
+    }
+
+    void ExecuteChoice(ChoiceDef ch)
+    {
         _awaitingChoice = false;
 
         if (ch.effect == "special_death") { TriggerSpecialDeath(); return; }
@@ -969,7 +1002,6 @@ public class GameManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(ch.gotoId))
         {
-            // 续接到另一段对话（其台词播完后也会再查它自己的 choices，可链式分支）
             _dialogueId = ch.gotoId;
             _dialogueLines = GameContent.GetLinesById(_dialogueId, _dialogueNpc != null ? _dialogueNpc.charId : null);
             _dialogueIndex = 0;
@@ -978,7 +1010,6 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // effect == end 或空：完整读完，正常结束
         _dialogueCompleted = true;
         EndDialogue();
     }
@@ -995,6 +1026,7 @@ public class GameManager : MonoBehaviour
         if (State == GameState.Dialogue)
             State = showRobotReward ? GameState.RobotReward : GameState.Playing;
         UI.HideDialogue();
+        UI.SetBadUiGlitch(false);
         UI.SetHudVisible(!showRobotReward);
         // 完整读完一段对话才计：count 模式递增到访次数（安安等靠它推进）+ 时间轴 +N
         if (wasInDialogue && completed)

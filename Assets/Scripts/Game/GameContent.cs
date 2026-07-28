@@ -24,7 +24,9 @@ public enum NpcKind
     PhotoMismatch,
     Deflate,
     SkinDog,
-    LookAway
+    LookAway,
+    BadUI,
+    MisClick
 }
 
 public enum NpcDialogueMode { Static, Phase, Count }
@@ -78,6 +80,8 @@ public class CharacterDef
 public class RoundDef
 {
     public string roundId = "r1";
+    public string[] characterIds;   // null/empty = all characters spawn
+    public string briefingKey = "briefing";  // ui.txt key prefix for title/body
 }
 
 /// <summary>固定出生点（来自 spawns.txt）：某角色在场景里的固定坐标与朝向。</summary>
@@ -97,6 +101,7 @@ public class ChoiceDef
     public string labelZh;
     public string gotoId;   // 选中后继续进入的 dialogueId（空 = 不续接）
     public string effect;   // 特殊效果：special_death / grant_robot / end / 空
+    public bool hijack;     // MisClick NPC: 玩家选此项时被"误点"到另一个选项
 
     public string Label => Loc.Pick(labelEn, labelZh);
 }
@@ -180,6 +185,32 @@ public static class GameContent
     {
         EnsureLoaded();
         return (_rounds != null && _rounds.Count > 0) ? _rounds[0] : new RoundDef();
+    }
+
+    public static RoundDef GetRound(string roundId)
+    {
+        EnsureLoaded();
+        if (_rounds != null && !string.IsNullOrEmpty(roundId))
+        {
+            foreach (var r in _rounds)
+                if (r.roundId == roundId) return r;
+        }
+        return GetDefaultRound();
+    }
+
+    /// <summary>返回某 round 应出场的角色子集；characterIds 为空则返回全部。</summary>
+    public static List<CharacterDef> GetCharactersForRound(string roundId)
+    {
+        EnsureLoaded();
+        var round = GetRound(roundId);
+        if (round.characterIds == null || round.characterIds.Length == 0)
+            return new List<CharacterDef>(_characters);
+        var set = new HashSet<string>();
+        foreach (var id in round.characterIds) set.Add(id.Trim());
+        var result = new List<CharacterDef>();
+        foreach (var c in _characters)
+            if (set.Contains(c.charId)) result.Add(c);
+        return result;
     }
 
     /// <summary>按时间轴数值推导当前阶段 order（1 起）。</summary>
@@ -357,6 +388,8 @@ public static class GameContent
             case NpcKind.Deflate: return Loc.Get("kind.deflate");
             case NpcKind.SkinDog: return Loc.Get("kind.skindog");
             case NpcKind.LookAway: return Loc.Get("kind.lookaway");
+            case NpcKind.BadUI: return Loc.Get("kind.badui");
+            case NpcKind.MisClick: return Loc.Get("kind.misclick");
             default: return Loc.Get("kind.normal");
         }
     }
@@ -481,7 +514,12 @@ public static class GameContent
         foreach (var r in rows)
         {
             if (string.IsNullOrEmpty(r[0])) continue;
-            _rounds.Add(new RoundDef { roundId = r[0].Trim() });
+            var rd = new RoundDef { roundId = r[0].Trim() };
+            if (r.Length > 1 && !string.IsNullOrEmpty(r[1].Trim()))
+                rd.characterIds = r[1].Trim().Split(',');
+            if (r.Length > 2 && !string.IsNullOrEmpty(r[2].Trim()))
+                rd.briefingKey = r[2].Trim();
+            _rounds.Add(rd);
         }
     }
 
@@ -602,7 +640,8 @@ public static class GameContent
                 labelEn = Unescape(r[2]),
                 labelZh = Unescape(r[3]),
                 gotoId = r.Length > 4 ? r[4].Trim() : "",
-                effect = r.Length > 5 ? r[5].Trim() : ""
+                effect = r.Length > 5 ? r[5].Trim() : "",
+                hijack = r.Length > 6 && r[6].Trim() == "1"
             };
             if (!_choices.TryGetValue(id, out var list)) { list = new List<ChoiceDef>(); _choices[id] = list; }
             list.Add(c);

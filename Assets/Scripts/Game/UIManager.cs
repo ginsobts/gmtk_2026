@@ -23,6 +23,8 @@ public class UIManager : MonoBehaviour
     GameObject _menuRoot;
     GameObject _creditsRoot;
     GameObject _briefingRoot;
+    Text _briefingTitle;
+    Text _briefingBody;
     Text _menuLangLabel;
     Image _menuBackground;
     Sprite[] _menuBackgrounds;
@@ -31,7 +33,7 @@ public class UIManager : MonoBehaviour
     Image _menuCreditsButtonImage;
     Text _menuCreditsButtonLabel;
     Shadow _menuCreditsRedShadow, _menuCreditsCyanShadow;
-    readonly Vector2 _menuCreditsButtonBasePos = new Vector2(212f, 155f);
+    readonly Vector2 _menuCreditsButtonBasePos = new Vector2(-198f, 75f);
     readonly Color _menuCreditsButtonBaseColor = new Color(0.17f, 0.20f, 0.25f, 0.84f);
     readonly List<RectTransform> _creditOrbitItems = new List<RectTransform>();
     readonly List<Text> _creditOrbitLabels = new List<Text>();
@@ -238,6 +240,10 @@ public class UIManager : MonoBehaviour
             new Vector2(0.5f, 0), new Vector2(-198, 155), new Vector2(360, 66));
         SetButtonColor(startBtn, new Color(0.28f, 0.10f, 0.12f, 0.86f));
 
+        var dlcBtn = MakeButton(_menuRoot.transform, "menu.dlc", 27, () => GameManager.Instance.StartGame("dlc"),
+            new Vector2(0.5f, 0), new Vector2(212, 155), new Vector2(360, 66));
+        SetButtonColor(dlcBtn, new Color(0.12f, 0.18f, 0.30f, 0.86f));
+
         var creditsBtn = MakeButton(_menuRoot.transform, "menu.credits", 27, () => GameManager.Instance.OpenCredits(),
             new Vector2(0.5f, 0), _menuCreditsButtonBasePos, new Vector2(360, 66));
         SetButtonColor(creditsBtn, _menuCreditsButtonBaseColor);
@@ -253,12 +259,12 @@ public class UIManager : MonoBehaviour
 
         var langBtn = MakeButton(_menuRoot.transform, MenuLanguageToggleLabel(), 27,
             () => GameManager.Instance.ToggleLanguage(),
-            new Vector2(0.5f, 0), new Vector2(-198, 75), new Vector2(360, 66), register: false);
+            new Vector2(0.5f, 0), new Vector2(212, 75), new Vector2(360, 66), register: false);
         SetButtonColor(langBtn, new Color(0.17f, 0.20f, 0.25f, 0.84f));
         _menuLangLabel = langBtn.GetComponentInChildren<Text>();
 
         var quitBtn = MakeButton(_menuRoot.transform, "menu.quit", 27, () => GameManager.Instance.QuitGame(),
-            new Vector2(0.5f, 0), new Vector2(212, 75), new Vector2(360, 66));
+            new Vector2(0.5f, 0), new Vector2(0, -5), new Vector2(360, 66));
         SetButtonColor(quitBtn, new Color(0.35f, 0.12f, 0.14f, 0.84f));
 
         _menuRoot.SetActive(false);
@@ -576,10 +582,12 @@ public class UIManager : MonoBehaviour
         var title = MakeLocText(_briefingRoot.transform, "BTitle", "briefing.title", 64, TextAnchor.UpperCenter);
         SetRect(title.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -90), new Vector2(1400, 90));
         title.color = new Color(1f, 0.9f, 0.55f);
+        _briefingTitle = title;
 
         var body = MakeLocText(_briefingRoot.transform, "BBody", "briefing.body", 30, TextAnchor.UpperLeft);
         SetRect(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 30), new Vector2(1120, 620));
         body.color = new Color(0.9f, 0.93f, 1f);
+        _briefingBody = body;
 
         MakeButton(_briefingRoot.transform, "briefing.confirm", 32, () => GameManager.Instance.ConfirmBriefing(),
             new Vector2(0.5f, 0), new Vector2(0, 80), new Vector2(460, 92));
@@ -587,11 +595,14 @@ public class UIManager : MonoBehaviour
         _briefingRoot.SetActive(false);
     }
 
-    public void ShowBriefing()
+    public void ShowBriefing(string briefingKey = "briefing")
     {
         if (_briefingRoot == null) return;
+        // Dynamically update briefing text based on round's briefingKey
+        if (_briefingTitle != null) _briefingTitle.text = Loc.Get(briefingKey + ".title");
+        if (_briefingBody != null) _briefingBody.text = Loc.Get(briefingKey + ".body");
         _briefingRoot.SetActive(true);
-        _briefingRoot.transform.SetAsLastSibling();   // 盖在其它面板之上
+        _briefingRoot.transform.SetAsLastSibling();
         PlayShow(_briefingRoot);
     }
 
@@ -1511,6 +1522,45 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>MisClick 伪人专用：高亮玩家选的按钮，然后动画滑到另一个按钮，最终执行回调。</summary>
+    public void AnimateChoiceHijack(int fromIdx, int toIdx, System.Action onDone)
+    {
+        StartCoroutine(ChoiceHijackAnimation(fromIdx, toIdx, onDone));
+    }
+
+    IEnumerator ChoiceHijackAnimation(int fromIdx, int toIdx, System.Action onDone)
+    {
+        if (fromIdx < 0 || fromIdx >= MaxChoices || toIdx < 0 || toIdx >= MaxChoices)
+        {
+            onDone?.Invoke();
+            yield break;
+        }
+        var fromBtn = _choiceBtns[fromIdx];
+        var toBtn = _choiceBtns[toIdx];
+        var fromImg = fromBtn != null ? fromBtn.GetComponent<Image>() : null;
+        var toImg = toBtn != null ? toBtn.GetComponent<Image>() : null;
+        Color highlightColor = new Color(0.9f, 0.95f, 0.3f, 1f);
+        Color normalColor = fromImg != null ? fromImg.color : Color.gray;
+
+        // Step 1: highlight the player's choice briefly
+        if (fromImg != null) fromImg.color = highlightColor;
+        yield return new WaitForSecondsRealtime(0.35f);
+
+        // Step 2: flash/move highlight to the other button
+        if (fromImg != null) fromImg.color = normalColor;
+        for (int i = 0; i < 3; i++)
+        {
+            if (toImg != null) toImg.color = i % 2 == 0 ? highlightColor : normalColor;
+            yield return new WaitForSecondsRealtime(0.1f);
+        }
+        if (toImg != null) toImg.color = highlightColor;
+        yield return new WaitForSecondsRealtime(0.2f);
+        if (toImg != null) toImg.color = normalColor;
+
+        // Step 3: execute the hijacked choice
+        onDone?.Invoke();
+    }
+
     public void HideDialogue()
     {
         if (_dialogueTypeCo != null) StopCoroutine(_dialogueTypeCo);
@@ -2045,5 +2095,122 @@ public class UIManager : MonoBehaviour
         rt.pivot = pivot;
         rt.anchoredPosition = anchoredPos;
         rt.sizeDelta = sizeDelta;
+    }
+
+    // ---------------- BadUI Glitch (DLC 伪人：UI 设计很差) ----------------
+
+    bool _badUiGlitchActive;
+    Coroutine _badUiGlitchCo;
+    readonly List<(Text text, int origSize, Color origColor)> _glitchedTexts = new List<(Text, int, Color)>();
+    readonly List<(Image img, Sprite origSprite, Color origColor)> _glitchedImages = new List<(Image, Sprite, Color)>();
+    readonly List<(RectTransform rt, Vector2 origPos)> _glitchedRects = new List<(RectTransform, Vector2)>();
+    static readonly Color PurpleMissing = new Color(1f, 0f, 1f, 1f);
+
+    public void SetBadUiGlitch(bool active)
+    {
+        if (active == _badUiGlitchActive) return;
+        _badUiGlitchActive = active;
+        if (active)
+        {
+            CaptureGlitchTargets();
+            if (_badUiGlitchCo != null) StopCoroutine(_badUiGlitchCo);
+            _badUiGlitchCo = StartCoroutine(BadUiGlitchLoop());
+        }
+        else
+        {
+            if (_badUiGlitchCo != null) { StopCoroutine(_badUiGlitchCo); _badUiGlitchCo = null; }
+            RestoreGlitchTargets();
+        }
+    }
+
+    void CaptureGlitchTargets()
+    {
+        _glitchedTexts.Clear();
+        _glitchedImages.Clear();
+        _glitchedRects.Clear();
+        if (_dialogueRoot == null) return;
+
+        foreach (var t in _dialogueRoot.GetComponentsInChildren<Text>(true))
+            _glitchedTexts.Add((t, t.fontSize, t.color));
+        foreach (var img in _dialogueRoot.GetComponentsInChildren<Image>(true))
+            _glitchedImages.Add((img, img.sprite, img.color));
+        foreach (var rt in _dialogueRoot.GetComponentsInChildren<RectTransform>(true))
+            _glitchedRects.Add((rt, rt.anchoredPosition));
+    }
+
+    void RestoreGlitchTargets()
+    {
+        foreach (var (t, origSize, origColor) in _glitchedTexts)
+        {
+            if (t == null) continue;
+            t.fontSize = origSize;
+            t.color = origColor;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        }
+        foreach (var (img, origSprite, origColor) in _glitchedImages)
+        {
+            if (img == null) continue;
+            img.sprite = origSprite;
+            img.color = origColor;
+        }
+        foreach (var (rt, origPos) in _glitchedRects)
+        {
+            if (rt == null) continue;
+            rt.anchoredPosition = origPos;
+        }
+        _glitchedTexts.Clear();
+        _glitchedImages.Clear();
+        _glitchedRects.Clear();
+    }
+
+    IEnumerator BadUiGlitchLoop()
+    {
+        var rng = new System.Random(42);
+        while (_badUiGlitchActive)
+        {
+            // Text glitches: random size spikes, color flicker, overflow
+            foreach (var (t, origSize, origColor) in _glitchedTexts)
+            {
+                if (t == null) continue;
+                if (rng.NextDouble() < 0.3f)
+                {
+                    t.fontSize = origSize + rng.Next(-8, 24);
+                    t.horizontalOverflow = rng.NextDouble() < 0.4 ? HorizontalWrapMode.Overflow : HorizontalWrapMode.Wrap;
+                }
+                if (rng.NextDouble() < 0.2f)
+                    t.color = new Color((float)rng.NextDouble(), (float)rng.NextDouble(), (float)rng.NextDouble(), 1f);
+                else
+                    t.color = origColor;
+            }
+
+            // Image glitches: random purple squares (missing texture look)
+            foreach (var (img, origSprite, origColor) in _glitchedImages)
+            {
+                if (img == null) continue;
+                if (rng.NextDouble() < 0.15f)
+                {
+                    img.sprite = null;
+                    img.color = PurpleMissing;
+                }
+                else
+                {
+                    img.sprite = origSprite;
+                    img.color = origColor;
+                }
+            }
+
+            // Position jitter on some elements
+            foreach (var (rt, origPos) in _glitchedRects)
+            {
+                if (rt == null) continue;
+                if (rng.NextDouble() < 0.2f)
+                    rt.anchoredPosition = origPos + new Vector2(rng.Next(-30, 30), rng.Next(-20, 20));
+                else
+                    rt.anchoredPosition = origPos;
+            }
+
+            yield return new WaitForSecondsRealtime(0.12f);
+        }
+        _badUiGlitchCo = null;
     }
 }

@@ -15,3 +15,5 @@ an_an	1.88	13	0	1
 han_lu	4.84	11.58	0	1
 gu_ying	7.82	2.85	0	1
 cheng_shu	-7.5	10.54	0	1
+bad_ui_npc	-5.5	3.2	0	1
+misclick_npc	6.0	-2.0	0	1

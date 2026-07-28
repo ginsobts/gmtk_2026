@@ -1,3 +1,4 @@
-# 关卡表（Tab 分隔）。单局固定剧本，仅 roundId 占位。
-roundId
-r1
+# 关卡表（Tab 分隔）。characters 为逗号分隔的 charId 列表（空 = 全部出场）；briefingKey 为 ui.txt 中简报文案前缀。
+roundId	characters	briefingKey
+r1		briefing
+dlc	lin_cai,wang_jianguo,chen_wei,su_qing,shrink_girl,fang_xiao,wu_ang,lu_yuan,wei_daye,an_an,han_lu,gu_ying,cheng_shu,bad_ui_npc,misclick_npc	briefing.dlc

@@ -56,3 +56,5 @@ cheng_shu	count	1	cheng_c1
 cheng_shu	count	2	cheng_c2
 cheng_shu	count	3	cheng_c3
 cheng_shu	count	4	cheng_c4
+bad_ui_npc	static	0	badui_static
+misclick_npc	static	0	misclick_static

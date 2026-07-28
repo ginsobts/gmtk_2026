@@ -13,3 +13,5 @@ an_an	Characters/an_an	generic	An'an	安安	Normal
 han_lu	Characters/han_lu	generic	Han Lu	韩露	SixFinger	Reception	前台	
 gu_ying	Characters/gu_ying	generic	Li Dongyang	李东阳	LookAway	Brand	品牌
 cheng_shu	Characters/cheng_shu	generic	Cheng Shu	程书	PhotoMismatch	Compliance	合规	
+bad_ui_npc	Characters/bad_ui_npc	badui_static	Zhao Glitch	赵格厉	BadUI	UI Design	界面设计	
+misclick_npc	Characters/misclick_npc	misclick_static	Qian Dian	钱点	MisClick	QA Intern	测试实习生	

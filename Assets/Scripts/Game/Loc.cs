@@ -241,5 +241,10 @@ public static class Loc
         ["kind.deflate"] = new[] { "Deflate", "变瘪人" },
         ["kind.lookaway"] = new[] { "Look-Away", "悲工坊人" },
         ["kind.skindog"] = new[] { "Skin-Dog", "人皮狗" },
+        ["kind.badui"] = new[] { "Bad-UI", "坏界面人" },
+        ["kind.misclick"] = new[] { "Mis-Click", "点错人" },
+        ["menu.dlc"] = new[] { "DLC Mode", "DLC 模式" },
+        ["briefing.dlc.title"] = new[] { "DLC Mode: Extended Investigation", "DLC 模式：扩展调查" },
+        ["briefing.dlc.body"] = new[] { "More suspects have arrived. Two new imposters hide among 15 people.\nThe timeline is longer, but so is the challenge. Good luck.", "更多嫌疑人出现了。15 个人中藏着两个新的伪人。\n时间线更长了，但挑战也更大了。祝你好运。" },
     };
 }

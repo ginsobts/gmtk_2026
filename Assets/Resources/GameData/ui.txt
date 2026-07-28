@@ -101,3 +101,8 @@ tutorial.progress	{0}/{1}	{0}/{1}
 tutorial.s1	This is the town. Walk up to anyone — press E to talk, or hold up your camera (Space) to photograph them. Some tells only show in the photo.	这里是小镇。走近任何人：按 E 交谈，或举起相机（空格）拍照。有些破绽只有在照片里才看得出来。
 tutorial.s2	This bar is your time. Talking and taking photos both cost time. Find the imposters before the countdown runs out.	上方这条是你的时间。交谈和拍照都会消耗时间，必须在倒计时结束前找出所有伪人。
 tutorial.s3	Stand near an NPC and press F to mark them as a suspect. Open the Accusation List (bottom-right) and submit before time runs out — get everyone right to win.	靠近某个 NPC 按 F 可将其标记为嫌疑人。在时间用完前打开右下角「指认列表」提交结果，全部猜对即获胜。
+menu.dlc	DLC Mode	DLC 模式
+briefing.dlc.title	DLC Mode: Extended Investigation	DLC 模式：扩展调查
+briefing.dlc.body	More suspects have arrived. Two new imposters hide among 15 people — one corrupts everything it touches, the other only appears in the afternoon and can't stop misclicking things.\n\nAll original suspects are still here. Be thorough.\n\nThe timeline is longer, but so is the challenge. Good luck.	更多嫌疑人出现了。15 个人中藏着两个新的伪人——一个会把它碰到的一切都搞坏，另一个只在下午出现，而且总是点错东西。\n\n原来的所有嫌疑人依然在场。仔细调查吧。\n\n时间线更长了，但挑战也更大了。祝你好运。
+kind.badui	Bad-UI	坏界面人
+kind.misclick	Mis-Click	点错人

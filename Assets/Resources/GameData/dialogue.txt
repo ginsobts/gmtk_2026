@@ -142,3 +142,14 @@ uncle_p2	3	uncle_anxious	You work here — you must've seen it! A yellow mutt…
 uncle_p3	1	uncle_horror	Hsssh... hsssh...	斯哈……斯哈……
 lin_branch_probe	1	doubao_glitch	(placeholder) Efficiency reform means... optimizing... human resources. Please rephrase your query.	（占位）效率改革，是指……优化……人力资源。请换一种提问方式。
 lin_branch_probe	2	doubao_calm	(placeholder) This concludes the available information. Thank you.	（占位）以上是可提供的全部信息，谢谢。
+badui_static	1	badui_neutral	Hey, can you help me check this interface? Something looks off...	嘿，帮我看看这个界面，总觉得哪里不太对劲……
+badui_static	2	badui_neutral	I designed the new internal system UI. Everyone says it looks... creative.	我设计了新的内部系统界面，大家都说看起来很……有创意。
+badui_static	3	badui_neutral	Colors, fonts, spacing — I handle them all by feeling. Specs are for robots.	颜色、字体、间距——我都靠感觉来的。规范是给机器人看的。
+misclick_static	1	misclick_neutral	Oh! You startled me. I was just... testing something. Don't mind the buttons.	哦！吓我一跳。我刚才在……测试一些东西。别在意那些按钮。
+misclick_static	2	misclick_neutral	I'm the new QA intern. Started this afternoon actually. Nobody showed me around yet.	我是新来的测试实习生，今天下午才入职的。还没人带我熟悉环境。
+misclick_static	3	misclick_neutral	Sometimes my finger just... slips. It's a habit. Nothing to worry about, really.	有时候手指就是……会滑一下。习惯了。真的没什么好担心的。
+misclick_branch	1	misclick_neutral	So... which way to the break room? Left or right?	所以……茶水间往哪走？左边还是右边？
+misclick_oops	1	misclick_neutral	Oops! Wrong one! I meant to pick the other... haha, clumsy me.	哎呀！点错了！我本来想选另一个的……哈哈，手滑了。
+misclick_oops	2	misclick_neutral	Wait, that wasn't what I— ugh, my finger slipped again. Happens all the time.	等等，我不是要——呃，手指又滑了。经常这样。
+misclick_correct	1	misclick_neutral	The break room is to the left. Everyone knows that!	茶水间在左边，这谁都知道！
+misclick_wrong	1	misclick_neutral	Right? No wait... or was it left? Whatever, I'll figure it out eventually.	右边？不对等等……还是左边来着？算了，我总会找到的。
